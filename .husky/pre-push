@@ -1,2 +1,7 @@
+# Skip in CI/CD environments
+if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ] || [ -n "$CONTINUOUS_INTEGRATION" ]; then
+  exit 0
+fi
+
 npm run build
 
