@@ -1,0 +1,152 @@
+name: Build and Commit
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    # Don't trigger on changes to build files to avoid infinite loops
+    paths-ignore:
+      - "build/**"
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required to commit and push
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for proper git operations
+
+      - name: Check for relevant changes
+        id: check-relevant-changes
+        run: |
+          # Check if this is a manual workflow dispatch (always run)
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Manual workflow dispatch - proceeding with build"
+            exit 0
+          fi
+
+          # For push events, compare against the base ref (branch before push)
+          # For pull requests, compare against the base branch
+          if [ "${{ github.event_name }}" == "push" ]; then
+            BASE_REF="${{ github.event.before }}"
+            HEAD_REF="${{ github.event.after }}"
+          else
+            # Fallback: compare HEAD with previous commit
+            BASE_REF="HEAD^"
+            HEAD_REF="HEAD"
+          fi
+
+          # Handle first commit or empty base ref
+          if [ -z "$BASE_REF" ] || [ "$BASE_REF" == "0000000000000000000000000000000000000000" ]; then
+            echo "First commit or no base ref - proceeding with build"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if base ref exists
+          if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+            echo "Base ref not found - proceeding with build"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check for changes in files that affect the build
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed files detected - skipping build"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Relevant paths that affect build output
+          RELEVANT_PATTERNS="src/ scripts/buildWithEsbuild.js package.json package-lock.json tsconfig.json"
+
+          HAS_RELEVANT_CHANGES=false
+          for pattern in $RELEVANT_PATTERNS; do
+            if echo "$CHANGED_FILES" | grep -qE "^$pattern|^$pattern/"; then
+              HAS_RELEVANT_CHANGES=true
+              echo "Found relevant change in: $pattern"
+              break
+            fi
+          done
+
+          if [ "$HAS_RELEVANT_CHANGES" = true ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Relevant source files changed - proceeding with build"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes detected - skipping build"
+            echo "Changed files were:"
+            echo "$CHANGED_FILES" | head -20
+          fi
+
+      - name: Exit if no relevant changes
+        if: steps.check-relevant-changes.outputs.has_changes != 'true'
+        run: |
+          echo "No relevant changes detected. Exiting workflow."
+          exit 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm" # Caches npm's global package cache (~/.npm) - speeds up npm install significantly
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: |
+          # Leverage caching: npm cache (from setup-node) + node_modules cache
+          if [ "${{ steps.cache-node-modules.outputs.cache-hit }}" == "true" ] && [ -d "node_modules" ]; then
+            echo "Cache hit - using cached node_modules with npm install (faster than npm ci)..."
+            # Use npm install when cache exists - it's faster and leverages cached node_modules
+            # npm ci would delete node_modules, defeating the cache purpose
+            npm install --prefer-offline --no-audit --no-fund
+          else
+            echo "Cache miss - using npm ci for clean install (npm cache will speed up downloads)..."
+            # Use npm ci for clean, reproducible installs when no cache
+            npm ci
+          fi
+
+      - name: Build project
+        run: npm run build
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet build/; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push build files
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          # Force add build files (overwrites any conflicts)
+          git add -f build/*.min.js
+          # Commit with --no-verify to skip hooks (since we're in CI)
+          git commit -m "chore: rebuild minified scripts [skip ci]" --no-verify || exit 0
+          # Force push to overwrite any remote changes
+          git push --force origin HEAD:${{ github.ref_name }}
