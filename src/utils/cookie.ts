@@ -24,7 +24,9 @@ export function getCookie(name: string): string | null {
  * @param cookieValue - The raw cookie value
  * @returns Parsed JSON object or null on error
  */
-export function parseJsonCookie<T = unknown>(cookieValue: string | null): T | null {
+export function parseJsonCookie<T = unknown>(
+  cookieValue: string | null
+): T | null {
   if (!cookieValue) {
     return null;
   }

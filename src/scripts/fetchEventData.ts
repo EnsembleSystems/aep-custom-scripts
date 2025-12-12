@@ -6,7 +6,12 @@
  */
 
 import { createLogger } from '../utils/logger.js';
-import { fetchWithTimeout, validateResponseSize, isAbortError, isNetworkError } from '../utils/fetch.js';
+import {
+  fetchWithTimeout,
+  validateResponseSize,
+  isAbortError,
+  isNetworkError,
+} from '../utils/fetch.js';
 import { getStorageItem } from '../utils/storage.js';
 
 // Types
@@ -32,7 +37,10 @@ const STORAGE_KEYS = {
 /**
  * Fetches event data from the API
  */
-async function fetchEventData(config: EventDataConfig, logger: ReturnType<typeof createLogger>): Promise<unknown> {
+async function fetchEventData(
+  config: EventDataConfig,
+  logger: ReturnType<typeof createLogger>
+): Promise<unknown> {
   const currentDomain = window.location.origin;
   const apiUrl = `${currentDomain}${API.EVENT_ENDPOINT}`;
 
@@ -82,7 +90,9 @@ function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the event data fetcher
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export async function fetchEventDataScript(testMode: boolean = false): Promise<EventDataResult | null> {
+export async function fetchEventDataScript(
+  testMode: boolean = false
+): Promise<EventDataResult | null> {
   const config: EventDataConfig = {
     timeout: 10000,
     debug: testMode,

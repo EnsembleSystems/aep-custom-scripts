@@ -43,6 +43,7 @@ npm run build
 ```
 
 This automatically (**using esbuild**):
+
 1. Auto-discovers all scripts in `src/scripts/`
 2. Bundles each script with all dependencies inlined
 3. Wraps in AEP-compatible IIFE format
@@ -118,6 +119,7 @@ Fetches event and attendee data from Adobe Events pages.
 **Use on**: `*.adobeevents.com` pages
 
 **Returns**:
+
 ```typescript
 {
   eventData: unknown,      // From /api/event.json?meta=true
@@ -126,10 +128,11 @@ Fetches event and attendee data from Adobe Events pages.
 ```
 
 **Configuration** (in wrapper file):
+
 ```typescript
 const config = {
-  timeout: 10000,  // Request timeout in ms
-  debug: false,    // Enable debug logging
+  timeout: 10000, // Request timeout in ms
+  debug: false, // Enable debug logging
 };
 ```
 
@@ -138,17 +141,19 @@ const config = {
 Extracts partner data from browser cookies.
 
 **Returns**:
+
 ```typescript
 {
-  partnerData: unknown  // Parsed from cookie (URL-decoded JSON)
+  partnerData: unknown; // Parsed from cookie (URL-decoded JSON)
 }
 ```
 
 **Configuration** (in wrapper file):
+
 ```typescript
 const config = {
   debug: false,
-  cookieKey: 'partner_data',  // Customize cookie name
+  cookieKey: 'partner_data', // Customize cookie name
 };
 ```
 
@@ -159,6 +164,7 @@ Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 **Use on**: Adobe Exchange pages with publisher links
 
 **How it works**:
+
 - Searches for `<a>` tags with `href` starting with `/publisher/`
 - Extracts and validates the publisher ID from the URL path
 - Supports UUID and Salesforce ID formats
@@ -166,9 +172,10 @@ Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 **Returns**: `string` (publisher/owner ID) or `null`
 
 **Configuration** (in wrapper file):
+
 ```typescript
 const config = {
-  debug: false,  // Enable debug logging
+  debug: false, // Enable debug logging
 };
 ```
 
@@ -241,18 +248,21 @@ git push
 ### For Teammates: Getting Latest Scripts
 
 **Option A - Via GitHub** (No build required):
+
 1. Browse to [build/](build/) folder in GitHub
 2. Click on the `.min.js` file you need
 3. Click "Raw" button
 4. Copy all and paste into AEP
 
 **Option B - Via Git Clone** (No build required):
+
 ```bash
 git pull
 # Files are in build/*.min.js
 ```
 
 **Option C - Build Yourself**:
+
 ```bash
 npm install
 npm run build
@@ -296,6 +306,7 @@ Teammates can then download from the [Releases](../../releases) page for stable,
 ### Adding a New Script
 
 1. **Copy the template**:
+
    ```bash
    cp src/scripts/helloWorld.ts src/scripts/yourScript.ts
    ```
@@ -311,6 +322,7 @@ Teammates can then download from the [Releases](../../releases) page for stable,
    ```
 
 That's it! The esbuild system:
+
 - ✅ Auto-discovers your new script
 - ✅ Auto-inlines your imported utilities
 - ✅ Bundles and minifies everything automatically
@@ -322,6 +334,7 @@ That's it! The esbuild system:
 All scripts use these common utilities (eliminating duplication):
 
 ### Logger (`src/utils/logger.ts`)
+
 ```typescript
 const logger = createLogger(debug, 'Script Name', isTestMode);
 logger.log('message', data);
@@ -330,23 +343,27 @@ logger.warn('warning message');
 ```
 
 ### Fetch with Timeout (`src/utils/fetch.ts`)
+
 ```typescript
 const response = await fetchWithTimeout(url, options, timeoutMs);
 ```
 
 ### Cookie Utils (`src/utils/cookie.ts`)
+
 ```typescript
 const cookie = getCookie('cookie_name');
 const parsed = parseJsonCookie(cookie);
 ```
 
 ### LocalStorage Utils (`src/utils/storage.ts`)
+
 ```typescript
 const data = getStorageItem<MyType>('storage_key');
 setStorageItem('key', data);
 ```
 
 ### Validation Utils (`src/utils/validation.ts`)
+
 ```typescript
 const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce ID formats
 ```
@@ -354,6 +371,7 @@ const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce
 ## APIs Used
 
 ### Adobe Events API
+
 - **Endpoint**: `/api/event.json?meta=true` (relative to event domain)
 - **Method**: GET
 - **Auth**: None required (same-origin request)
@@ -363,15 +381,23 @@ const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce
 The original JavaScript files (`fetchEventData.js`, etc.) have been refactored into TypeScript with these improvements:
 
 ### Before (JavaScript - Duplicated Code)
+
 ```javascript
 // Each file had its own copy of:
-function log(message, data) { /* ... */ }
-function fetchWithTimeout(url, options, timeoutMs) { /* ... */ }
-function getCookie(name) { /* ... */ }
+function log(message, data) {
+  /* ... */
+}
+function fetchWithTimeout(url, options, timeoutMs) {
+  /* ... */
+}
+function getCookie(name) {
+  /* ... */
+}
 // ... etc
 ```
 
 ### After (TypeScript - DRY)
+
 ```typescript
 // Shared utilities imported from common modules:
 import { createLogger } from '../utils/logger.js';
@@ -380,6 +406,7 @@ import { getCookie } from '../utils/cookie.js';
 ```
 
 **Benefits**:
+
 - 🎯 Single source of truth for common functionality
 - 🐛 Easier bug fixes (fix once, affects all scripts)
 - 📏 Smaller codebase overall
@@ -389,6 +416,7 @@ import { getCookie } from '../utils/cookie.js';
 ## Security Features
 
 ✅ **Built-in protections**:
+
 1. **Response size validation**: 5MB limit prevents memory exhaustion attacks
 2. **Request timeouts**: 10-second default prevents hanging requests
 3. **Input validation**: Publisher IDs validated against UUID and Salesforce ID formats
@@ -412,12 +440,14 @@ The build process with **esbuild** produces highly optimized code:
 ```
 
 **Performance improvements vs. previous build system**:
+
 - 73-87% smaller bundle sizes
 - 10-100x faster build times
 - Cleaner output (no webpack runtime code)
 - Simpler build process (no complex transformations)
 
 esbuild minification includes:
+
 - Variable name mangling
 - Dead code elimination (tree-shaking)
 - Expression optimization
@@ -443,6 +473,7 @@ The project uses strict TypeScript settings for maximum type safety:
 Target: ES2020+ (modern browsers)
 
 Supported environments:
+
 - Chrome/Edge 80+
 - Firefox 75+
 - Safari 13.1+
@@ -454,6 +485,7 @@ ISC
 ## Support
 
 For issues or questions:
+
 1. Check existing documentation in this README
 2. Review TypeScript types and JSDoc comments in source files
 3. Examine the original JavaScript files for behavior reference

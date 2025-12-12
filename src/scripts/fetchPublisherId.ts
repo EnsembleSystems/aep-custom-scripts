@@ -24,11 +24,11 @@ function extractPublisherId(
 ): string | null {
   // URL structure indices for publisher links
   const URL_PARTS = {
-    EMPTY: 0,        // ''
-    PUBLISHER: 1,    // 'publisher'
-    APP_TYPE: 2,     // 'cc' | 'dc' | 'ec'
-    ID: 3,           // actual ID
-    NAME: 4          // publisher name
+    EMPTY: 0, // ''
+    PUBLISHER: 1, // 'publisher'
+    APP_TYPE: 2, // 'cc' | 'dc' | 'ec'
+    ID: 3, // actual ID
+    NAME: 4, // publisher name
   } as const;
   const MIN_PARTS = 4;
 
@@ -57,7 +57,9 @@ function extractPublisherId(
  * Main entry point for the publisher ID fetcher
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export async function fetchPublisherIdScript(testMode: boolean = false): Promise<string | null> {
+export async function fetchPublisherIdScript(
+  testMode: boolean = false
+): Promise<string | null> {
   const config: PublisherIdConfig = {
     debug: testMode,
   };
@@ -75,11 +77,14 @@ export async function fetchPublisherIdScript(testMode: boolean = false): Promise
 
     // Use optimized selector to only query publisher links
     // This is much faster than querying all links and filtering
-    const links = document.querySelectorAll<HTMLAnchorElement>('a[href^="/publisher/"]');
+    const links = document.querySelectorAll<HTMLAnchorElement>(
+      'a[href^="/publisher/"]'
+    );
     logger.log(`Found ${links.length} publisher links`);
 
     // Iterate through publisher links to find valid ID
-    for (let i = 0; i < links.length; i++) {
+    // eslint-disable-next-line no-plusplus
+    for (let i = 0; i < links.length; i += 1) {
       const href = links[i].getAttribute('href');
 
       if (href) {

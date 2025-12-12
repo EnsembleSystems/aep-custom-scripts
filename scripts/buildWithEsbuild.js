@@ -14,7 +14,13 @@
  */
 
 import * as esbuild from 'esbuild';
-import { readdirSync, existsSync, mkdirSync, writeFileSync, statSync } from 'fs';
+import {
+  readdirSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  statSync,
+} from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,26 +42,14 @@ function discoverScripts() {
   }
 
   return readdirSync(SCRIPTS_DIR)
-    .filter(file => file.endsWith('.ts') && !file.includes('.test.'))
-    .map(file => ({
+    .filter((file) => file.endsWith('.ts') && !file.includes('.test.'))
+    .map((file) => ({
       name: basename(file, '.ts'),
       path: join(SCRIPTS_DIR, file),
     }));
 }
 
-/**
- * esbuild plugin to wrap output in AEP IIFE pattern
- */
-function aepWrapperPlugin() {
-  return {
-    name: 'aep-wrapper',
-    setup(build) {
-      build.onEnd(async (result) => {
-        // Plugin runs after build, modifications handled in main function
-      });
-    },
-  };
-}
+// Removed unused aepWrapperPlugin function - wrapper is applied directly in buildScript
 
 /**
  * Builds a single script with esbuild
@@ -98,11 +92,18 @@ async function buildScript(scriptPath) {
 
     // Find the main function name
     const functionCallMatch = bundledCode.match(/async function (\w+Script)/);
-    const mainFunctionName = functionCallMatch ? functionCallMatch[1] : `${scriptName}Script`;
+    const mainFunctionName = functionCallMatch
+      ? functionCallMatch[1]
+      : `${scriptName}Script`;
+
+    // Get TEST_MODE from environment variable (defaults to false for production)
+    // Developers can set TEST_MODE=true locally, but it won't be committed
+    const testMode =
+      process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
     // Wrap in AEP IIFE pattern with async support
     const wrappedCode = `return (async () => {
-  const TEST_MODE = false;
+  const TEST_MODE = ${testMode};
 
 ${bundledCode}
 
@@ -139,7 +140,9 @@ ${bundledCode}
     const savings = ((1 - minifiedSize / wrappedSize) * 100).toFixed(1);
 
     console.log(`✅ ${scriptName}:`);
-    console.log(`   Original:  ${originalSize.toLocaleString()} bytes (TypeScript source)`);
+    console.log(
+      `   Original:  ${originalSize.toLocaleString()} bytes (TypeScript source)`
+    );
     console.log(`   Bundled:   ${bundledSize.toLocaleString()} bytes`);
     console.log(`   Wrapped:   ${wrappedSize.toLocaleString()} bytes`);
     console.log(`   Minified:  ${minifiedSize.toLocaleString()} bytes`);
@@ -147,11 +150,10 @@ ${bundledCode}
     console.log(`   Output:    ${outputPath}`);
 
     return true;
-
   } catch (error) {
     console.error(`❌ Error building ${scriptName}:`, error.message);
     if (error.errors) {
-      error.errors.forEach(err => console.error('  ', err.text));
+      error.errors.forEach((err) => console.error('  ', err.text));
     }
     throw error;
   }
@@ -189,13 +191,14 @@ async function build() {
     }
 
     console.log('\n' + '='.repeat(60));
-    console.log(`\n✨ Build completed successfully! (${successCount}/${scripts.length})\n`);
+    console.log(
+      `\n✨ Build completed successfully! (${successCount}/${scripts.length})\n`
+    );
     console.log('📁 Minified scripts are in: build/\n');
     console.log('📋 To deploy to AEP:');
     console.log('   1. Open the minified .js file');
     console.log('   2. Copy the entire contents');
     console.log('   3. Paste into AEP Data Element as custom code\n');
-
   } catch (error) {
     console.error('\n❌ Build failed:', error.message);
     process.exit(1);

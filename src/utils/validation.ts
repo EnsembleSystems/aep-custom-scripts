@@ -14,7 +14,8 @@ export function isValidPublisherId(id: string | undefined): boolean {
   }
 
   // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   // Salesforce ID format: 15 or 18 alphanumeric characters
   const salesforcePattern = /^[a-z0-9]{15}([a-z0-9]{3})?$/i;

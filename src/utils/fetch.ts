@@ -35,7 +35,9 @@ export function fetchWithTimeout(
 export function validateResponseSize(response: Response): void {
   const contentLength = response.headers.get('content-length');
   if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
-    throw new Error(`Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`);
+    throw new Error(
+      `Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`
+    );
   }
 }
 
@@ -47,8 +49,5 @@ export function isAbortError(error: unknown): boolean {
 }
 
 export function isNetworkError(error: unknown): boolean {
-  return (
-    error instanceof TypeError &&
-    error.message.includes('fetch')
-  );
+  return error instanceof TypeError && error.message.includes('fetch');
 }

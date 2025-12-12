@@ -19,7 +19,11 @@
  */
 
 import { createLogger } from '../utils/logger.js';
-import { fetchWithTimeout, isAbortError, isNetworkError } from '../utils/fetch.js';
+import {
+  fetchWithTimeout,
+  isAbortError,
+  isNetworkError,
+} from '../utils/fetch.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -67,7 +71,7 @@ const DEFAULT_CONFIG: HelloWorldConfig = {
 /**
  * Example API endpoints (if needed)
  */
-// @ts-ignore - Placeholder for template
+// @ts-expect-error - Placeholder for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const API = {
   // Example: '/api/data.json'
@@ -81,7 +85,7 @@ const API = {
  * Example helper function to fetch data from an API
  * Delete this if you don't need it
  */
-// @ts-ignore - Example function for template
+// @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function fetchExampleData(
   config: HelloWorldConfig,
@@ -117,9 +121,12 @@ async function fetchExampleData(
  * Example helper function to process data
  * Delete this if you don't need it
  */
-// @ts-ignore - Example function for template
+// @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processData(data: unknown, logger: ReturnType<typeof createLogger>): unknown {
+function processData(
+  data: unknown,
+  logger: ReturnType<typeof createLogger>
+): unknown {
   logger.log('Processing data...');
 
   // Add your data processing logic here
@@ -146,7 +153,9 @@ function processData(data: unknown, logger: ReturnType<typeof createLogger>): un
  * // In AEP Data Element:
  * return (async () => { ... })();
  */
-export async function helloWorldScript(testMode: boolean = false): Promise<HelloWorldResult | null> {
+export async function helloWorldScript(
+  testMode: boolean = false
+): Promise<HelloWorldResult | null> {
   // Merge default config
   const config: HelloWorldConfig = {
     ...DEFAULT_CONFIG,
@@ -230,7 +239,6 @@ export async function helloWorldScript(testMode: boolean = false): Promise<Hello
     }
 
     return result;
-
   } catch (error) {
     // ========================================================================
     // ERROR HANDLING
