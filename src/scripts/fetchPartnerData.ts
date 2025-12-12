@@ -85,7 +85,7 @@ export async function fetchPartnerDataScript(
       console.log(JSON.stringify(result, null, 2));
       console.log('='.repeat(80));
     } else {
-      logger.log('AEP - Returning partner data', result);
+      logger.log('Returning partner data', result);
     }
 
     return result;
