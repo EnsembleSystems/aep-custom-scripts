@@ -101,11 +101,7 @@ export async function fetchEventDataScript(
   const logger = createLogger(config.debug, 'Event Data', testMode);
 
   try {
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('EVENT DATA EXTRACTOR - TEST MODE');
-      console.log('='.repeat(80));
-    }
+    logger.testHeader('EVENT DATA EXTRACTOR - TEST MODE');
 
     // Fetch event data
     const eventData = await fetchEventData(config, logger);
@@ -119,13 +115,8 @@ export async function fetchEventDataScript(
       attendeeData,
     };
 
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('RESULT:');
-      console.log('='.repeat(80));
-      console.log(JSON.stringify(result, null, 2));
-      console.log('='.repeat(80));
-    } else {
+    logger.testResult(result);
+    if (!testMode) {
       logger.log('Returning combined data', result);
     }
 

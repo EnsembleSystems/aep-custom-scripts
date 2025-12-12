@@ -167,12 +167,7 @@ export async function helloWorldScript(
 
   try {
     // Test mode header
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('HELLO WORLD SCRIPT - TEST MODE');
-      console.log('='.repeat(80));
-      console.log('Config:', config);
-    }
+    logger.testHeader('HELLO WORLD SCRIPT - TEST MODE', config);
 
     // ========================================================================
     // YOUR SCRIPT LOGIC GOES HERE
@@ -228,13 +223,8 @@ export async function helloWorldScript(
     };
 
     // Test mode footer
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('RESULT:');
-      console.log('='.repeat(80));
-      console.log(JSON.stringify(result, null, 2));
-      console.log('='.repeat(80));
-    } else {
+    logger.testResult(result);
+    if (!testMode) {
       logger.log('Returning result:', result);
     }
 

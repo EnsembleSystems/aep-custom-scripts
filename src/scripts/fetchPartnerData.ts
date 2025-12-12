@@ -62,13 +62,10 @@ export async function fetchPartnerDataScript(
   const logger = createLogger(config.debug, 'Partner Data', testMode);
 
   try {
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('PARTNER DATA EXTRACTOR - TEST MODE');
-      console.log('='.repeat(80));
-      console.log(`Cookie Key: ${config.cookieKey}`);
-      console.log('='.repeat(80));
-    }
+    logger.testHeader(
+      'PARTNER DATA EXTRACTOR - TEST MODE',
+      `Cookie Key: ${config.cookieKey}`
+    );
 
     // Get partner data from cookies
     const partnerData = getPartnerData(config.cookieKey, logger);
@@ -78,13 +75,8 @@ export async function fetchPartnerDataScript(
       partnerData,
     };
 
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('RESULT:');
-      console.log('='.repeat(80));
-      console.log(JSON.stringify(result, null, 2));
-      console.log('='.repeat(80));
-    } else {
+    logger.testResult(result);
+    if (!testMode) {
       logger.log('Returning partner data', result);
     }
 

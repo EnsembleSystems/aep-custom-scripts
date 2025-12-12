@@ -67,11 +67,7 @@ export async function fetchPublisherIdScript(
   const logger = createLogger(config.debug, 'Publisher ID DOM', testMode);
 
   try {
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('PUBLISHER ID FETCHER (DOM) - TEST MODE');
-      console.log('='.repeat(80));
-    }
+    logger.testHeader('PUBLISHER ID FETCHER (DOM) - TEST MODE');
 
     logger.log('Searching for publisher links in DOM');
 
@@ -93,13 +89,7 @@ export async function fetchPublisherIdScript(
         if (publisherId) {
           logger.log('Found valid publisher ID', publisherId);
 
-          if (testMode) {
-            console.log('='.repeat(80));
-            console.log('RESULT:');
-            console.log('='.repeat(80));
-            console.log(`Publisher ID: ${publisherId}`);
-            console.log('='.repeat(80));
-          }
+          logger.testResult(`Publisher ID: ${publisherId}`);
 
           return publisherId;
         }
@@ -108,11 +98,7 @@ export async function fetchPublisherIdScript(
 
     logger.log('No valid publisher link found in DOM');
 
-    if (testMode) {
-      console.log('='.repeat(80));
-      console.log('RESULT: null (no publisher link found)');
-      console.log('='.repeat(80));
-    }
+    logger.testResult('null (no publisher link found)');
 
     return null;
   } catch (error) {
