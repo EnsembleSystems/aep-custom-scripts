@@ -20,10 +20,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.10.2",
     "esbuild": "^0.27.1",
-    "terser": "^5.37.0",
-    "typescript": "^5.7.2",
-    "uglify-js": "^3.19.3"
+    "typescript": "^5.7.2"
   }
 }
