@@ -91,7 +91,7 @@ export async function fetchPublisherIdScript(
         const publisherId = extractPublisherId(href, logger);
 
         if (publisherId) {
-          logger.log('Found valid publisher ID', publisherId);
+          logger.log('AEP - Found valid publisher ID', publisherId);
 
           if (testMode) {
             console.log('='.repeat(80));

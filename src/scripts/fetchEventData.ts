@@ -126,7 +126,7 @@ export async function fetchEventDataScript(
       console.log(JSON.stringify(result, null, 2));
       console.log('='.repeat(80));
     } else {
-      logger.log('Returning combined data', result);
+      logger.log('AEP - Returning combined data', result);
     }
 
     return result;
