@@ -8,8 +8,8 @@
  * 4. Outputs minified scripts ready for AEP deployment
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import { dirname, join, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { minify } from 'terser';
 
@@ -17,24 +17,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
-// Configuration
-const scripts = [
-  {
-    name: 'fetchEventData',
-    input: join(projectRoot, 'dist/wrappers/fetchEventData.wrapper.js'),
-    output: join(projectRoot, 'build/fetchEventData.min.js'),
-  },
-  {
-    name: 'fetchPartnerData',
-    input: join(projectRoot, 'dist/wrappers/fetchPartnerData.wrapper.js'),
-    output: join(projectRoot, 'build/fetchPartnerData.min.js'),
-  },
-  {
-    name: 'fetchPublisherId',
-    input: join(projectRoot, 'dist/wrappers/fetchPublisherId.wrapper.js'),
-    output: join(projectRoot, 'build/fetchPublisherId.min.js'),
-  },
-];
+/**
+ * Auto-discover wrapper files from dist/wrappers directory
+ * This eliminates the need to manually configure scripts
+ */
+function discoverScripts() {
+  const wrappersDir = join(projectRoot, 'dist/wrappers');
+
+  if (!existsSync(wrappersDir)) {
+    console.warn('⚠️  Wrappers directory not found. Run TypeScript compilation first.');
+    return [];
+  }
+
+  const wrapperFiles = readdirSync(wrappersDir)
+    .filter(file => file.endsWith('.wrapper.js'));
+
+  return wrapperFiles.map(file => {
+    const name = basename(file, '.wrapper.js');
+    return {
+      name,
+      input: join(wrappersDir, file),
+      output: join(projectRoot, 'build', `${name}.min.js`),
+    };
+  });
+}
+
+// Auto-discover scripts (no manual configuration needed)
+const scripts = discoverScripts();
 
 // Terser configuration for AEP scripts
 const terserOptions = {
@@ -146,6 +155,14 @@ async function minifyScript(scriptConfig) {
 async function build() {
   console.log('\n🚀 Starting AEP Scripts Minification\n');
   console.log('=' .repeat(60));
+
+  if (scripts.length === 0) {
+    console.log('\n⚠️  No wrapper files found to minify.');
+    console.log('   Make sure to run TypeScript compilation first: npm run build:ts\n');
+    return;
+  }
+
+  console.log(`\nFound ${scripts.length} wrapper(s) to minify:\n`);
 
   try {
     for (const script of scripts) {

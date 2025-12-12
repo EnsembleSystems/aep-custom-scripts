@@ -19,16 +19,34 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 npm install
 ```
 
-### Building Scripts for AEP
+### Creating a New Script (Streamlined!)
+
+```bash
+# 1. Copy the template
+cp src/scripts/helloWorld.ts src/scripts/myScript.ts
+
+# 2. Edit your script (add your logic)
+
+# 3. Build (wrappers auto-generated!)
+npm run build
+
+# 4. Deploy build/myScript.min.js to AEP
+```
+
+**That's it!** No manual wrapper creation needed!
+
+### Building Existing Scripts
 
 ```bash
 npm run build
 ```
 
-This will:
-1. Compile TypeScript to JavaScript
-2. Extract and minify AEP-ready scripts
-3. Output minified files to `build/`
+This automatically:
+1. Generates wrappers for new scripts
+2. Compiles TypeScript to JavaScript
+3. Inlines utilities into wrappers
+4. Extracts and minifies AEP-ready scripts
+5. Outputs minified files to `build/`
 
 ### Available Scripts
 
@@ -37,6 +55,7 @@ After building, you'll find these minified scripts in `build/`:
 - **`fetchEventData.min.js`** - Adobe Events data fetcher
 - **`fetchPartnerData.min.js`** - Partner cookie data extractor
 - **`fetchPublisherId.min.js`** - Publisher/Owner ID fetcher
+- **`helloWorld.min.js`** - Template example (for reference)
 
 ## 📥 Download Latest Scripts
 
@@ -246,12 +265,13 @@ npm run build
 ### Available NPM Scripts
 
 ```bash
-npm run build         # Full build: clean + compile + minify
-npm run build:ts      # Compile TypeScript only
-npm run build:scripts # Minify scripts only (requires compiled TS)
-npm run clean         # Remove dist/ and build/
-npm run dev           # TypeScript watch mode
-npm run type-check    # Type-check without emitting files
+npm run build              # Full build: clean + generate wrappers + compile + minify
+npm run build:ts           # Compile TypeScript only
+npm run build:scripts      # Minify scripts only (requires compiled TS)
+npm run generate:wrappers  # Generate wrappers for new scripts
+npm run clean              # Remove dist/ and build/
+npm run dev                # TypeScript watch mode
+npm run type-check         # Type-check without emitting files
 ```
 
 ### Creating Production Releases
@@ -279,25 +299,29 @@ git push origin v2.1.0
 
 Teammates can then download from the [Releases](../../releases) page for stable, production-ready versions.
 
-### Adding a New Script
+### Adding a New Script (Automated!)
 
-1. **Create main implementation** in `src/scripts/yourScript.ts`
-   - Export an async function (e.g., `yourScriptScript()`)
-   - Use shared utilities from `src/utils/`
+1. **Copy the template**:
+   ```bash
+   cp src/scripts/helloWorld.ts src/scripts/yourScript.ts
+   ```
+
+2. **Edit your script**:
+   - Update types, config, and logic
+   - Import utilities you need from `src/utils/`
    - Follow existing patterns for error handling
 
-2. **Create AEP wrapper** in `src/wrappers/yourScript.wrapper.ts`
-   - Wrap code in `return (async () => { ... })()` IIFE
-   - Add `START_AEP_CODE` and `END_AEP_CODE` markers
-   - Inline all dependencies (logger, fetch utils, etc.)
-
-3. **Update build script** in `build/minify.js`
-   - Add new script to the `scripts` array
-
-4. **Build and test**:
+3. **Build** (wrapper auto-generated!):
    ```bash
    npm run build
    ```
+
+That's it! The build system:
+- ✅ Auto-generates the wrapper
+- ✅ Auto-inlines your imported utilities
+- ✅ Auto-discovers and minifies the script
+
+**See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed examples and patterns.**
 
 ## Shared Utilities
 

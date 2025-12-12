@@ -1,7 +1,14 @@
 /**
- * AEP Wrapper for Partner Data Fetcher
+ * AEP Wrapper for Hello World
  *
- * This wrapper is designed to be minified and deployed to AEP Data Elements.
+ * This wrapper demonstrates the complete structure of an AEP-compatible script.
+ * Use this as a reference when creating your own wrappers.
+ *
+ * Key points:
+ * - Everything between START_AEP_CODE and END_AEP_CODE will be minified
+ * - All utilities must be inlined (no imports)
+ * - Must return a Promise (IIFE pattern)
+ * - TEST_MODE should be false for production, true for console testing
  */
 
 // @ts-ignore - This is a wrapper file that will be extracted and minified
@@ -25,6 +32,10 @@ return (async () => {
     error(message: string, data?: unknown): void {
       console.error(`${this.prefix} ${message}`, data ?? '');
     }
+
+    warn(message: string, data?: unknown): void {
+      console.warn(`${this.prefix} ${message}`, data ?? '');
+    }
   }
 
   function createLogger(debug: boolean, scriptName: string, isTestMode: boolean): Logger {
@@ -33,63 +44,52 @@ return (async () => {
   }
 
   // ============================================================================
-  // COOKIE UTILITIES
+  // FETCH UTILITIES (only if needed - remove if not using fetch)
   // ============================================================================
-  function getCookie(name: string): string | null {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      const cookieValue = parts.pop()?.split(';').shift();
-      return cookieValue ?? null;
-    }
-    return null;
+  function isAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
   }
 
-  function parseJsonCookie<T = unknown>(cookieValue: string | null): T | null {
-    if (!cookieValue) return null;
-    try {
-      return JSON.parse(decodeURIComponent(cookieValue)) as T;
-    } catch {
-      return null;
-    }
+  function isNetworkError(error: unknown): boolean {
+    return error instanceof TypeError && error.message.includes('fetch');
   }
 
   // ============================================================================
   // MAIN SCRIPT
   // ============================================================================
   const config = {
+    timeout: 10000,
     debug: TEST_MODE,
-    cookieKey: 'partner_data',
+    message: 'Hello from AEP!',
   };
 
-  const logger = createLogger(config.debug, 'Partner Data', TEST_MODE);
+  const logger = createLogger(config.debug, 'Hello World', TEST_MODE);
 
   try {
     if (TEST_MODE) {
       console.log('='.repeat(80));
-      console.log('PARTNER DATA EXTRACTOR - TEST MODE');
+      console.log('HELLO WORLD SCRIPT - TEST MODE');
       console.log('='.repeat(80));
-      console.log(`Cookie Key: ${config.cookieKey}`);
-      console.log('='.repeat(80));
+      console.log('Config:', config);
     }
 
-    // Get partner data from cookies
-    const partnerCookie = getCookie(config.cookieKey);
-    if (!partnerCookie) {
-      logger.log('No partner data in cookies');
-    }
+    logger.log('Script started');
 
-    const partnerData = parseJsonCookie(partnerCookie);
-    if (!partnerData) {
-      if (partnerCookie) {
-        logger.error('Error parsing partner data from cookie');
-      }
-    } else {
-      logger.log('Found partner data', partnerData);
-    }
+    // Build result
+    const simpleResult = {
+      message: config.message,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      currentUrl: window.location.href,
+    };
+
+    logger.log('Simple result created:', simpleResult);
 
     const result = {
-      partnerData,
+      success: true,
+      message: 'Hello World script executed successfully',
+      data: simpleResult,
+      timestamp: new Date().toISOString(),
     };
 
     if (TEST_MODE) {
@@ -99,12 +99,20 @@ return (async () => {
       console.log(JSON.stringify(result, null, 2));
       console.log('='.repeat(80));
     } else {
-      logger.log('Returning partner data', result);
+      logger.log('Returning result:', result);
     }
 
     return result;
   } catch (error) {
-    logger.error('Unexpected error fetching partner data:', error);
+    if (isAbortError(error)) {
+      logger.error(`Request timeout after ${config.timeout}ms`);
+      return null;
+    }
+    if (isNetworkError(error)) {
+      logger.error('Network error:', error);
+      return null;
+    }
+    logger.error('Unexpected error in Hello World script:', error);
     return null;
   }
 })();

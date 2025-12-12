@@ -134,7 +134,7 @@ export async function fetchEventDataScript(testMode: boolean = false): Promise<E
     }
 
     // Handle other errors
-    logger.error('Error:', error);
+    logger.error('Unexpected error fetching event data:', error);
     return null;
   }
 }

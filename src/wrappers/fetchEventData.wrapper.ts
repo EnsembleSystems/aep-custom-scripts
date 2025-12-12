@@ -156,7 +156,7 @@ return (async () => {
       logger.error('Network error:', error);
       return null;
     }
-    logger.error('Error:', error);
+    logger.error('Unexpected error fetching event data:', error);
     return null;
   }
 })();

@@ -5,10 +5,11 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "npm run clean && npm run build:ts && npm run build:scripts",
+    "build": "npm run clean && npm run generate:wrappers && npm run build:ts && npm run build:scripts",
     "build:ts": "tsc",
     "build:scripts": "node scripts/minify.js",
     "build:simple": "npm run clean && tsc",
+    "generate:wrappers": "node scripts/generateWrapper.js",
     "clean": "rm -rf dist build",
     "dev": "tsc --watch",
     "type-check": "tsc --noEmit"

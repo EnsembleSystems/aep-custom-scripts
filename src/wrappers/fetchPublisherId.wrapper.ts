@@ -62,9 +62,14 @@ return (async () => {
    * Returns: "2c4c7552-2bb9-4541-b625-04721319c07b" (between 3rd and 4th slash)
    */
   function extractPublisherId(href: string, logger: Logger): string | null {
-    // Constants for array indices
-    const PUBLISHER_INDEX = 1;
-    const ID_INDEX = 3;
+    // URL structure indices for publisher links
+    const URL_PARTS = {
+      EMPTY: 0,        // ''
+      PUBLISHER: 1,    // 'publisher'
+      APP_TYPE: 2,     // 'cc' | 'dc' | 'ec'
+      ID: 3,           // actual ID
+      NAME: 4          // publisher name
+    } as const;
     const MIN_PARTS = 4;
 
     // Split by slash and get the part between 3rd and 4th slash
@@ -74,8 +79,8 @@ return (async () => {
     const parts = href.split('/');
 
     // We want index 3 (between 3rd and 4th slash)
-    if (parts.length >= MIN_PARTS && parts[PUBLISHER_INDEX] === 'publisher') {
-      const publisherId = parts[ID_INDEX];
+    if (parts.length >= MIN_PARTS && parts[URL_PARTS.PUBLISHER] === 'publisher') {
+      const publisherId = parts[URL_PARTS.ID];
 
       // Validate the ID format for security
       if (publisherId && isValidPublisherId(publisherId)) {
@@ -148,7 +153,7 @@ return (async () => {
 
     return null;
   } catch (error) {
-    logger.error('Error:', error);
+    logger.error('Unexpected error parsing publisher ID:', error);
     return null;
   }
 })();

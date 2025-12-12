@@ -90,7 +90,7 @@ export async function fetchPartnerDataScript(
 
     return result;
   } catch (error) {
-    logger.error('Error:', error);
+    logger.error('Unexpected error fetching partner data:', error);
     return null;
   }
 }
