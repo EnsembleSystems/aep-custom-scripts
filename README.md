@@ -1,111 +1,191 @@
-# AEP Custom Scripts
+# AEP Custom Scripts (TypeScript)
 
-JavaScript data fetchers for Adobe Experience Platform (AEP) Data Collection. These scripts are designed to be embedded as custom code in AEP Data Elements and can also be tested standalone in browser consoles.
+TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection. These scripts are designed to be embedded as custom code in AEP Data Elements and can also be tested standalone in browser consoles.
+
+## Features
+
+- ✅ **TypeScript-first**: Full type safety and modern JavaScript features
+- 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
+- 📦 **Automated Build**: One-command build process for all scripts
+- 🗜️ **Optimized Minification**: Production-ready minified outputs
+- 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
+- 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
 
 ## Quick Start
 
-### For AEP Deployment
+### Installation
 
-1. Open the script file you need (e.g., `fetchEventData.js`)
-2. Set `TEST_MODE = false` (around line 16)
-3. Copy the code starting from the `return` statement (line 14-15)
-4. Paste into AEP Data Element as custom code
-
-### For Browser Console Testing
-
-1. Open the script file you need
-2. Set `TEST_MODE = true` (around line 16)
-3. Copy the **entire** script
-4. Paste into your browser's developer console
-5. **Replace** `return` with `await` at the start of the async IIFE
-6. Press Enter to execute
-
-**Example:**
-```javascript
-// Original (for AEP)
-return (async () => {
-  // ... script code
-})();
-
-// Modified (for console testing)
-await (async () => {
-  // ... script code
-})();
+```bash
+npm install
 ```
 
-## Available Scripts
+### Building Scripts for AEP
 
-### Publisher/Owner ID Fetcher
-
-Fetches publisher or owner IDs for Adobe Exchange apps.
-
-**`fetchPublisherId.js`** - API-based fetcher for AEP
-- Supports Experience Cloud (ec), Document Cloud (dc), and Creative Cloud (cc) apps
-- Extracts app type and ID from URL pattern: `/apps/{type}/{id}/`
-- Requires API key configuration
-- CC apps require additional auth token
-- Comprehensive input validation and error handling
-
-### Data Extractors
-
-**`fetchEventData.js`** - Adobe Events data fetcher
-- Fetches event data from `/api/event.json?meta=true`
-- Retrieves attendee data from localStorage (`attendeaseMember` key)
-- Returns combined: `{ eventData, attendeeData }`
-- Use on Adobe Events pages (e.g., `*.adobeevents.com`)
-
-**`fetchPartnerData.js`** - Partner cookie data extractor
-- Extracts partner data from cookies
-- Default cookie key: `partner_data`
-- Returns: `{ partnerData }`
-- Handles URL-encoded JSON
-
-## Browser Console Testing Guide
-
-### Step-by-Step Instructions
-
-1. **Open Developer Tools**
-   - Chrome/Edge: Press `F12` or `Ctrl+Shift+J` (Windows) / `Cmd+Option+J` (Mac)
-   - Firefox: Press `F12` or `Ctrl+Shift+K` (Windows) / `Cmd+Option+K` (Mac)
-   - Safari: Enable Developer menu in Preferences, then press `Cmd+Option+C`
-
-2. **Navigate to the Console tab**
-
-3. **Prepare the Script**
-   - Open the script file in a text editor
-   - Set `TEST_MODE = true`
-   - Copy the entire script content
-
-4. **Modify for Console**
-   - Paste the script into the console
-   - **Important**: Change `return (async () => {` to `await (async () => {`
-   - This is typically on line 15
-
-5. **Execute**
-   - Press `Enter` to run
-   - View the formatted output with debug logs
-
-### Example: Testing fetchEventData.js
-
-```javascript
-// Navigate to an Adobe Events page first
-// Example: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
-
-// Then paste this in console (with TEST_MODE = true):
-await (async () => {
-  const TEST_MODE = true; // Must be true for console testing
-
-  const CONFIG = {
-    timeout: 10000,
-    debug: TEST_MODE,
-  };
-
-  // ... rest of the script code ...
-
-})();
+```bash
+npm run build
 ```
 
-**Expected Output:**
+This will:
+1. Compile TypeScript to JavaScript
+2. Extract and minify AEP-ready scripts
+3. Output minified files to `build/`
+
+### Available Scripts
+
+After building, you'll find these minified scripts in `build/`:
+
+- **`fetchEventData.min.js`** - Adobe Events data fetcher
+- **`fetchPartnerData.min.js`** - Partner cookie data extractor
+- **`fetchPublisherId.min.js`** - Publisher/Owner ID fetcher
+
+## 📥 Download Latest Scripts
+
+### Quick Access for Teammates
+
+Ready-to-deploy minified scripts (committed to repository):
+
+- **[fetchEventData.min.js](build/fetchEventData.min.js)** - Adobe Events data fetcher
+- **[fetchPartnerData.min.js](build/fetchPartnerData.min.js)** - Partner cookie extractor
+- **[fetchPublisherId.min.js](build/fetchPublisherId.min.js)** - Publisher ID fetcher
+
+**To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
+
+### Production Releases
+
+For stable, versioned deployments see [Releases](../../releases) page.
+
+## Deploying to AEP
+
+1. Download the script you need from links above (or run `npm run build` locally)
+2. Copy the **entire** minified code
+3. Paste into AEP Data Element as custom code
+4. Save and test!
+
+## Project Structure
+
+```
+aep-custom-scripts/
+├── src/
+│   ├── scripts/           # Main script implementations
+│   │   ├── fetchEventData.ts
+│   │   ├── fetchPartnerData.ts
+│   │   └── fetchPublisherId.ts
+│   ├── wrappers/          # AEP deployment wrappers
+│   │   ├── fetchEventData.wrapper.ts
+│   │   ├── fetchPartnerData.wrapper.ts
+│   │   └── fetchPublisherId.wrapper.ts
+│   ├── utils/             # Shared utilities (DRY)
+│   │   ├── logger.ts      # Consistent logging
+│   │   ├── fetch.ts       # Fetch with timeout
+│   │   ├── cookie.ts      # Cookie parsing
+│   │   ├── storage.ts     # LocalStorage helpers
+│   │   └── validation.ts  # Input validation
+│   ├── types/             # TypeScript type definitions
+│   └── index.ts           # Main exports
+├── scripts/
+│   └── minify.js          # Build script (committed)
+├── build/                 # Minified scripts (gitignored)
+│   ├── fetchEventData.min.js
+│   ├── fetchPartnerData.min.js
+│   └── fetchPublisherId.min.js
+├── dist/                  # Compiled JS (gitignored)
+├── tsconfig.json          # TypeScript configuration
+└── package.json           # Project metadata
+```
+
+## Script Descriptions
+
+### 1. Event Data Fetcher (`fetchEventData`)
+
+Fetches event and attendee data from Adobe Events pages.
+
+**Use on**: `*.adobeevents.com` pages
+
+**Returns**:
+```typescript
+{
+  eventData: unknown,      // From /api/event.json?meta=true
+  attendeeData: unknown    // From localStorage key 'attendeaseMember'
+}
+```
+
+**Configuration** (in wrapper file):
+```typescript
+const config = {
+  timeout: 10000,  // Request timeout in ms
+  debug: false,    // Enable debug logging
+};
+```
+
+### 2. Partner Data Fetcher (`fetchPartnerData`)
+
+Extracts partner data from browser cookies.
+
+**Returns**:
+```typescript
+{
+  partnerData: unknown  // Parsed from cookie (URL-decoded JSON)
+}
+```
+
+**Configuration** (in wrapper file):
+```typescript
+const config = {
+  debug: false,
+  cookieKey: 'partner_data',  // Customize cookie name
+};
+```
+
+### 3. Publisher ID Fetcher (`fetchPublisherId`)
+
+Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
+
+**Use on**: Adobe Exchange pages with publisher links
+
+**How it works**:
+- Searches for `<a>` tags with `href` starting with `/publisher/`
+- Extracts and validates the publisher ID from the URL path
+- Supports UUID and Salesforce ID formats
+
+**Returns**: `string` (publisher/owner ID) or `null`
+
+**Configuration** (in wrapper file):
+```typescript
+const config = {
+  debug: false,  // Enable debug logging
+};
+```
+
+**No API keys required** - this script uses DOM parsing only.
+
+## Browser Console Testing
+
+For testing scripts in the browser console before deploying to AEP:
+
+### Method 1: Using Compiled TypeScript
+
+1. Build the project: `npm run build`
+2. Open the compiled file from `dist/wrappers/`
+3. Set `TEST_MODE = true` in the file
+4. Copy the entire file contents
+5. In browser console, change `return (async () => {` to `await (async () => {`
+6. Press Enter
+
+### Method 2: Using Source TypeScript (Recommended for Development)
+
+Use the modular scripts in `src/scripts/` which export testable functions:
+
+```typescript
+// In browser console (after importing somehow, or in a test environment)
+import { fetchEventDataScript } from './dist/scripts/fetchEventData.js';
+
+// Test mode = true
+const result = await fetchEventDataScript(true);
+console.log(result);
+```
+
+### Example Console Output (Test Mode)
+
 ```
 ================================================================================
 EVENT DATA EXTRACTOR - TEST MODE
@@ -123,138 +203,229 @@ RESULT:
 ================================================================================
 ```
 
-### Example: Testing fetchPublisherId.js
+## Development
 
-```javascript
-// Navigate to an Adobe Exchange app page first
-// Example: https://exchange.adobe.com/apps/ec/108203/vibes-sms
+### For Developers: Update Workflow
 
-// Configure your credentials in CONFIG section
-// Then paste in console:
-await (async () => {
-  const CONFIG = {
-    apiKey: "your-api-key-here",
-    authToken: "your-auth-token-for-cc-apps",
-    timeout: 10000,
-    debug: true,
-  };
-
-  // ... rest of the script code ...
-
-})();
-```
-
-### Troubleshooting Console Testing
-
-**"Unexpected token 'return'"**
-- You forgot to change `return` to `await`
-
-**"Uncaught SyntaxError: await is only valid in async functions"**
-- Make sure the entire IIFE pattern is correct: `await (async () => { ... })()`
-
-**No output or null result**
-- Check if you're on the correct page (e.g., Adobe Events page for fetchEventData)
-- Enable debug mode by setting `debug: true` in CONFIG
-- Check browser console for error messages
-
-**CORS errors**
-- Some APIs may block cross-origin requests
-- You may need to be on the correct domain or authenticated
-
-## Configuration
-
-### Publisher ID Fetchers
-
-Update the `CONFIG` object in the script:
-
-```javascript
-const CONFIG = {
-  apiKey: "your-api-key",           // Required: Your X-Api-Key
-  authToken: "your-auth-token",      // Required for CC apps only
-  timeout: 10000,                    // Request timeout (ms)
-  debug: false,                      // Enable debug logging
-};
-```
-
-### Event Data Fetcher
-
-```javascript
-const CONFIG = {
-  timeout: 10000,    // Request timeout (ms)
-  debug: TEST_MODE,  // Auto-enabled in test mode
-};
-```
-
-### Partner Data Fetcher
-
-```javascript
-const CONFIG = {
-  debug: TEST_MODE,  // Auto-enabled in test mode
-};
-
-const COOKIE_KEYS = {
-  PARTNER: "partner_data",  // Change if your cookie uses a different key
-};
-```
-
-## Build & Minify
-
-To minify scripts for production:
+When you make changes to the TypeScript source:
 
 ```bash
-./uglify.sh
+# 1. Make your changes in src/
+# 2. Build the minified scripts
+npm run build
+
+# 3. Commit both source and built files
+git add src/ build/*.min.js
+git commit -m "Update feature XYZ"
+git push
 ```
 
-**Note**: Currently configured to minify `fetchPartnerData.js`. Edit the script to minify other files.
+**Important**: Built files (`build/*.min.js`) are committed to the repository so teammates always have access to the latest scripts.
 
-The minification uses uglify-js with these flags:
-- `--compress`: Compress the code
-- `--mangle`: Mangle variable names
-- `--parse bare_returns`: Allow return statements at top level (for AEP)
+### For Teammates: Getting Latest Scripts
 
-## API Reference
+**Option A - Via GitHub** (No build required):
+1. Browse to [build/](build/) folder in GitHub
+2. Click on the `.min.js` file you need
+3. Click "Raw" button
+4. Copy all and paste into AEP
 
-### Adobe APIs Used
+**Option B - Via Git Clone** (No build required):
+```bash
+git pull
+# Files are in build/*.min.js
+```
 
-**Creative Cloud Extensions API**
-- Endpoint: `https://ccext-public.adobe.io/v3/extensions`
-- Method: POST
-- Headers: `Authorization`, `X-Api-Key`, `Accept`, `Content-Type`
+**Option C - Build Yourself**:
+```bash
+npm install
+npm run build
+# Files generated in build/*.min.js
+```
 
-**App Registry API**
-- Endpoint: `https://appregistry.adobe.io/myxchng/v2/apps/{appId}`
-- Method: GET
-- Headers: `X-Api-Key`
+### Available NPM Scripts
 
-**Adobe Events API**
-- Endpoint: `/api/event.json?meta=true` (relative to event domain)
-- Method: GET
-- Headers: `Accept: application/json`
+```bash
+npm run build         # Full build: clean + compile + minify
+npm run build:ts      # Compile TypeScript only
+npm run build:scripts # Minify scripts only (requires compiled TS)
+npm run clean         # Remove dist/ and build/
+npm run dev           # TypeScript watch mode
+npm run type-check    # Type-check without emitting files
+```
 
-## Security Notes
+### Creating Production Releases
 
-⚠️ **Important**: The example scripts contain placeholder API keys and auth tokens.
+For major versions or production deployments:
 
-Before deployment:
-1. Replace all API keys with your own credentials
-2. Never commit real credentials to version control
-3. Use environment-specific configuration for production
-4. Rotate auth tokens regularly (they expire)
+```bash
+# 1. Build and test
+npm run build
 
-## File Structure
+# 2. Commit changes
+git add .
+git commit -m "Release v2.1.0: [describe changes]"
+
+# 3. Create a tag
+git tag -a v2.1.0 -m "Release v2.1.0"
+git push origin v2.1.0
+
+# 4. Create GitHub Release
+# - Go to GitHub → Releases → "Create new release"
+# - Choose tag v2.1.0
+# - Upload the 3 files from build/*.min.js
+# - Add release notes describing changes
+```
+
+Teammates can then download from the [Releases](../../releases) page for stable, production-ready versions.
+
+### Adding a New Script
+
+1. **Create main implementation** in `src/scripts/yourScript.ts`
+   - Export an async function (e.g., `yourScriptScript()`)
+   - Use shared utilities from `src/utils/`
+   - Follow existing patterns for error handling
+
+2. **Create AEP wrapper** in `src/wrappers/yourScript.wrapper.ts`
+   - Wrap code in `return (async () => { ... })()` IIFE
+   - Add `START_AEP_CODE` and `END_AEP_CODE` markers
+   - Inline all dependencies (logger, fetch utils, etc.)
+
+3. **Update build script** in `build/minify.js`
+   - Add new script to the `scripts` array
+
+4. **Build and test**:
+   ```bash
+   npm run build
+   ```
+
+## Shared Utilities
+
+All scripts use these common utilities (eliminating duplication):
+
+### Logger (`src/utils/logger.ts`)
+```typescript
+const logger = createLogger(debug, 'Script Name', isTestMode);
+logger.log('message', data);
+logger.error('error message');
+logger.warn('warning message');
+```
+
+### Fetch with Timeout (`src/utils/fetch.ts`)
+```typescript
+const response = await fetchWithTimeout(url, options, timeoutMs);
+```
+
+### Cookie Utils (`src/utils/cookie.ts`)
+```typescript
+const cookie = getCookie('cookie_name');
+const parsed = parseJsonCookie(cookie);
+```
+
+### LocalStorage Utils (`src/utils/storage.ts`)
+```typescript
+const data = getStorageItem<MyType>('storage_key');
+setStorageItem('key', data);
+```
+
+### Validation Utils (`src/utils/validation.ts`)
+```typescript
+const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce ID formats
+```
+
+## APIs Used
+
+### Adobe Events API
+- **Endpoint**: `/api/event.json?meta=true` (relative to event domain)
+- **Method**: GET
+- **Auth**: None required (same-origin request)
+
+## Migration from JavaScript
+
+The original JavaScript files (`fetchEventData.js`, etc.) have been refactored into TypeScript with these improvements:
+
+### Before (JavaScript - Duplicated Code)
+```javascript
+// Each file had its own copy of:
+function log(message, data) { /* ... */ }
+function fetchWithTimeout(url, options, timeoutMs) { /* ... */ }
+function getCookie(name) { /* ... */ }
+// ... etc
+```
+
+### After (TypeScript - DRY)
+```typescript
+// Shared utilities imported from common modules:
+import { createLogger } from '../utils/logger.js';
+import { fetchWithTimeout } from '../utils/fetch.js';
+import { getCookie } from '../utils/cookie.js';
+```
+
+**Benefits**:
+- 🎯 Single source of truth for common functionality
+- 🐛 Easier bug fixes (fix once, affects all scripts)
+- 📏 Smaller codebase overall
+- 🔒 Type safety catches errors at compile time
+- 🧪 More testable and maintainable
+
+## Security Features
+
+✅ **Built-in protections**:
+1. **Response size validation**: 5MB limit prevents memory exhaustion attacks
+2. **Request timeouts**: 10-second default prevents hanging requests
+3. **Input validation**: Publisher IDs validated against UUID and Salesforce ID formats
+4. **Safe JSON parsing**: All parsing wrapped in try-catch blocks
+5. **No credentials required**: Scripts use DOM parsing and same-origin API calls
+
+## Build Output Details
+
+The build process produces highly optimized code:
 
 ```
-.
-├── fetchEventData.js     # Event & attendee data fetcher
-├── fetchPartnerData.js   # Partner cookie data extractor
-├── fetchPublisherId.js   # Publisher ID fetcher (API-based, for AEP)
-├── uglify.sh             # Minification script
-├── package.json          # Project metadata
-├── .gitignore            # Git ignore rules
-├── CLAUDE.md             # Claude Code guidance
-└── README.md             # This file
+📦 Processing: fetchEventData
+✅ fetchEventData:
+   Original:  3,456 bytes
+   Minified:  1,234 bytes
+   Savings:   64.3%
 ```
+
+Minification includes:
+- Variable name mangling
+- Dead code elimination
+- Expression optimization
+- Whitespace removal
+- Comment stripping (except important ones)
+
+## TypeScript Configuration
+
+The project uses strict TypeScript settings for maximum type safety:
+
+```json
+{
+  "strict": true,
+  "noUnusedLocals": true,
+  "noUnusedParameters": true,
+  "noImplicitReturns": true,
+  "noFallthroughCasesInSwitch": true
+}
+```
+
+## Browser Compatibility
+
+Target: ES2020+ (modern browsers)
+
+Supported environments:
+- Chrome/Edge 80+
+- Firefox 75+
+- Safari 13.1+
 
 ## License
 
 ISC
+
+## Support
+
+For issues or questions:
+1. Check existing documentation in this README
+2. Review TypeScript types and JSDoc comments in source files
+3. Examine the original JavaScript files for behavior reference

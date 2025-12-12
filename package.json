@@ -1,0 +1,31 @@
+{
+  "name": "aep-custom-scripts",
+  "version": "2.0.0",
+  "description": "TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npm run clean && npm run build:ts && npm run build:scripts",
+    "build:ts": "tsc",
+    "build:scripts": "node scripts/minify.js",
+    "build:simple": "npm run clean && tsc",
+    "clean": "rm -rf dist build",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "adobe",
+    "aep",
+    "data-collection",
+    "analytics",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "terser": "^5.37.0",
+    "typescript": "^5.7.2",
+    "uglify-js": "^3.19.3"
+  }
+}
