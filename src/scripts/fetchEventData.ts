@@ -1,7 +1,7 @@
 /**
  * Event Data Fetcher for Adobe Experience Platform (AEP)
  *
- * Fetches event and attendee data from Adobe Events pages.
+ * Fetches event data from Adobe Events pages.
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
@@ -12,7 +12,6 @@ import {
   isAbortError,
   isNetworkError,
 } from '../utils/fetch.js';
-import { getStorageItem } from '../utils/storage.js';
 
 // Types
 export interface EventDataConfig {
@@ -20,18 +19,9 @@ export interface EventDataConfig {
   debug: boolean;
 }
 
-export interface EventDataResult {
-  eventData: unknown;
-  attendeeData: unknown;
-}
-
 // Constants
 const API = {
   EVENT_ENDPOINT: '/api/event.json?meta=true',
-};
-
-const STORAGE_KEYS = {
-  ATTENDEE: 'attendeaseMember',
 };
 
 /**
@@ -72,27 +62,12 @@ async function fetchEventData(
 }
 
 /**
- * Gets attendee data from localStorage
- */
-function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
-  const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
-
-  if (!attendeeData) {
-    logger.log('No attendee data in localStorage');
-    return null;
-  }
-
-  logger.log('Found attendee data', attendeeData);
-  return attendeeData;
-}
-
-/**
  * Main entry point for the event data fetcher
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
 export async function fetchEventDataScript(
   testMode: boolean = false
-): Promise<EventDataResult | null> {
+): Promise<unknown> {
   const config: EventDataConfig = {
     timeout: 10000,
     debug: testMode,
@@ -106,21 +81,12 @@ export async function fetchEventDataScript(
     // Fetch event data
     const eventData = await fetchEventData(config, logger);
 
-    // Get attendee data from localStorage
-    const attendeeData = getAttendeeData(logger);
-
-    // Return combined data
-    const result: EventDataResult = {
-      eventData,
-      attendeeData,
-    };
-
-    logger.testResult(result);
+    logger.testResult(eventData);
     if (!testMode) {
-      logger.log('Returning combined data', result);
+      logger.log('Returning event data', eventData);
     }
 
-    return result;
+    return eventData;
   } catch (error) {
     // Handle timeout
     if (isAbortError(error)) {
