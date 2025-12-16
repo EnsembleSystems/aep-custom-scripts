@@ -1,7 +1,7 @@
 /**
- * Publisher ID Fetcher for Adobe Experience Platform (AEP)
+ * Publisher ID Extractor for Adobe Experience Platform (AEP)
  *
- * Fetches publisher/owner ID by parsing DOM links.
+ * Extracts publisher/owner ID by parsing DOM links.
  * Looks for <a> tags with href starting with "/publisher/"
  */
 
@@ -54,20 +54,20 @@ function extractPublisherId(
 }
 
 /**
- * Main entry point for the publisher ID fetcher
+ * Main entry point for the publisher ID extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export async function fetchPublisherIdScript(
+export async function extractPublisherIdScript(
   testMode: boolean = false
 ): Promise<string | null> {
   const config: PublisherIdConfig = {
     debug: testMode,
   };
 
-  const logger = createLogger(config.debug, 'Publisher ID DOM', testMode);
+  const logger = createLogger(config.debug, 'Publisher ID', testMode);
 
   try {
-    logger.testHeader('PUBLISHER ID FETCHER (DOM) - TEST MODE');
+    logger.testHeader('PUBLISHER ID EXTRACTOR - TEST MODE');
 
     logger.log('Searching for publisher links in DOM');
 

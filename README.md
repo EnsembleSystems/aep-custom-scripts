@@ -59,7 +59,7 @@ After building, you'll find these minified scripts in `build/`:
 - **`fetchEventData.min.js`** - Adobe Events event data fetcher
 - **`extractAttendeeData.min.js`** - Adobe Events attendee data extractor
 - **`fetchPartnerData.min.js`** - Partner cookie data extractor
-- **`fetchPublisherId.min.js`** - Publisher/Owner ID fetcher
+- **`extractPublisherId.min.js`** - Publisher/Owner ID extractor
 - **`helloWorld.min.js`** - Template example (for reference)
 
 ## 📥 Download Latest Scripts
@@ -71,7 +71,7 @@ Ready-to-deploy minified scripts (committed to repository):
 - **[fetchEventData.min.js](build/fetchEventData.min.js)** - Adobe Events event data fetcher
 - **[extractAttendeeData.min.js](build/extractAttendeeData.min.js)** - Adobe Events attendee data extractor
 - **[fetchPartnerData.min.js](build/fetchPartnerData.min.js)** - Partner cookie extractor
-- **[fetchPublisherId.min.js](build/fetchPublisherId.min.js)** - Publisher ID fetcher
+- **[extractPublisherId.min.js](build/extractPublisherId.min.js)** - Publisher ID extractor
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
 
@@ -93,8 +93,9 @@ aep-custom-scripts/
 ├── src/
 │   ├── scripts/           # Main script implementations
 │   │   ├── fetchEventData.ts
+│   │   ├── extractAttendeeData.ts
 │   │   ├── fetchPartnerData.ts
-│   │   ├── fetchPublisherId.ts
+│   │   ├── extractPublisherId.ts
 │   │   └── helloWorld.ts  # Template for new scripts
 │   ├── utils/             # Shared utilities (DRY)
 │   │   ├── logger.ts      # Consistent logging
@@ -108,8 +109,9 @@ aep-custom-scripts/
 │   └── buildWithEsbuild.js  # esbuild-based build script
 ├── build/                 # Minified scripts (ready for AEP)
 │   ├── fetchEventData.min.js
+│   ├── extractAttendeeData.min.js
 │   ├── fetchPartnerData.min.js
-│   └── fetchPublisherId.min.js
+│   └── extractPublisherId.min.js
 ├── tsconfig.json          # TypeScript configuration
 └── package.json           # Project metadata
 ```
@@ -164,9 +166,9 @@ const config = {
 };
 ```
 
-### 4. Publisher ID Fetcher (`fetchPublisherId`)
+### 4. Publisher ID Extractor (`extractPublisherId`)
 
-Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
+Extracts publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 
 **Use on**: Adobe Exchange pages with publisher links
 
