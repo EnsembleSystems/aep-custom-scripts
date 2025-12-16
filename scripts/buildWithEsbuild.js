@@ -72,7 +72,7 @@ async function buildScript(scriptPath) {
       minify: false,
       format: 'esm', // Use ESM to avoid IIFE wrapper
       platform: 'browser',
-      target: 'es2020',
+      target: 'es2017', // ES2017 for AEP (native async/await, cleaner output)
       write: false,
       treeShaking: true,
       legalComments: 'none',
@@ -87,8 +87,8 @@ async function buildScript(scriptPath) {
 
     // Remove export statements since we're wrapping in IIFE
     bundledCode = bundledCode
-      .replace(/export\s+/g, '') // Remove all export keywords
-      .replace(/export\s*{[^}]*};?/g, ''); // Remove export {...}
+      .replace(/export\s*\{[^}]*\};?\s*/g, '') // Remove export { ... }; blocks first
+      .replace(/export\s+/g, ''); // Then remove remaining export keywords
 
     // Find the main function name
     const functionCallMatch = bundledCode.match(/async function (\w+Script)/);
@@ -102,23 +102,30 @@ async function buildScript(scriptPath) {
       process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
     // Wrap in AEP IIFE pattern with async support
-    const wrappedCode = `return (async () => {
+    // Use variable assignment first to avoid linter warnings about standalone return
+    const wrappedCode = `var result = (async () => {
   const TEST_MODE = ${testMode};
 
 ${bundledCode}
 
   return await ${mainFunctionName}(TEST_MODE);
-})();`;
+})();
+
+return result;`;
 
     // Now minify the complete wrapped code
+    // For AEP compatibility, we only minify identifiers (variable names)
+    // Keep syntax and whitespace readable for AEP's linter
     console.log(`   Minifying...`);
     const minifyResult = await esbuild.build({
       stdin: {
         contents: wrappedCode,
         loader: 'js',
       },
-      minify: true,
-      target: 'es2020',
+      minifyWhitespace: false, // Keep whitespace for readability
+      minifySyntax: false, // Keep syntax readable for AEP linter
+      minifyIdentifiers: true, // Only minify variable names
+      target: 'es2017', // ES2017 for AEP (native async/await, cleaner output)
       write: false,
       legalComments: 'none',
       logLevel: 'silent',

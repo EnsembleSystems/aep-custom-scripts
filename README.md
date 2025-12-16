@@ -7,7 +7,8 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 - ✅ **TypeScript-first**: Full type safety and modern JavaScript features
 - 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
 - ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
-- 🗜️ **Highly Optimized**: Production-ready minified outputs (79% smaller than previous builds)
+- 🎯 **ES2017 Output**: Native async/await, clean readable code for AEP
+- 🗜️ **Optimized Minification**: ~20% size reduction with AEP-friendly formatting
 - 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
 - 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
 - 🚀 **Zero Configuration**: Direct script-to-bundle workflow
@@ -28,13 +29,13 @@ cp src/scripts/helloWorld.ts src/scripts/myScript.ts
 
 # 2. Edit your script (add your logic)
 
-# 3. Build (wrappers auto-generated!)
-npm run build
+# 3. Build
+TEST_MODE=false npm run build
 
 # 4. Deploy build/myScript.min.js to AEP
 ```
 
-**That's it!** No manual wrapper creation needed!
+**That's it!** esbuild handles everything automatically!
 
 ### Building Existing Scripts
 
@@ -45,16 +46,18 @@ npm run build
 This automatically (**using esbuild**):
 
 1. Auto-discovers all scripts in `src/scripts/`
-2. Bundles each script with all dependencies inlined
-3. Wraps in AEP-compatible IIFE format
-4. Minifies with esbuild's built-in minifier (79% average reduction)
-5. Outputs production-ready files to `build/`
+2. Bundles each script with all utilities inlined
+3. Transpiles to ES2017 (native async/await)
+4. Wraps in AEP-compatible IIFE format
+5. Minifies identifiers while keeping syntax readable
+6. Outputs production-ready files to `build/` (~4-5KB each)
 
 ### Available Scripts
 
 After building, you'll find these minified scripts in `build/`:
 
-- **`fetchEventData.min.js`** - Adobe Events data fetcher
+- **`fetchEventData.min.js`** - Adobe Events event data fetcher
+- **`extractAttendeeData.min.js`** - Adobe Events attendee data extractor
 - **`fetchPartnerData.min.js`** - Partner cookie data extractor
 - **`fetchPublisherId.min.js`** - Publisher/Owner ID fetcher
 - **`helloWorld.min.js`** - Template example (for reference)
@@ -65,7 +68,8 @@ After building, you'll find these minified scripts in `build/`:
 
 Ready-to-deploy minified scripts (committed to repository):
 
-- **[fetchEventData.min.js](build/fetchEventData.min.js)** - Adobe Events data fetcher
+- **[fetchEventData.min.js](build/fetchEventData.min.js)** - Adobe Events event data fetcher
+- **[extractAttendeeData.min.js](build/extractAttendeeData.min.js)** - Adobe Events attendee data extractor
 - **[fetchPartnerData.min.js](build/fetchPartnerData.min.js)** - Partner cookie extractor
 - **[fetchPublisherId.min.js](build/fetchPublisherId.min.js)** - Publisher ID fetcher
 
@@ -114,20 +118,13 @@ aep-custom-scripts/
 
 ### 1. Event Data Fetcher (`fetchEventData`)
 
-Fetches event and attendee data from Adobe Events pages.
+Fetches event data from Adobe Events pages via API.
 
 **Use on**: `*.adobeevents.com` pages
 
-**Returns**:
+**Returns**: Event data object (from `/api/event.json?meta=true`) or `null` on error
 
-```typescript
-{
-  eventData: unknown,      // From /api/event.json?meta=true
-  attendeeData: unknown    // From localStorage key 'attendeaseMember'
-}
-```
-
-**Configuration** (in wrapper file):
+**Configuration** (default in source):
 
 ```typescript
 const config = {
@@ -136,19 +133,29 @@ const config = {
 };
 ```
 
-### 2. Partner Data Fetcher (`fetchPartnerData`)
+### 2. Attendee Data Extractor (`extractAttendeeData`)
+
+Extracts attendee data from localStorage on Adobe Events pages.
+
+**Use on**: `*.adobeevents.com` pages
+
+**Returns**: Attendee data object (from localStorage key `attendeaseMember`) or `null` if not found
+
+**Configuration** (default in source):
+
+```typescript
+const config = {
+  debug: false, // Enable debug logging
+};
+```
+
+### 3. Partner Data Fetcher (`fetchPartnerData`)
 
 Extracts partner data from browser cookies.
 
-**Returns**:
+**Returns**: Partner data object (parsed from cookie, URL-decoded JSON) or `null` if not found
 
-```typescript
-{
-  partnerData: unknown; // Parsed from cookie (URL-decoded JSON)
-}
-```
-
-**Configuration** (in wrapper file):
+**Configuration** (default in source):
 
 ```typescript
 const config = {
@@ -157,7 +164,7 @@ const config = {
 };
 ```
 
-### 3. Publisher ID Fetcher (`fetchPublisherId`)
+### 4. Publisher ID Fetcher (`fetchPublisherId`)
 
 Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 
@@ -171,7 +178,7 @@ Fetches publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 
 **Returns**: `string` (publisher/owner ID) or `null`
 
-**Configuration** (in wrapper file):
+**Configuration** (default in source):
 
 ```typescript
 const config = {
@@ -185,29 +192,23 @@ const config = {
 
 For testing scripts in the browser console before deploying to AEP:
 
-### Method 1: Using Compiled TypeScript
+### Quick Test Mode
 
-1. Build the project: `npm run build`
-2. Open the compiled file from `dist/wrappers/`
-3. Set `TEST_MODE = true` in the file
-4. Copy the entire file contents
-5. In browser console, change `return (async () => {` to `await (async () => {`
-6. Press Enter
+1. Build with test mode enabled:
 
-### Method 2: Using Source TypeScript (Recommended for Development)
+   ```bash
+   TEST_MODE=true npm run build
+   ```
 
-Use the modular scripts in `src/scripts/` which export testable functions:
+2. Open the minified file from `build/<script>.min.js`
 
-```typescript
-// In browser console (after importing somehow, or in a test environment)
-import { fetchEventDataScript } from './dist/scripts/fetchEventData.js';
+3. Copy entire file contents
 
-// Test mode = true
-const result = await fetchEventDataScript(true);
-console.log(result);
-```
+4. Paste into browser console and press Enter (the IIFE executes automatically)
 
-### Example Console Output (Test Mode)
+5. Check console for `[Script Name Test]` output with formatted results
+
+**Example Output**:
 
 ```
 ================================================================================
@@ -215,13 +216,12 @@ EVENT DATA EXTRACTOR - TEST MODE
 ================================================================================
 [Event Data Test] Fetching event data from https://...
 [Event Data Test] Event data received {...}
-[Event Data Test] Found attendee data {...}
 ================================================================================
 RESULT:
 ================================================================================
 {
-  "eventData": { ... },
-  "attendeeData": { ... }
+  "eventId": "...",
+  "eventName": "..."
 }
 ================================================================================
 ```
@@ -234,8 +234,8 @@ When you make changes to the TypeScript source:
 
 ```bash
 # 1. Make your changes in src/
-# 2. Build the minified scripts
-npm run build
+# 2. Build the minified scripts (IMPORTANT: Set TEST_MODE=false for production!)
+TEST_MODE=false npm run build
 
 # 3. Commit both source and built files
 git add src/ build/*.min.js
@@ -243,7 +243,10 @@ git commit -m "Update feature XYZ"
 git push
 ```
 
-**Important**: Built files (`build/*.min.js`) are committed to the repository so teammates always have access to the latest scripts.
+**Important**:
+
+- Built files (`build/*.min.js`) are committed to the repository so teammates always have access to the latest scripts
+- Always use `TEST_MODE=false` for production builds to ensure debug mode is disabled
 
 ### For Teammates: Getting Latest Scripts
 
@@ -265,7 +268,7 @@ git pull
 
 ```bash
 npm install
-npm run build
+TEST_MODE=false npm run build
 # Files generated in build/*.min.js
 ```
 
@@ -284,7 +287,7 @@ For major versions or production deployments:
 
 ```bash
 # 1. Build and test
-npm run build
+TEST_MODE=false npm run build
 
 # 2. Commit changes
 git add .
@@ -297,7 +300,7 @@ git push origin v2.1.0
 # 4. Create GitHub Release
 # - Go to GitHub → Releases → "Create new release"
 # - Choose tag v2.1.0
-# - Upload the 3 files from build/*.min.js
+# - Upload the files from build/*.min.js
 # - Add release notes describing changes
 ```
 
@@ -318,14 +321,14 @@ Teammates can then download from the [Releases](../../releases) page for stable,
 
 3. **Build**:
    ```bash
-   npm run build
+   TEST_MODE=false npm run build
    ```
 
 That's it! The esbuild system:
 
 - ✅ Auto-discovers your new script
-- ✅ Auto-inlines your imported utilities
-- ✅ Bundles and minifies everything automatically
+- ✅ Auto-bundles your imported utilities
+- ✅ Transpiles to ES2017 and minifies automatically
 
 **See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed examples and patterns.**
 
@@ -425,34 +428,34 @@ import { getCookie } from '../utils/cookie.js';
 
 ## Build Output Details
 
-The build process with **esbuild** produces highly optimized code:
+The build process with **esbuild** produces AEP-compatible code:
 
 ```
 📦 Building: fetchEventData
    Bundling with esbuild...
    Minifying...
 ✅ fetchEventData:
-   Original:  3,621 bytes (TypeScript source)
-   Bundled:   3,902 bytes
-   Wrapped:   4,007 bytes
-   Minified:  2,073 bytes
-   Savings:   48.3% (from wrapped)
+   Original:  2,453 bytes (TypeScript source)
+   Bundled:   5,148 bytes
+   Wrapped:   5,275 bytes
+   Minified:  4,200 bytes
+   Savings:   20.4% (from wrapped)
 ```
 
-**Performance improvements vs. previous build system**:
+**Key Features**:
 
-- 73-87% smaller bundle sizes
-- 10-100x faster build times
-- Cleaner output (no webpack runtime code)
-- Simpler build process (no complex transformations)
+- ✅ **ES2017 output**: Native async/await (no generator transpilation)
+- ✅ **Readable syntax**: Line breaks and proper formatting for AEP linter
+- ✅ **Minified identifiers**: Variable names shortened (a, b, c, etc.)
+- ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
+- ✅ **Tree-shaking**: Dead code elimination
 
-esbuild minification includes:
+**Minification Strategy**:
 
-- Variable name mangling
-- Dead code elimination (tree-shaking)
-- Expression optimization
-- Whitespace removal
-- Comment stripping
+- ✅ Variable name mangling (saves ~20%)
+- ✅ Whitespace preserved (AEP linter compatibility)
+- ✅ Syntax preserved (no comma operators)
+- ✅ Comments preserved (JSDoc in output)
 
 ## TypeScript Configuration
 
@@ -470,13 +473,21 @@ The project uses strict TypeScript settings for maximum type safety:
 
 ## Browser Compatibility
 
-Target: ES2020+ (modern browsers)
+**Output Target**: ES2017
 
-Supported environments:
+**Supported Environments**:
 
-- Chrome/Edge 80+
-- Firefox 75+
-- Safari 13.1+
+- Chrome/Edge 58+ (2017+)
+- Firefox 52+ (2017+)
+- Safari 10.1+ (2017+)
+
+**Key ES2017 Features Used**:
+
+- Native async/await
+- Object spread operator (transpiled)
+- Template literals
+- Arrow functions
+- Classes
 
 ## License
 
