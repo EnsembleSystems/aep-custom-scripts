@@ -13,10 +13,6 @@ export interface PartnerDataConfig {
   cookieKey: string;
 }
 
-export interface PartnerDataResult {
-  partnerData: unknown;
-}
-
 // Constants
 const DEFAULT_COOKIE_KEY = 'partner_data';
 
@@ -53,7 +49,7 @@ function getPartnerData(
 export async function fetchPartnerDataScript(
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
-): Promise<PartnerDataResult | null> {
+): Promise<unknown> {
   const config: PartnerDataConfig = {
     debug: testMode,
     cookieKey,
@@ -70,17 +66,12 @@ export async function fetchPartnerDataScript(
     // Get partner data from cookies
     const partnerData = getPartnerData(config.cookieKey, logger);
 
-    // Return partner data
-    const result: PartnerDataResult = {
-      partnerData,
-    };
-
-    logger.testResult(result);
+    logger.testResult(partnerData);
     if (!testMode) {
-      logger.log('Returning partner data', result);
+      logger.log('Returning partner data', partnerData);
     }
 
-    return result;
+    return partnerData;
   } catch (error) {
     logger.error('Unexpected error fetching partner data:', error);
     return null;
