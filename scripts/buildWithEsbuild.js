@@ -96,27 +96,46 @@ async function buildScript(scriptPath) {
       .map((line) => (line.trim() ? '  ' + line : line))
       .join('\n');
 
-    // Find the main function name
-    const functionCallMatch = bundledCode.match(/async function (\w+Script)/);
-    const mainFunctionName = functionCallMatch
-      ? functionCallMatch[1]
-      : `${scriptName}Script`;
+    // Find the main function name and check if it's async
+    const asyncFunctionMatch = bundledCode.match(/async function (\w+Script)/);
+    const syncFunctionMatch = bundledCode.match(/function (\w+Script)/);
+
+    const isAsync = !!asyncFunctionMatch;
+    let mainFunctionName;
+    if (asyncFunctionMatch) {
+      [, mainFunctionName] = asyncFunctionMatch;
+    } else if (syncFunctionMatch) {
+      [, mainFunctionName] = syncFunctionMatch;
+    } else {
+      mainFunctionName = `${scriptName}Script`;
+    }
 
     // Get TEST_MODE from environment variable (defaults to false for production)
     // Developers can set TEST_MODE=true locally, but it won't be committed
     const testMode =
       process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
-    // Wrap in AEP IIFE pattern with async support
-    // Execute the async function immediately and return the result
-    // This ensures AEP gets the Promise which it can then await
-    const wrappedCode = `return (async () => {
+    // Wrap in AEP IIFE pattern
+    // For async functions: wrap in async IIFE and await the result
+    // For sync functions: wrap in regular IIFE and return directly
+    let wrappedCode;
+    if (isAsync) {
+      wrappedCode = `return (async () => {
   const TEST_MODE = ${testMode};
 
 ${indentedCode}
 
   return await ${mainFunctionName}(TEST_MODE);
 })();`;
+    } else {
+      wrappedCode = `return (() => {
+  const TEST_MODE = ${testMode};
+
+${indentedCode}
+
+  return ${mainFunctionName}(TEST_MODE);
+})();`;
+    }
 
     // Write the final code (no minification - AEP does this for us)
     writeFileSync(outputPath, wrappedCode, 'utf8');

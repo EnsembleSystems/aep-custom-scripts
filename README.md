@@ -48,8 +48,10 @@ This automatically (**using esbuild**):
 1. Auto-discovers all scripts in `src/scripts/`
 2. Bundles each script with all utilities inlined
 3. Transpiles to ES2017 (native async/await)
-4. Wraps in AEP-compatible async IIFE format
-5. Outputs readable, production-ready files to `build/` (~5KB each)
+4. Auto-detects async vs sync and wraps accordingly:
+   - Async (API calls): `return (async () => { ... })();`
+   - Sync (cookies/DOM/localStorage): `return (() => { ... })();`
+5. Outputs readable, production-ready files to `build/` (~4-5KB each)
 
 **Note**: No minification applied - AEP handles that automatically!
 
@@ -462,7 +464,9 @@ The build process with **esbuild** produces AEP-compatible code:
 
 - ✅ **ES2017 output**: Native async/await (no generator transpilation)
 - ✅ **Readable code**: Full variable names and formatting for easier debugging
-- ✅ **Returns Promise**: AEP automatically awaits async IIFE results
+- ✅ **Smart wrapping**: Auto-detects async vs sync functions
+  - Async scripts (API calls) return Promises
+  - Sync scripts (cookie/DOM/localStorage) return values directly
 - ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
 - ✅ **Tree-shaking**: Dead code elimination
 

@@ -57,9 +57,9 @@ function extractPublisherId(
  * Main entry point for the publisher ID extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export async function extractPublisherIdScript(
+export function extractPublisherIdScript(
   testMode: boolean = false
-): Promise<string | null> {
+): string | null {
   const config: PublisherIdConfig = {
     debug: testMode,
   };

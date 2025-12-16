@@ -58,10 +58,10 @@ function getPartnerData(
  * @param testMode - Set to true for console testing, false for AEP deployment
  * @param cookieKey - Optional custom cookie key (defaults to 'partner_data')
  */
-export async function extractPartnerDataScript(
+export function extractPartnerDataScript(
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
-): Promise<unknown> {
+): unknown {
   const config: PartnerDataConfig = {
     debug: testMode,
     cookieKey,

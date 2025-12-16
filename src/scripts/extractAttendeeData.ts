@@ -37,9 +37,7 @@ function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the attendee data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export async function extractAttendeeDataScript(
-  testMode: boolean = false
-): Promise<unknown> {
+export function extractAttendeeDataScript(testMode: boolean = false): unknown {
   const config: AttendeeDataConfig = {
     debug: testMode,
   };
