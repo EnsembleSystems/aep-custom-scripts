@@ -73,8 +73,8 @@ jobs:
         if: steps.check-changes.outputs.has_changes == 'true'
         run: |
           # Force add build files (overwrites any conflicts)
-          git add -f build/*.min.js
+          git add -f build/*.js
           # Commit with --no-verify to skip hooks (since we're in CI)
-          git commit -m "chore: rebuild minified scripts [skip ci]" --no-verify || exit 0
+          git commit -m "chore: rebuild bundled scripts [skip ci]" --no-verify || exit 0
           # Force push to overwrite any remote changes
           git push --force origin HEAD:${{ github.ref_name }}
