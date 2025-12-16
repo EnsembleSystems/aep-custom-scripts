@@ -1,7 +1,7 @@
 /**
- * Partner Data Fetcher for Adobe Experience Platform (AEP)
+ * Partner Data Extractor for Adobe Experience Platform (AEP)
  *
- * Extracts partner data from browser cookies.
+ * Extracts partner data from browser cookies and returns the DXP value.
  */
 
 import { createLogger } from '../utils/logger.js';
@@ -17,7 +17,7 @@ export interface PartnerDataConfig {
 const DEFAULT_COOKIE_KEY = 'partner_data';
 
 /**
- * Gets partner data from cookies
+ * Gets partner data from cookies and extracts the DXP value
  */
 function getPartnerData(
   cookieKey: string,
@@ -37,16 +37,28 @@ function getPartnerData(
     return null;
   }
 
-  logger.log('Found partner data', partnerData);
+  // Extract DXP value if it exists
+  if (
+    typeof partnerData === 'object' &&
+    partnerData !== null &&
+    'DXP' in partnerData
+  ) {
+    const dxpValue = (partnerData as Record<string, unknown>).DXP;
+    logger.log('Found partner data (DXP extracted)', dxpValue);
+    return dxpValue;
+  }
+
+  // If no DXP key, return the whole object
+  logger.log('Found partner data (no DXP key)', partnerData);
   return partnerData;
 }
 
 /**
- * Main entry point for the partner data fetcher
+ * Main entry point for the partner data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  * @param cookieKey - Optional custom cookie key (defaults to 'partner_data')
  */
-export async function fetchPartnerDataScript(
+export async function extractPartnerDataScript(
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
 ): Promise<unknown> {
@@ -63,17 +75,17 @@ export async function fetchPartnerDataScript(
       `Cookie Key: ${config.cookieKey}`
     );
 
-    // Get partner data from cookies
+    // Get partner data from cookies (DXP value extracted)
     const partnerData = getPartnerData(config.cookieKey, logger);
 
     logger.testResult(partnerData);
     if (!testMode) {
-      logger.log('Returning partner data', partnerData);
+      logger.log('Returning partner data (DXP value)', partnerData);
     }
 
     return partnerData;
   } catch (error) {
-    logger.error('Unexpected error fetching partner data:', error);
+    logger.error('Unexpected error extracting partner data:', error);
     return null;
   }
 }

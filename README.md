@@ -8,7 +8,7 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 - 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
 - ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
 - 🎯 **ES2017 Output**: Native async/await, clean readable code for AEP
-- 🗜️ **Optimized Minification**: ~20% size reduction with AEP-friendly formatting
+- 📖 **Readable Output**: No minification - AEP handles that automatically
 - 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
 - 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
 - 🚀 **Zero Configuration**: Direct script-to-bundle workflow
@@ -32,7 +32,7 @@ cp src/scripts/helloWorld.ts src/scripts/myScript.ts
 # 3. Build
 TEST_MODE=false npm run build
 
-# 4. Deploy build/myScript.min.js to AEP
+# 4. Deploy build/myScript.js to AEP
 ```
 
 **That's it!** esbuild handles everything automatically!
@@ -48,30 +48,31 @@ This automatically (**using esbuild**):
 1. Auto-discovers all scripts in `src/scripts/`
 2. Bundles each script with all utilities inlined
 3. Transpiles to ES2017 (native async/await)
-4. Wraps in AEP-compatible IIFE format
-5. Minifies identifiers while keeping syntax readable
-6. Outputs production-ready files to `build/` (~4-5KB each)
+4. Wraps in AEP-compatible async IIFE format
+5. Outputs readable, production-ready files to `build/` (~5KB each)
+
+**Note**: No minification applied - AEP handles that automatically!
 
 ### Available Scripts
 
-After building, you'll find these minified scripts in `build/`:
+After building, you'll find these bundled scripts in `build/`:
 
-- **`fetchEventData.min.js`** - Adobe Events event data fetcher
-- **`extractAttendeeData.min.js`** - Adobe Events attendee data extractor
-- **`fetchPartnerData.min.js`** - Partner cookie data extractor
-- **`extractPublisherId.min.js`** - Publisher/Owner ID extractor
-- **`helloWorld.min.js`** - Template example (for reference)
+- **`fetchEventData.js`** - Adobe Events event data fetcher
+- **`extractAttendeeData.js`** - Adobe Events attendee data extractor
+- **`extractPartnerData.js`** - Partner cookie data extractor
+- **`extractPublisherId.js`** - Publisher/Owner ID extractor
+- **`helloWorld.js`** - Template example (for reference)
 
 ## 📥 Download Latest Scripts
 
 ### Quick Access for Teammates
 
-Ready-to-deploy minified scripts (committed to repository):
+Ready-to-deploy bundled scripts (committed to repository):
 
-- **[fetchEventData.min.js](build/fetchEventData.min.js)** - Adobe Events event data fetcher
-- **[extractAttendeeData.min.js](build/extractAttendeeData.min.js)** - Adobe Events attendee data extractor
-- **[fetchPartnerData.min.js](build/fetchPartnerData.min.js)** - Partner cookie extractor
-- **[extractPublisherId.min.js](build/extractPublisherId.min.js)** - Publisher ID extractor
+- **[fetchEventData.js](build/fetchEventData.js)** - Adobe Events event data fetcher
+- **[extractAttendeeData.js](build/extractAttendeeData.js)** - Adobe Events attendee data extractor
+- **[extractPartnerData.js](build/extractPartnerData.js)** - Partner cookie extractor
+- **[extractPublisherId.js](build/extractPublisherId.js)** - Publisher ID extractor
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
 
@@ -82,9 +83,11 @@ For stable, versioned deployments see [Releases](../../releases) page.
 ## Deploying to AEP
 
 1. Download the script you need from links above (or run `npm run build` locally)
-2. Copy the **entire** minified code
+2. Copy the **entire** bundled code
 3. Paste into AEP Data Element as custom code
 4. Save and test!
+
+**Note**: The code you paste will be readable (not minified). AEP automatically minifies custom code blocks when you save them.
 
 ## Project Structure
 
@@ -94,7 +97,7 @@ aep-custom-scripts/
 │   ├── scripts/           # Main script implementations
 │   │   ├── fetchEventData.ts
 │   │   ├── extractAttendeeData.ts
-│   │   ├── fetchPartnerData.ts
+│   │   ├── extractPartnerData.ts
 │   │   ├── extractPublisherId.ts
 │   │   └── helloWorld.ts  # Template for new scripts
 │   ├── utils/             # Shared utilities (DRY)
@@ -107,11 +110,11 @@ aep-custom-scripts/
 │   └── index.ts           # Main exports
 ├── scripts/
 │   └── buildWithEsbuild.js  # esbuild-based build script
-├── build/                 # Minified scripts (ready for AEP)
-│   ├── fetchEventData.min.js
-│   ├── extractAttendeeData.min.js
-│   ├── fetchPartnerData.min.js
-│   └── extractPublisherId.min.js
+├── build/                 # Bundled scripts (ready for AEP)
+│   ├── fetchEventData.js
+│   ├── extractAttendeeData.js
+│   ├── extractPartnerData.js
+│   └── extractPublisherId.js
 ├── tsconfig.json          # TypeScript configuration
 └── package.json           # Project metadata
 ```
@@ -151,11 +154,20 @@ const config = {
 };
 ```
 
-### 3. Partner Data Fetcher (`fetchPartnerData`)
+### 3. Partner Data Extractor (`extractPartnerData`)
 
-Extracts partner data from browser cookies.
+Extracts partner data from browser cookies and returns the DXP value.
 
-**Returns**: Partner data object (parsed from cookie, URL-decoded JSON) or `null` if not found
+**How it works**:
+
+- Reads the `partner_data` cookie (customizable)
+- Parses the cookie value as URL-decoded JSON
+- Extracts and returns the value from the `DXP` key
+- Falls back to returning the entire object if no `DXP` key exists
+
+**Returns**: DXP value object (e.g., `{"status": "NOT_PARTNER"}`) or `null` if not found
+
+**Example**: Cookie `{"DXP": {"status": "NOT_PARTNER"}}` → Returns `{"status": "NOT_PARTNER"}`
 
 **Configuration** (default in source):
 
@@ -202,7 +214,7 @@ For testing scripts in the browser console before deploying to AEP:
    TEST_MODE=true npm run build
    ```
 
-2. Open the minified file from `build/<script>.min.js`
+2. Open the bundled file from `build/<script>.js`
 
 3. Copy entire file contents
 
@@ -236,26 +248,27 @@ When you make changes to the TypeScript source:
 
 ```bash
 # 1. Make your changes in src/
-# 2. Build the minified scripts (IMPORTANT: Set TEST_MODE=false for production!)
+# 2. Build the bundled scripts (IMPORTANT: Set TEST_MODE=false for production!)
 TEST_MODE=false npm run build
 
 # 3. Commit both source and built files
-git add src/ build/*.min.js
+git add src/ build/*.js
 git commit -m "Update feature XYZ"
 git push
 ```
 
 **Important**:
 
-- Built files (`build/*.min.js`) are committed to the repository so teammates always have access to the latest scripts
+- Built files (`build/*.js`) are committed to the repository so teammates always have access to the latest scripts
 - Always use `TEST_MODE=false` for production builds to ensure debug mode is disabled
+- Output files are readable (not minified) - AEP applies minification when you save them
 
 ### For Teammates: Getting Latest Scripts
 
 **Option A - Via GitHub** (No build required):
 
 1. Browse to [build/](build/) folder in GitHub
-2. Click on the `.min.js` file you need
+2. Click on the `.js` file you need
 3. Click "Raw" button
 4. Copy all and paste into AEP
 
@@ -263,7 +276,7 @@ git push
 
 ```bash
 git pull
-# Files are in build/*.min.js
+# Files are in build/*.js
 ```
 
 **Option C - Build Yourself**:
@@ -271,13 +284,13 @@ git pull
 ```bash
 npm install
 TEST_MODE=false npm run build
-# Files generated in build/*.min.js
+# Files generated in build/*.js
 ```
 
 ### Available NPM Scripts
 
 ```bash
-npm run build              # Full build: clean + bundle + minify with esbuild
+npm run build              # Full build: clean + bundle with esbuild
 npm run clean              # Remove dist/ and build/
 npm run dev                # TypeScript watch mode
 npm run type-check         # Type-check without emitting files
@@ -302,11 +315,13 @@ git push origin v2.1.0
 # 4. Create GitHub Release
 # - Go to GitHub → Releases → "Create new release"
 # - Choose tag v2.1.0
-# - Upload the files from build/*.min.js
+# - Upload the files from build/*.js (bundled, readable code)
 # - Add release notes describing changes
 ```
 
 Teammates can then download from the [Releases](../../releases) page for stable, production-ready versions.
+
+**Note**: The bundled files are readable JavaScript - AEP will minify them automatically when saved.
 
 ### Adding a New Script
 
@@ -330,7 +345,8 @@ That's it! The esbuild system:
 
 - ✅ Auto-discovers your new script
 - ✅ Auto-bundles your imported utilities
-- ✅ Transpiles to ES2017 and minifies automatically
+- ✅ Transpiles to ES2017 automatically
+- ✅ Outputs readable code (AEP handles minification)
 
 **See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed examples and patterns.**
 
@@ -435,28 +451,26 @@ The build process with **esbuild** produces AEP-compatible code:
 ```
 📦 Building: fetchEventData
    Bundling with esbuild...
-   Minifying...
 ✅ fetchEventData:
    Original:  2,453 bytes (TypeScript source)
    Bundled:   5,148 bytes
-   Wrapped:   5,275 bytes
-   Minified:  4,200 bytes
-   Savings:   20.4% (from wrapped)
+   Wrapped:   5,253 bytes
+   Output:    /path/to/build/fetchEventData.js
 ```
 
 **Key Features**:
 
 - ✅ **ES2017 output**: Native async/await (no generator transpilation)
-- ✅ **Readable syntax**: Line breaks and proper formatting for AEP linter
-- ✅ **Minified identifiers**: Variable names shortened (a, b, c, etc.)
+- ✅ **Readable code**: Full variable names and formatting for easier debugging
+- ✅ **Returns Promise**: AEP automatically awaits async IIFE results
 - ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
 - ✅ **Tree-shaking**: Dead code elimination
 
-**Minification Strategy**:
+**Output Strategy**:
 
-- ✅ Variable name mangling (saves ~20%)
-- ✅ Whitespace preserved (AEP linter compatibility)
-- ✅ Syntax preserved (no comma operators)
+- ✅ No minification (AEP handles this automatically)
+- ✅ Readable variable names for easier debugging
+- ✅ Clean formatting preserved
 - ✅ Comments preserved (JSDoc in output)
 
 ## TypeScript Configuration

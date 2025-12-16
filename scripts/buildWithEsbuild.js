@@ -59,7 +59,7 @@ async function buildScript(scriptPath) {
   console.log(`\n📦 Building: ${scriptName}`);
 
   try {
-    const outputPath = join(BUILD_DIR, `${scriptName}.min.js`);
+    const outputPath = join(BUILD_DIR, `${scriptName}.js`);
 
     // Get original file size for stats
     const originalSize = statSync(scriptPath).size;
@@ -90,6 +90,12 @@ async function buildScript(scriptPath) {
       .replace(/export\s*\{[^}]*\};?\s*/g, '') // Remove export { ... }; blocks first
       .replace(/export\s+/g, ''); // Then remove remaining export keywords
 
+    // Indent bundled code by 2 spaces for consistency with IIFE wrapper
+    const indentedCode = bundledCode
+      .split('\n')
+      .map((line) => (line.trim() ? '  ' + line : line))
+      .join('\n');
+
     // Find the main function name
     const functionCallMatch = bundledCode.match(/async function (\w+Script)/);
     const mainFunctionName = functionCallMatch
@@ -102,49 +108,22 @@ async function buildScript(scriptPath) {
       process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
     // Wrap in AEP IIFE pattern with async support
-    // Use variable assignment first to avoid linter warnings about standalone return
-    const wrappedCode = `var result = (async () => {
+    // Execute the async function immediately and return the result
+    // This ensures AEP gets the Promise which it can then await
+    const wrappedCode = `return (async () => {
   const TEST_MODE = ${testMode};
 
-${bundledCode}
+${indentedCode}
 
   return await ${mainFunctionName}(TEST_MODE);
-})();
+})();`;
 
-return result;`;
-
-    // Now minify the complete wrapped code
-    // For AEP compatibility, we only minify identifiers (variable names)
-    // Keep syntax and whitespace readable for AEP's linter
-    console.log(`   Minifying...`);
-    const minifyResult = await esbuild.build({
-      stdin: {
-        contents: wrappedCode,
-        loader: 'js',
-      },
-      minifyWhitespace: false, // Keep whitespace for readability
-      minifySyntax: false, // Keep syntax readable for AEP linter
-      minifyIdentifiers: true, // Only minify variable names
-      target: 'es2017', // ES2017 for AEP (native async/await, cleaner output)
-      write: false,
-      legalComments: 'none',
-      logLevel: 'silent',
-    });
-
-    if (!minifyResult.outputFiles || minifyResult.outputFiles.length === 0) {
-      throw new Error('Minification produced no output');
-    }
-
-    const minifiedCode = minifyResult.outputFiles[0].text;
-
-    // Write the final minified code
-    writeFileSync(outputPath, minifiedCode, 'utf8');
+    // Write the final code (no minification - AEP does this for us)
+    writeFileSync(outputPath, wrappedCode, 'utf8');
 
     // Calculate stats
     const bundledSize = Buffer.byteLength(bundledCode, 'utf8');
     const wrappedSize = Buffer.byteLength(wrappedCode, 'utf8');
-    const minifiedSize = Buffer.byteLength(minifiedCode, 'utf8');
-    const savings = ((1 - minifiedSize / wrappedSize) * 100).toFixed(1);
 
     console.log(`✅ ${scriptName}:`);
     console.log(
@@ -152,8 +131,6 @@ return result;`;
     );
     console.log(`   Bundled:   ${bundledSize.toLocaleString()} bytes`);
     console.log(`   Wrapped:   ${wrappedSize.toLocaleString()} bytes`);
-    console.log(`   Minified:  ${minifiedSize.toLocaleString()} bytes`);
-    console.log(`   Savings:   ${savings}% (from wrapped)`);
     console.log(`   Output:    ${outputPath}`);
 
     return true;
@@ -201,11 +178,12 @@ async function build() {
     console.log(
       `\n✨ Build completed successfully! (${successCount}/${scripts.length})\n`
     );
-    console.log('📁 Minified scripts are in: build/\n');
+    console.log('📁 Bundled scripts are in: build/\n');
     console.log('📋 To deploy to AEP:');
-    console.log('   1. Open the minified .js file');
+    console.log('   1. Open the .js file');
     console.log('   2. Copy the entire contents');
-    console.log('   3. Paste into AEP Data Element as custom code\n');
+    console.log('   3. Paste into AEP Data Element as custom code');
+    console.log('   (AEP will minify the code automatically)\n');
   } catch (error) {
     console.error('\n❌ Build failed:', error.message);
     process.exit(1);
