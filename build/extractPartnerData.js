@@ -1,4 +1,4 @@
-return (async () => {
+return (() => {
   const TEST_MODE = false;
 
   // src/utils/logger.ts
@@ -118,7 +118,7 @@ return (async () => {
     logger.log("Found partner data (no DXP key)", partnerData);
     return partnerData;
   }
-  async function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
+  function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
     const config = {
       debug: testMode,
       cookieKey
@@ -142,5 +142,5 @@ return (async () => {
   }
 
 
-  return await extractPartnerDataScript(TEST_MODE);
+  return extractPartnerDataScript(TEST_MODE);
 })();

@@ -1,4 +1,4 @@
-return (async () => {
+return (() => {
   const TEST_MODE = false;
 
   // src/utils/logger.ts
@@ -101,7 +101,7 @@ return (async () => {
     logger.log("Found attendee data", attendeeData);
     return attendeeData;
   }
-  async function extractAttendeeDataScript(testMode = false) {
+  function extractAttendeeDataScript(testMode = false) {
     const config = {
       debug: testMode
     };
@@ -121,5 +121,5 @@ return (async () => {
   }
 
 
-  return await extractAttendeeDataScript(TEST_MODE);
+  return extractAttendeeDataScript(TEST_MODE);
 })();

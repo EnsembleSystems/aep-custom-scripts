@@ -1,4 +1,4 @@
-return (async () => {
+return (() => {
   const TEST_MODE = false;
 
   // src/utils/logger.ts
@@ -110,7 +110,7 @@ return (async () => {
     }
     return null;
   }
-  async function extractPublisherIdScript(testMode = false) {
+  function extractPublisherIdScript(testMode = false) {
     const config = {
       debug: testMode
     };
@@ -143,5 +143,5 @@ return (async () => {
   }
 
 
-  return await extractPublisherIdScript(TEST_MODE);
+  return extractPublisherIdScript(TEST_MODE);
 })();
