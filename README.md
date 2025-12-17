@@ -2,13 +2,20 @@
 
 TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection. These scripts are designed to be embedded as custom code in AEP Data Elements and can also be tested standalone in browser consoles.
 
+> **⚡ Recent Updates (Dec 2025)**:
+>
+> - **Direct Promise Returns**: Removed IIFE wrapper for proper AEP Launch Promise support
+> - **Clean Formatting**: Output code now starts at column 0 with no extra indentation
+> - See [AEP_PROMISE_FIX.md](AEP_PROMISE_FIX.md) for technical details
+
 ## Features
 
 - ✅ **TypeScript-first**: Full type safety and modern JavaScript features
 - 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
 - ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
-- 🎯 **ES2015+ Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
-- 📖 **Readable Output**: No minification - AEP handles that automatically
+- 🎯 **ES2017 Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
+- 🔓 **Direct Promise Returns**: No IIFE wrapper - AEP Launch natively supports ES6+ Promises
+- 📖 **Readable Output**: No minification, clean indentation - AEP handles minification automatically
 - 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
 - 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
 - 🚀 **Zero Configuration**: Direct script-to-bundle workflow
@@ -47,13 +54,15 @@ This automatically (**using esbuild**):
 
 1. Auto-discovers all scripts in `src/scripts/`
 2. Bundles each script with all utilities inlined
-3. Transpiles to ES2015+ JavaScript (Promises, no `async/await`)
-4. Wraps all scripts with consistent synchronous IIFE: `return (() => { ... })()`
+3. Transpiles to ES2017 JavaScript (Promises, no `async/await`)
+4. Adds direct return pattern (no IIFE wrapper):
+   - Pattern: `const TEST_MODE = false; ... return scriptName(TEST_MODE);`
    - Scripts with async operations return Promises via `.then()` chains
-   - All scripts use same wrapper pattern for AEP compatibility
+   - AEP Launch natively awaits returned Promises (ES6+ support)
+   - Clean indentation - code starts at column 0
 5. Outputs readable, production-ready files to `build/` (~4-5KB each)
 
-**Note**: No minification applied - AEP handles that automatically!
+**Note**: No minification applied, clean formatting - AEP handles minification automatically!
 
 ### Available Scripts
 

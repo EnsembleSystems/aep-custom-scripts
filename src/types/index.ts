@@ -13,3 +13,12 @@ export interface LoggerConfig {
 }
 
 export type FetchResult<T> = T | null;
+
+// Extend Window interface to include _eventData
+declare global {
+  interface Window {
+    _eventData?: {
+      apiResponse?: unknown;
+    };
+  }
+}

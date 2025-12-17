@@ -45,7 +45,7 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__filename', '__dirname'],
+        allow: ['__filename', '__dirname', '_eventData'],
       },
     ],
   },
@@ -78,6 +78,17 @@ module.exports = {
       files: ['src/utils/validation.ts'],
       rules: {
         'import/prefer-default-export': 'off',
+      },
+    },
+    {
+      files: ['src/scripts/fetchEventData.ts'],
+      rules: {
+        'no-underscore-dangle': [
+          'error',
+          {
+            allow: ['_eventData'],
+          },
+        ],
       },
     },
   ],

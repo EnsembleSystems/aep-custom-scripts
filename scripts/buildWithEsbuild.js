@@ -1,16 +1,16 @@
 /**
- * Build script using esbuild for bundling and minification
+ * Build script using esbuild for bundling
  *
  * This script:
  * 1. Uses esbuild to bundle scripts + utilities into single files
- * 2. Wraps bundled code in AEP-compatible IIFE pattern
- * 3. Minifies with esbuild's built-in minifier
+ * 2. Adds TEST_MODE constant and direct return statement
+ * 3. Outputs readable code (AEP handles minification)
  *
- * Benefits over ncc:
- * - Simpler: No webpack runtime code to strip
- * - Faster: 10-100x faster than webpack-based bundlers
- * - Cleaner output: Native IIFE support without transformations
- * - All-in-one: Bundling + minification in one tool
+ * Key features:
+ * - No IIFE wrapper: AEP Launch supports direct Promise returns (ES6+)
+ * - Clean output: Readable code for easier debugging
+ * - Fast: 10-100x faster than webpack-based bundlers
+ * - Simple: Direct return pattern for proper Promise handling
  */
 
 import * as esbuild from 'esbuild';
@@ -85,16 +85,10 @@ async function buildScript(scriptPath) {
 
     let bundledCode = bundleResult.outputFiles[0].text;
 
-    // Remove export statements since we're wrapping in IIFE
+    // Remove export statements since we don't need them in the bundle
     bundledCode = bundledCode
       .replace(/export\s*\{[^}]*\};?\s*/g, '') // Remove export { ... }; blocks first
       .replace(/export\s+/g, ''); // Then remove remaining export keywords
-
-    // Indent bundled code by 2 spaces for consistency with IIFE wrapper
-    const indentedCode = bundledCode
-      .split('\n')
-      .map((line) => (line.trim() ? '  ' + line : line))
-      .join('\n');
 
     // Find the main function name
     const functionMatch = bundledCode.match(/function (\w+Script)/);
@@ -107,15 +101,13 @@ async function buildScript(scriptPath) {
     const testMode =
       process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
-    // Wrap in AEP IIFE pattern (synchronous wrapper for all scripts)
-    // Scripts that use Promises return them directly (no async/await)
-    const wrappedCode = `return (() => {
-  const TEST_MODE = ${testMode};
+    // NO IIFE wrapper - AEP Launch supports direct Promise returns
+    // Add TEST_MODE constant at the top and call the main function directly
+    const wrappedCode = `const TEST_MODE = ${testMode};
 
-${indentedCode}
+${bundledCode}
 
-  return ${mainFunctionName}(TEST_MODE);
-})();`;
+return ${mainFunctionName}(TEST_MODE);`;
 
     // Write the final code (no minification - AEP does this for us)
     writeFileSync(outputPath, wrappedCode, 'utf8');

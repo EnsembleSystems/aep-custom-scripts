@@ -69,6 +69,23 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
       logger.log('Event data received', data);
       logger.testResult(data);
 
+      // Store data on window for access by other scripts
+      try {
+        // Ensure window._eventData exists
+        if (!window._eventData || typeof window._eventData !== 'object') {
+          window._eventData = {};
+        }
+
+        // Store the API response
+        window._eventData.apiResponse = data;
+        logger.log('Stored in window._eventData.apiResponse');
+
+        // Dispatch event to notify other listeners
+        document.dispatchEvent(new CustomEvent('eventDataReady'));
+      } catch (err) {
+        logger.warn('Could not store data on window._eventData:', err);
+      }
+
       return data;
     })
     .catch((error) => {
