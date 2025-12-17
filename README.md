@@ -7,7 +7,7 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 - ✅ **TypeScript-first**: Full type safety and modern JavaScript features
 - 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
 - ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
-- 🎯 **ES2017 Output**: Native async/await, clean readable code for AEP
+- 🎯 **ES2015+ Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
 - 📖 **Readable Output**: No minification - AEP handles that automatically
 - 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
 - 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
@@ -47,10 +47,10 @@ This automatically (**using esbuild**):
 
 1. Auto-discovers all scripts in `src/scripts/`
 2. Bundles each script with all utilities inlined
-3. Transpiles to ES2017 (native async/await)
-4. Auto-detects async vs sync and wraps accordingly:
-   - Async (API calls): `return (async () => { ... })();`
-   - Sync (cookies/DOM/localStorage): `return (() => { ... })();`
+3. Transpiles to ES2015+ JavaScript (Promises, no `async/await`)
+4. Wraps all scripts with consistent synchronous IIFE: `return (() => { ... })()`
+   - Scripts with async operations return Promises via `.then()` chains
+   - All scripts use same wrapper pattern for AEP compatibility
 5. Outputs readable, production-ready files to `build/` (~4-5KB each)
 
 **Note**: No minification applied - AEP handles that automatically!
@@ -462,11 +462,12 @@ The build process with **esbuild** produces AEP-compatible code:
 
 **Key Features**:
 
-- ✅ **ES2017 output**: Native async/await (no generator transpilation)
+- ✅ **ES2015+ output**: Promises with `.then()` chains (no `async/await` keywords)
 - ✅ **Readable code**: Full variable names and formatting for easier debugging
-- ✅ **Smart wrapping**: Auto-detects async vs sync functions
-  - Async scripts (API calls) return Promises
-  - Sync scripts (cookie/DOM/localStorage) return values directly
+- ✅ **Consistent wrapping**: All scripts use synchronous IIFE wrapper
+  - `return (() => { ... })()` for all scripts
+  - Scripts with async operations return Promises via `.then()` chains
+  - Maximum AEP compatibility
 - ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
 - ✅ **Tree-shaking**: Dead code elimination
 
@@ -475,7 +476,7 @@ The build process with **esbuild** produces AEP-compatible code:
 - ✅ No minification (AEP handles this automatically)
 - ✅ Readable variable names for easier debugging
 - ✅ Clean formatting preserved
-- ✅ Comments preserved (JSDoc in output)
+- ✅ No `async/await` keywords (uses Promise `.then()` chains instead)
 
 ## TypeScript Configuration
 
