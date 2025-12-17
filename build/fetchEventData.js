@@ -1,4 +1,4 @@
-return (async () => {
+return (() => {
   const TEST_MODE = false;
 
   var __defProp = Object.defineProperty;
@@ -123,11 +123,17 @@ return (async () => {
   var API = {
     EVENT_ENDPOINT: "/api/event.json?meta=true"
   };
-  async function fetchEventData(config, logger) {
+  function fetchEventDataScript(testMode = false) {
+    const config = {
+      timeout: 1e4,
+      debug: testMode
+    };
+    const logger = createLogger(config.debug, "Event Data", testMode);
+    logger.testHeader("EVENT DATA EXTRACTOR - TEST MODE");
     const currentDomain = window.location.origin;
     const apiUrl = `${currentDomain}${API.EVENT_ENDPOINT}`;
     logger.log("Fetching event data from", apiUrl);
-    const response = await fetchWithTimeout(
+    return fetchWithTimeout(
       apiUrl,
       {
         method: "GET",
@@ -136,31 +142,18 @@ return (async () => {
         }
       },
       config.timeout
-    );
-    if (!response.ok) {
-      logger.error(`API error: ${response.status} ${response.statusText}`);
-      throw new Error(`API returned ${response.status}`);
-    }
-    validateResponseSize(response);
-    const data = await response.json();
-    logger.log("Event data received", data);
-    return data;
-  }
-  async function fetchEventDataScript(testMode = false) {
-    const config = {
-      timeout: 1e4,
-      debug: testMode
-    };
-    const logger = createLogger(config.debug, "Event Data", testMode);
-    try {
-      logger.testHeader("EVENT DATA EXTRACTOR - TEST MODE");
-      const eventData = await fetchEventData(config, logger);
-      logger.testResult(eventData);
-      if (!testMode) {
-        logger.log("Returning event data", eventData);
+    ).then((response) => {
+      if (!response.ok) {
+        logger.error(`API error: ${response.status} ${response.statusText}`);
+        throw new Error(`API returned ${response.status}`);
       }
-      return eventData;
-    } catch (error) {
+      validateResponseSize(response);
+      return response.json();
+    }).then((data) => {
+      logger.log("Event data received", data);
+      logger.testResult(data);
+      return data;
+    }).catch((error) => {
       if (isAbortError(error)) {
         logger.error(`Request timeout after ${config.timeout}ms`);
         return null;
@@ -171,9 +164,9 @@ return (async () => {
       }
       logger.error("Unexpected error fetching event data:", error);
       return null;
-    }
+    });
   }
 
 
-  return await fetchEventDataScript(TEST_MODE);
+  return fetchEventDataScript(TEST_MODE);
 })();

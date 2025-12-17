@@ -1,4 +1,4 @@
-return (async () => {
+return (() => {
   const TEST_MODE = false;
 
   var __defProp = Object.defineProperty;
@@ -152,5 +152,5 @@ return (async () => {
   }
 
 
-  return await helloWorldScript(TEST_MODE);
+  return helloWorldScript(TEST_MODE);
 })();
