@@ -12,6 +12,7 @@ import {
   isAbortError,
   isNetworkError,
 } from '../utils/fetch.js';
+import CONSTANTS from '../utils/constants.js';
 
 // Types
 export interface EventDataConfig {
@@ -78,10 +79,12 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
 
         // Store the API response
         window._eventData.apiResponse = data;
-        logger.log('Stored in window._eventData.apiResponse');
+        logger.log('Event data stored in window._eventData.apiResponse');
 
         // Dispatch event to notify other listeners
-        document.dispatchEvent(new CustomEvent('eventDataReady'));
+        document.dispatchEvent(
+          new CustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT)
+        );
       } catch (err) {
         logger.warn('Could not store data on window._eventData:', err);
       }

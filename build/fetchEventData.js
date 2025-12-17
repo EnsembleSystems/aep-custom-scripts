@@ -118,6 +118,11 @@ function isNetworkError(error) {
   return error instanceof TypeError && error.message.includes("fetch");
 }
 
+// src/utils/constants.ts
+var constants_default = {
+  EVENT_DATA_READY_EVENT: "eventDataReady"
+};
+
 // src/scripts/fetchEventData.ts
 var API = {
   EVENT_ENDPOINT: "/api/event.json?meta=true"
@@ -156,8 +161,10 @@ function fetchEventDataScript(testMode = false) {
         window._eventData = {};
       }
       window._eventData.apiResponse = data;
-      logger.log("Stored in window._eventData.apiResponse");
-      document.dispatchEvent(new CustomEvent("eventDataReady"));
+      logger.log("Event data stored in window._eventData.apiResponse");
+      document.dispatchEvent(
+        new CustomEvent(constants_default.EVENT_DATA_READY_EVENT)
+      );
     } catch (err) {
       logger.warn("Could not store data on window._eventData:", err);
     }
