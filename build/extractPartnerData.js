@@ -96,8 +96,30 @@ function parseJsonCookie(cookieValue) {
   }
 }
 
+// src/utils/object.ts
+function removeProperties(data, propertiesToRemove) {
+  if (data === null || data === void 0) {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => removeProperties(item, propertiesToRemove));
+  }
+  if (typeof data === "object") {
+    const entries = Object.entries(data);
+    const cleaned = {};
+    entries.forEach(([key, value]) => {
+      if (!propertiesToRemove.includes(key)) {
+        cleaned[key] = removeProperties(value, propertiesToRemove);
+      }
+    });
+    return cleaned;
+  }
+  return data;
+}
+
 // src/scripts/extractPartnerData.ts
 var DEFAULT_COOKIE_KEY = "partner_data";
+var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
 function getPartnerData(cookieKey, logger) {
   const partnerCookie = getCookie(cookieKey);
   if (!partnerCookie) {
@@ -111,11 +133,16 @@ function getPartnerData(cookieKey, logger) {
   }
   if (typeof partnerData === "object" && partnerData !== null && "DXP" in partnerData) {
     const dxpValue = partnerData.DXP;
-    logger.log("Found partner data (DXP extracted)", dxpValue);
-    return dxpValue;
+    const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
+    logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
+    return cleanedDxpValue;
   }
-  logger.log("Found partner data (no DXP key)", partnerData);
-  return partnerData;
+  const cleanedPartnerData = removeProperties(
+    partnerData,
+    PROPERTIES_TO_REMOVE
+  );
+  logger.log("Found partner data (no DXP key)", cleanedPartnerData);
+  return cleanedPartnerData;
 }
 function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
   const config = {

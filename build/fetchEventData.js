@@ -123,6 +123,16 @@ var constants_default = {
   EVENT_DATA_READY_EVENT: "eventDataReady"
 };
 
+// src/utils/dates.ts
+function extractDates(objects) {
+  if (!Array.isArray(objects)) {
+    return [];
+  }
+  return objects.filter(
+    (obj) => obj && typeof obj.date === "string" && obj.date.trim() !== ""
+  ).map((obj) => obj.date);
+}
+
 // src/scripts/fetchEventData.ts
 var API = {
   EVENT_ENDPOINT: "/api/event.json?meta=true"
@@ -160,15 +170,24 @@ function fetchEventDataScript(testMode = false) {
       if (!window._eventData || typeof window._eventData !== "object") {
         window._eventData = {};
       }
-      window._eventData.apiResponse = data;
+      const dates = extractDates(
+        data.dates
+      );
+      logger.log("Extracted dates (`yyyy-MM-dd` format):", dates);
+      const transformedData = __spreadProps(__spreadValues({}, data), {
+        dates
+      });
+      logger.log("Transformed data", transformedData);
+      window._eventData.apiResponse = transformedData;
       logger.log("Event data stored in window._eventData.apiResponse");
       document.dispatchEvent(
         new CustomEvent(constants_default.EVENT_DATA_READY_EVENT)
       );
+      return transformedData;
     } catch (err) {
       logger.warn("Could not store data on window._eventData:", err);
+      return data;
     }
-    return data;
   }).catch((error) => {
     if (isAbortError(error)) {
       logger.error(`Request timeout after ${config.timeout}ms`);
