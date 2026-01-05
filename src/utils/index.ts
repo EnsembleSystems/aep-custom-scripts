@@ -7,3 +7,4 @@ export * from './fetch.js';
 export * from './cookie.js';
 export * from './storage.js';
 export * from './validation.js';
+export { default as removeProperties } from './object.js';

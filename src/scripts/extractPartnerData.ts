@@ -6,6 +6,7 @@
 
 import { createLogger } from '../utils/logger.js';
 import { getCookie, parseJsonCookie } from '../utils/cookie.js';
+import removeProperties from '../utils/object.js';
 
 // Types
 export interface PartnerDataConfig {
@@ -15,6 +16,7 @@ export interface PartnerDataConfig {
 
 // Constants
 const DEFAULT_COOKIE_KEY = 'partner_data';
+const PROPERTIES_TO_REMOVE = ['latestAgreementAcceptedVersion'];
 
 /**
  * Gets partner data from cookies and extracts the DXP value
@@ -44,13 +46,18 @@ function getPartnerData(
     'DXP' in partnerData
   ) {
     const dxpValue = (partnerData as Record<string, unknown>).DXP;
-    logger.log('Found partner data (DXP extracted)', dxpValue);
-    return dxpValue;
+    const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
+    logger.log('Found partner data (DXP extracted)', cleanedDxpValue);
+    return cleanedDxpValue;
   }
 
   // If no DXP key, return the whole object
-  logger.log('Found partner data (no DXP key)', partnerData);
-  return partnerData;
+  const cleanedPartnerData = removeProperties(
+    partnerData,
+    PROPERTIES_TO_REMOVE
+  );
+  logger.log('Found partner data (no DXP key)', cleanedPartnerData);
+  return cleanedPartnerData;
 }
 
 /**

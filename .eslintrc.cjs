@@ -75,7 +75,7 @@ module.exports = {
       },
     },
     {
-      files: ['src/utils/validation.ts'],
+      files: ['src/utils/validation.ts', 'src/utils/dates.ts'],
       rules: {
         'import/prefer-default-export': 'off',
       },

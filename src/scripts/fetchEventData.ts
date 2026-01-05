@@ -13,6 +13,7 @@ import {
   isNetworkError,
 } from '../utils/fetch.js';
 import CONSTANTS from '../utils/constants.js';
+import { extractDates } from '../utils/dates.js';
 
 // Types
 export interface EventDataConfig {
@@ -77,19 +78,33 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
           window._eventData = {};
         }
 
-        // Store the API response
-        window._eventData.apiResponse = data;
+        // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
+        const dates: string[] = extractDates(
+          data.dates as Array<{ date?: string }>
+        );
+        logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
+
+        // Create transformed data object with extracted dates
+        const transformedData = {
+          ...data,
+          dates,
+        };
+        logger.log('Transformed data', transformedData);
+
+        // Store the API response in window._eventData.apiResponse global variable
+        window._eventData.apiResponse = transformedData;
         logger.log('Event data stored in window._eventData.apiResponse');
 
-        // Dispatch event to notify other listeners
+        // Dispatch event to notify other listeners using the global variable
         document.dispatchEvent(
           new CustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT)
         );
+
+        return transformedData;
       } catch (err) {
         logger.warn('Could not store data on window._eventData:', err);
+        return data;
       }
-
-      return data;
     })
     .catch((error) => {
       // Handle timeout
