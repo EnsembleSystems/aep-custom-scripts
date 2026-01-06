@@ -28,6 +28,24 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 npm install
 ```
 
+### Environment Variables
+
+This project uses environment variables to control build behavior. Create a `.env` file in the project root (you can copy `.env.example` as a template):
+
+```bash
+cp .env.example .env
+```
+
+**Available Variables**:
+
+- **`TEST_MODE`** (optional): Controls whether builds include test mode features
+  - Set to `'true'` or `'1'` to enable test mode (adds console output and test wrappers)
+  - Set to `'false'` or leave unset for production builds
+  - Default: `false` (production mode)
+  - Example: `TEST_MODE=true npm run build`
+
+**Note**: The `.env` file is gitignored and will not be committed. Use `.env.example` as a template for your local configuration.
+
 ### Creating a New Script (Streamlined!)
 
 ```bash
