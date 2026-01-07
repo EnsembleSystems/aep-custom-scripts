@@ -120,7 +120,10 @@ function matchesElement(element, tagName, className) {
   }
   return matches;
 }
-function dispatchCustomEvent(eventName, detail) {
+function dispatchCustomEvent(eventName, detail, logger) {
+  if (logger) {
+    logger.log(`Dispatching custom event: ${eventName}`, detail);
+  }
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
@@ -210,20 +213,66 @@ function extractWrapperContext(wrapper, logger) {
   }
   return { sectionID, filterContext };
 }
-function setupClickListeners(logger) {
+function attachListenerToWrapper(wrapper, logger, processedWrappers) {
+  if (processedWrappers.has(wrapper)) {
+    return false;
+  }
+  const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
+  wrapper.addEventListener("click", (event) => {
+    handleWrapperClick(event, sectionID, filterContext, logger);
+  });
+  processedWrappers.add(wrapper);
+  return true;
+}
+function setupClickListeners(logger, processedWrappers) {
   const wrappers = document.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
   if (wrappers.length === 0) {
     logger.warn("No card collection wrappers found on page");
     return 0;
   }
+  let newListeners = 0;
   wrappers.forEach((wrapper) => {
-    const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
-    wrapper.addEventListener("click", (event) => {
-      handleWrapperClick(event, sectionID, filterContext, logger);
-    });
+    if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
+      newListeners += 1;
+    }
   });
-  logger.log(`Attached ${wrappers.length} click listeners`);
-  return wrappers.length;
+  logger.log(
+    `Attached ${newListeners} new click listeners (${wrappers.length} total wrappers on page)`
+  );
+  return newListeners;
+}
+function setupDynamicObserver(logger, processedWrappers) {
+  const observer = new MutationObserver((mutations) => {
+    const newWrappersFound = [];
+    mutations.forEach((mutation) => {
+      Array.from(mutation.addedNodes).forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+        const element = node;
+        if (element.matches(SELECTORS.CARD_COLLECTION_WRAPPER)) {
+          if (attachListenerToWrapper(element, logger, processedWrappers)) {
+            newWrappersFound.push(element);
+          }
+        }
+        const childWrappers = element.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
+        Array.from(childWrappers).forEach((wrapper) => {
+          if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
+            newWrappersFound.push(wrapper);
+          }
+        });
+      });
+    });
+    if (newWrappersFound.length > 0) {
+      logger.log(`Attached listeners to ${newWrappersFound.length} dynamically loaded wrappers`);
+    }
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  logger.log("MutationObserver started - watching for dynamic content");
+  return observer;
 }
 function extractPartnerCardCtxScript(testMode = false) {
   const config = {
@@ -231,11 +280,20 @@ function extractPartnerCardCtxScript(testMode = false) {
   };
   const logger = createLogger(config.debug, "Partner Card Context", testMode);
   try {
+    if (window._partnerCardObserver) {
+      logger.log("Script already initialized, skipping duplicate setup");
+      return { listenersAttached: 0 };
+    }
     logger.testHeader("PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE");
-    const listenerCount = setupClickListeners(logger);
+    const processedWrappers = /* @__PURE__ */ new WeakSet();
+    const listenerCount = setupClickListeners(logger, processedWrappers);
+    const observer = setupDynamicObserver(logger, processedWrappers);
+    window._partnerCardObserver = observer;
     const result = { listenersAttached: listenerCount };
     logger.testResult(result);
-    logger.log(`Setup complete: ${listenerCount} listeners attached`);
+    logger.log(
+      `Setup complete: ${listenerCount} listeners attached, observer watching for dynamic content`
+    );
     return result;
   } catch (error) {
     logger.error("Unexpected error during setup:", error);
