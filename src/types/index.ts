@@ -16,18 +16,25 @@ export interface LoggerConfig {
 
 export type FetchResult<T> = T | null;
 
-// Extend Window interface to include _eventData, _partnerCardCtx, and _partnerCardObserver
+// Extend Window interface to include Adobe Partners namespace
 declare global {
   interface Window {
-    _eventData?: {
-      apiResponse?: unknown;
-    };
-    _partnerCardCtx?: PartnerCardCtx | null;
-    _partnerCardObserver?: MutationObserver;
-    _partnerCardXdmCache?: {
-      timestamp: number;
-      data: unknown;
-      sourceData: PartnerCardCtx | null;
+    _adobePartners?: {
+      // Event data (from fetchEventData/getEventData)
+      eventData?: {
+        apiResponse?: unknown;
+      };
+
+      // Partner card tracking (from extractPartnerCardCtx/getPartnerCardCtxXdm)
+      partnerCard?: {
+        context?: PartnerCardCtx | null;
+        observer?: MutationObserver;
+        xdmCache?: {
+          timestamp: number;
+          data: unknown;
+          sourceData: PartnerCardCtx | null;
+        };
+      };
     };
   }
 }

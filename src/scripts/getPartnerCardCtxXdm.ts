@@ -48,7 +48,12 @@ const CACHE_DURATION_MS = 500;
  * Checks if cached data is still valid and matches current source data
  */
 function isCacheValid(logger: ReturnType<typeof createLogger>): boolean {
-  const { _partnerCardXdmCache: cache, _partnerCardCtx: currentData } = window;
+  if (!window._adobePartners?.partnerCard) {
+    logger.log('No _adobePartners.partnerCard found');
+    return false;
+  }
+
+  const { xdmCache: cache, context: currentData } = window._adobePartners.partnerCard;
 
   if (!cache) {
     logger.log('No cache found');
@@ -81,32 +86,31 @@ function isCacheValid(logger: ReturnType<typeof createLogger>): boolean {
 function formatPartnerCardCtxXdm(
   logger: ReturnType<typeof createLogger>
 ): PartnerCardCtxXdm | null {
-  // Get the partner card context from the window
-  const { _partnerCardCtx } = window;
-
-  // Check if window._partnerCardCtx exists
-  if (!_partnerCardCtx) {
-    logger.log('No _partnerCardCtx on window');
+  // Check if window._adobePartners.partnerCard.context exists
+  if (!window._adobePartners?.partnerCard?.context) {
+    logger.log('No partner card context on window._adobePartners.partnerCard.context');
     return null;
   }
 
+  const partnerCardContext = window._adobePartners.partnerCard.context;
+
   // Check if we have valid cached data
   if (isCacheValid(logger)) {
-    return window._partnerCardXdmCache!.data as PartnerCardCtxXdm;
+    return window._adobePartners.partnerCard.xdmCache!.data as PartnerCardCtxXdm;
   }
 
-  // Create XDM structure with cardCollection as an array
+  // Create XDM structure with cardCollection
   const xdmData: PartnerCardCtxXdm = {
     _adobepartners: {
-      cardCollection: _partnerCardCtx, // Wrap in array for XDM schema
+      cardCollection: partnerCardContext,
     },
   };
 
-  // Cache the result
-  window._partnerCardXdmCache = {
+  // Cache the result (partnerCard guaranteed to exist from line 90 check)
+  window._adobePartners.partnerCard.xdmCache = {
     timestamp: Date.now(),
     data: xdmData,
-    sourceData: _partnerCardCtx,
+    sourceData: partnerCardContext,
   };
 
   logger.log('Formatted XDM data (cached for reuse)', xdmData);

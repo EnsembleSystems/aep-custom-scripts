@@ -173,7 +173,7 @@ Fetches event data from Adobe Events pages via API.
 
 **Returns**: Promise that resolves to event data object (from `/api/event.json?meta=true`) or `null` on error
 
-**Note**: This script makes an API call and stores the result on `window._eventData.apiResponse`. The data is also returned directly as a Promise.
+**Note**: This script makes an API call and stores the result on `window._adobePartners.eventData.apiResponse`. The data is also returned directly as a Promise.
 
 **Configuration** (default in source):
 
@@ -186,11 +186,11 @@ const config = {
 
 ### 2. Event Data Getter (`getEventData`)
 
-Gets event data from `window._eventData.apiResponse` on Adobe Events pages.
+Gets event data from `window._adobePartners.eventData.apiResponse` on Adobe Events pages.
 
 **Use on**: `*.adobeevents.com` pages
 
-**Returns**: Event data object (from `window._eventData.apiResponse`) or `null` if not found
+**Returns**: Event data object (from `window._adobePartners.eventData.apiResponse`) or `null` if not found
 
 **Note**: This script retrieves data previously stored by `fetchEventData`. Use this in data elements that need the event data after it's been fetched.
 
@@ -276,7 +276,7 @@ Sets up click listeners on partner cards and extracts context data from shadow D
 
 - Use as a **Rule Action** on page load (Page Bottom or DOM Ready event)
 - The script attaches click listeners to all partner card wrappers
-- Click data is stored in `window._partnerCardCtx` and triggers `partnerCardClick` custom event
+- Click data is stored in `window._adobePartners.partnerCard.context` and triggers `partnerCardClick` custom event
 - Create a second rule to track clicks: Event Type = "Custom Event", Event Name = "partnerCardClick"
 
 **How it works**:
@@ -300,7 +300,7 @@ const config = {
 
 ### 7. Partner Card XDM Formatter (`getPartnerCardCtxXdm`)
 
-Formats partner card data from `window._partnerCardCtx` into XDM structure for AEP.
+Formats partner card data from `window._adobePartners.partnerCard.context` into XDM structure for AEP.
 
 **Use on**: Adobe Partner pages (as a data element)
 
