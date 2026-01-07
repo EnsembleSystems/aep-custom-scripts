@@ -74,9 +74,17 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
 
       // Store data on window for access by other scripts
       try {
-        // Ensure window._eventData exists
-        if (!window._eventData || typeof window._eventData !== 'object') {
-          window._eventData = {};
+        // Ensure window._adobePartners exists
+        if (!window._adobePartners || typeof window._adobePartners !== 'object') {
+          window._adobePartners = {};
+        }
+
+        // Ensure window._adobePartners.eventData exists
+        if (
+          !window._adobePartners.eventData ||
+          typeof window._adobePartners.eventData !== 'object'
+        ) {
+          window._adobePartners.eventData = {};
         }
 
         // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
@@ -90,16 +98,16 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
         };
         logger.log('Transformed data', transformedData);
 
-        // Store the API response in window._eventData.apiResponse global variable
-        window._eventData.apiResponse = transformedData;
-        logger.log('Event data stored in window._eventData.apiResponse');
+        // Store the API response in window._adobePartners.eventData.apiResponse global variable
+        window._adobePartners.eventData.apiResponse = transformedData;
+        logger.log('Event data stored in window._adobePartners.eventData.apiResponse');
 
         // Dispatch event to notify other listeners using the global variable
         dispatchCustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT);
 
         return transformedData;
       } catch (err) {
-        logger.warn('Could not store data on window._eventData:', err);
+        logger.warn('Could not store data on window._adobePartners.eventData:', err);
         return data;
       }
     })

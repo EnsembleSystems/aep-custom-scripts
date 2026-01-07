@@ -172,8 +172,18 @@ function handleWrapperClick(
     return;
   }
 
+  // Ensure window._adobePartners exists
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+
+  // Ensure window._adobePartners.partnerCard exists
+  if (!window._adobePartners.partnerCard) {
+    window._adobePartners.partnerCard = {};
+  }
+
   // Store in window for AEP to access
-  window._partnerCardCtx = cardContext;
+  window._adobePartners.partnerCard.context = cardContext;
 
   // Trigger custom event for AEP
   dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
@@ -326,8 +336,8 @@ function setupDynamicObserver(
  *
  * Then create another rule to track clicks:
  * Event: Custom Event, type='partnerCardClick'
- * Condition: window._partnerCardCtx exists
- * Action: Send analytics with %window._partnerCardCtx%
+ * Condition: window._adobePartners.partnerCard.context exists
+ * Action: Send analytics with %window._adobePartners.partnerCard.context%
  *
  * TESTING IN BROWSER CONSOLE:
  * ----------------------------
@@ -336,7 +346,7 @@ function setupDynamicObserver(
  *
  * // Now click on any partner card
  * // Check the data:
- * console.log(window._partnerCardCtx);
+ * console.log(window._adobePartners.partnerCard.context);
  */
 export function extractPartnerCardCtxScript(
   testMode: boolean = false
@@ -348,8 +358,18 @@ export function extractPartnerCardCtxScript(
   const logger = createLogger(config.debug, 'Partner Card Context', testMode);
 
   try {
+    // Ensure window._adobePartners exists
+    if (!window._adobePartners) {
+      window._adobePartners = {};
+    }
+
+    // Ensure window._adobePartners.partnerCard exists
+    if (!window._adobePartners.partnerCard) {
+      window._adobePartners.partnerCard = {};
+    }
+
     // Check if already initialized - prevent duplicate setup
-    if (window._partnerCardObserver) {
+    if (window._adobePartners.partnerCard.observer) {
       logger.log('Script already initialized, skipping duplicate setup');
       return { listenersAttached: 0 };
     }
@@ -366,7 +386,7 @@ export function extractPartnerCardCtxScript(
     const observer = setupDynamicObserver(logger, processedWrappers);
 
     // Store observer on window so it can be accessed if needed
-    window._partnerCardObserver = observer;
+    window._adobePartners.partnerCard.observer = observer;
 
     const result = { listenersAttached: listenerCount };
 
