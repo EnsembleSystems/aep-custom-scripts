@@ -158,5 +158,5 @@ export function matchesElement(
  * dispatchCustomEvent('partnerCardClick', { cardId: '123' })
  */
 export function dispatchCustomEvent(eventName: string, detail?: unknown): void {
-  window.dispatchEvent(new CustomEvent(eventName, { detail }));
+  document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
