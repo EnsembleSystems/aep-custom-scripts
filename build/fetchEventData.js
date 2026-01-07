@@ -133,6 +133,11 @@ function extractDates(objects) {
   ).map((obj) => obj.date);
 }
 
+// src/utils/dom.ts
+function dispatchCustomEvent(eventName, detail) {
+  document.dispatchEvent(new CustomEvent(eventName, { detail }));
+}
+
 // src/scripts/fetchEventData.ts
 var API = {
   EVENT_ENDPOINT: "/api/event.json?meta=true"
@@ -180,9 +185,7 @@ function fetchEventDataScript(testMode = false) {
       logger.log("Transformed data", transformedData);
       window._eventData.apiResponse = transformedData;
       logger.log("Event data stored in window._eventData.apiResponse");
-      document.dispatchEvent(
-        new CustomEvent(constants_default.EVENT_DATA_READY_EVENT)
-      );
+      dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
       return transformedData;
     } catch (err) {
       logger.warn("Could not store data on window._eventData:", err);

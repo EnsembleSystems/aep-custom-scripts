@@ -123,7 +123,7 @@ function matchesElement(element, tagName, className) {
   return matches;
 }
 function dispatchCustomEvent(eventName, detail) {
-  window.dispatchEvent(new CustomEvent(eventName, { detail }));
+  document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
 // src/scripts/extractPartnerCardData.ts
