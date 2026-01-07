@@ -77,7 +77,12 @@ function createLogger(debug, scriptName, isTestMode) {
 // src/scripts/getPartnerCardCtxXdm.ts
 var CACHE_DURATION_MS = 500;
 function isCacheValid(logger) {
-  const { _partnerCardXdmCache: cache, _partnerCardCtx: currentData } = window;
+  var _a;
+  if (!((_a = window._adobePartners) == null ? void 0 : _a.partnerCard)) {
+    logger.log("No _adobePartners.partnerCard found");
+    return false;
+  }
+  const { xdmCache: cache, context: currentData } = window._adobePartners.partnerCard;
   if (!cache) {
     logger.log("No cache found");
     return false;
@@ -97,24 +102,24 @@ function isCacheValid(logger) {
   return true;
 }
 function formatPartnerCardCtxXdm(logger) {
-  const { _partnerCardCtx } = window;
-  if (!_partnerCardCtx) {
-    logger.log("No _partnerCardCtx on window");
+  var _a, _b;
+  if (!((_b = (_a = window._adobePartners) == null ? void 0 : _a.partnerCard) == null ? void 0 : _b.context)) {
+    logger.log("No partner card context on window._adobePartners.partnerCard.context");
     return null;
   }
+  const partnerCardContext = window._adobePartners.partnerCard.context;
   if (isCacheValid(logger)) {
-    return window._partnerCardXdmCache.data;
+    return window._adobePartners.partnerCard.xdmCache.data;
   }
   const xdmData = {
     _adobepartners: {
-      cardCollection: _partnerCardCtx
-      // Wrap in array for XDM schema
+      cardCollection: partnerCardContext
     }
   };
-  window._partnerCardXdmCache = {
+  window._adobePartners.partnerCard.xdmCache = {
     timestamp: Date.now(),
     data: xdmData,
-    sourceData: _partnerCardCtx
+    sourceData: partnerCardContext
   };
   logger.log("Formatted XDM data (cached for reuse)", xdmData);
   return xdmData;

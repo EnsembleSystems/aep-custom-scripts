@@ -76,15 +76,12 @@ function createLogger(debug, scriptName, isTestMode) {
 
 // src/scripts/getEventData.ts
 function getEventData(logger) {
-  if (!window._eventData) {
-    logger.log("No _eventData object on window");
+  var _a, _b;
+  if (!((_b = (_a = window._adobePartners) == null ? void 0 : _a.eventData) == null ? void 0 : _b.apiResponse)) {
+    logger.log("No apiResponse found in window._adobePartners.eventData");
     return null;
   }
-  if (!window._eventData.apiResponse) {
-    logger.log("No apiResponse in window._eventData");
-    return null;
-  }
-  const eventData = window._eventData.apiResponse;
+  const eventData = window._adobePartners.eventData.apiResponse;
   logger.log("Found event data", eventData);
   return eventData;
 }

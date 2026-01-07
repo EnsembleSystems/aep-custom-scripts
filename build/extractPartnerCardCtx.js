@@ -190,6 +190,7 @@ function findCardInPath(event, logger) {
   return cardElement;
 }
 function handleWrapperClick(event, sectionID, filterContext, logger) {
+  var _a, _b;
   const cardElement = findCardInPath(event, logger);
   if (!cardElement) {
     return;
@@ -199,11 +200,16 @@ function handleWrapperClick(event, sectionID, filterContext, logger) {
     logger.warn("Failed to extract card context");
     return;
   }
-  window._partnerCardCtx = cardContext;
+  window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
+  window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
+  window._adobePartners.partnerCard.context = cardContext;
   dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
   logger.log("Card click processed successfully");
 }
 function extractWrapperContext(wrapper, logger) {
+  if (!wrapper.parentElement) {
+    logger.warn("Wrapper has no parent element, sectionID will be empty");
+  }
   const sectionID = getAttribute(wrapper.parentElement, ATTRIBUTES.DAA_LH);
   const { shadowRoot } = wrapper;
   const partnerCardsElement = shadowRoot == null ? void 0 : shadowRoot.querySelector(SELECTORS.PARTNER_CARDS);
@@ -275,12 +281,15 @@ function setupDynamicObserver(logger, processedWrappers) {
   return observer;
 }
 function extractPartnerCardCtxScript(testMode = false) {
+  var _a, _b;
   const config = {
     debug: testMode
   };
   const logger = createLogger(config.debug, "Partner Card Context", testMode);
   try {
-    if (window._partnerCardObserver) {
+    window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
+    window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
+    if (window._adobePartners.partnerCard.observer) {
       logger.log("Script already initialized, skipping duplicate setup");
       return { listenersAttached: 0 };
     }
@@ -288,7 +297,7 @@ function extractPartnerCardCtxScript(testMode = false) {
     const processedWrappers = /* @__PURE__ */ new WeakSet();
     const listenerCount = setupClickListeners(logger, processedWrappers);
     const observer = setupDynamicObserver(logger, processedWrappers);
-    window._partnerCardObserver = observer;
+    window._adobePartners.partnerCard.observer = observer;
     const result = { listenersAttached: listenerCount };
     logger.testResult(result);
     logger.log(

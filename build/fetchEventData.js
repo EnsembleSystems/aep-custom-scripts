@@ -168,24 +168,24 @@ function fetchEventDataScript(testMode = false) {
     validateResponseSize(response);
     return response.json();
   }).then((data) => {
+    var _a, _b, _c;
     logger.log("Event data received", data);
     logger.testResult(data);
     try {
-      if (!window._eventData || typeof window._eventData !== "object") {
-        window._eventData = {};
-      }
-      const dates = extractDates(data.dates);
+      window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
+      window._adobePartners.eventData = (_b = window._adobePartners.eventData) != null ? _b : {};
+      const dates = extractDates((_c = data.dates) != null ? _c : []);
       logger.log("Extracted dates (`yyyy-MM-dd` format):", dates);
       const transformedData = __spreadProps(__spreadValues({}, data), {
         dates
       });
       logger.log("Transformed data", transformedData);
-      window._eventData.apiResponse = transformedData;
-      logger.log("Event data stored in window._eventData.apiResponse");
+      window._adobePartners.eventData.apiResponse = transformedData;
+      logger.log("Event data stored in window._adobePartners.eventData.apiResponse");
       dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
       return transformedData;
     } catch (err) {
-      logger.warn("Could not store data on window._eventData:", err);
+      logger.warn("Could not store data on window._adobePartners.eventData:", err);
       return data;
     }
   }).catch((error) => {
