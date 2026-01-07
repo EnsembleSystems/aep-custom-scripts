@@ -205,10 +205,39 @@ function extractWrapperContext(
 }
 
 /**
+ * Attaches click listener to a single wrapper element
+ * Single Responsibility: Single wrapper listener attachment
+ */
+function attachListenerToWrapper(
+  wrapper: Element,
+  logger: ReturnType<typeof createLogger>,
+  processedWrappers: WeakSet<Element>
+): boolean {
+  // Skip if already processed
+  if (processedWrappers.has(wrapper)) {
+    return false;
+  }
+
+  const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
+
+  // Use arrow function to preserve context
+  wrapper.addEventListener('click', (event) => {
+    handleWrapperClick(event, sectionID, filterContext, logger);
+  });
+
+  // Mark as processed
+  processedWrappers.add(wrapper);
+  return true;
+}
+
+/**
  * Sets up click listeners on shadow host wrappers
  * Single Responsibility: Listener setup
  */
-function setupClickListeners(logger: ReturnType<typeof createLogger>): number {
+function setupClickListeners(
+  logger: ReturnType<typeof createLogger>,
+  processedWrappers: WeakSet<Element>
+): number {
   // Find all card collection wrappers (shadow hosts)
   const wrappers = document.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
 
@@ -217,18 +246,72 @@ function setupClickListeners(logger: ReturnType<typeof createLogger>): number {
     return 0;
   }
 
+  let newListeners = 0;
+
   // Attach click listener to each wrapper
   wrappers.forEach((wrapper) => {
-    const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
-
-    // Use arrow function to preserve context
-    wrapper.addEventListener('click', (event) => {
-      handleWrapperClick(event, sectionID, filterContext, logger);
-    });
+    if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
+      newListeners += 1;
+    }
   });
 
-  logger.log(`Attached ${wrappers.length} click listeners`);
-  return wrappers.length;
+  logger.log(
+    `Attached ${newListeners} new click listeners (${wrappers.length} total wrappers on page)`
+  );
+  return newListeners;
+}
+
+/**
+ * Sets up MutationObserver to watch for dynamically added wrappers
+ * Single Responsibility: Dynamic content monitoring
+ */
+function setupDynamicObserver(
+  logger: ReturnType<typeof createLogger>,
+  processedWrappers: WeakSet<Element>
+): MutationObserver {
+  const observer = new MutationObserver((mutations) => {
+    const newWrappersFound: Element[] = [];
+
+    mutations.forEach((mutation) => {
+      // Check added nodes for card collection wrappers
+      Array.from(mutation.addedNodes).forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+
+        const element = node as Element;
+
+        // Check if the added node itself is a wrapper
+        if (element.matches(SELECTORS.CARD_COLLECTION_WRAPPER)) {
+          if (attachListenerToWrapper(element, logger, processedWrappers)) {
+            newWrappersFound.push(element);
+          }
+        }
+
+        // Check if the added node contains wrappers
+        const childWrappers = element.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
+        Array.from(childWrappers).forEach((wrapper) => {
+          if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
+            newWrappersFound.push(wrapper);
+          }
+        });
+      });
+    });
+
+    if (newWrappersFound.length > 0) {
+      logger.log(`Attached listeners to ${newWrappersFound.length} dynamically loaded wrappers`);
+    }
+  });
+
+  // Start observing the document for DOM changes
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  logger.log('MutationObserver started - watching for dynamic content');
+
+  return observer;
 }
 
 /**
@@ -244,7 +327,7 @@ function setupClickListeners(logger: ReturnType<typeof createLogger>): number {
  * Then create another rule to track clicks:
  * Event: Custom Event, type='partnerCardClick'
  * Condition: window._partnerCardCtx exists
- * Action: Send analytics with %window.partnerCardCtx%
+ * Action: Send analytics with %window._partnerCardCtx%
  *
  * TESTING IN BROWSER CONSOLE:
  * ----------------------------
@@ -265,15 +348,32 @@ export function extractPartnerCardCtxScript(
   const logger = createLogger(config.debug, 'Partner Card Context', testMode);
 
   try {
+    // Check if already initialized - prevent duplicate setup
+    if (window._partnerCardObserver) {
+      logger.log('Script already initialized, skipping duplicate setup');
+      return { listenersAttached: 0 };
+    }
+
     logger.testHeader('PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE');
 
-    // Set up click listeners on all cards
-    const listenerCount = setupClickListeners(logger);
+    // Track processed wrappers to prevent duplicate listeners
+    const processedWrappers = new WeakSet<Element>();
+
+    // Set up click listeners on currently available cards
+    const listenerCount = setupClickListeners(logger, processedWrappers);
+
+    // Set up observer to watch for dynamically added cards
+    const observer = setupDynamicObserver(logger, processedWrappers);
+
+    // Store observer on window so it can be accessed if needed
+    window._partnerCardObserver = observer;
 
     const result = { listenersAttached: listenerCount };
 
     logger.testResult(result);
-    logger.log(`Setup complete: ${listenerCount} listeners attached`);
+    logger.log(
+      `Setup complete: ${listenerCount} listeners attached, observer watching for dynamic content`
+    );
 
     return result;
   } catch (error) {

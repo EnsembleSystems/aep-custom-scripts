@@ -2,6 +2,8 @@
  * DOM utility functions for working with elements, shadow DOM, and attributes
  */
 
+import type { Logger } from './logger.js';
+
 /**
  * Splits a string by delimiter and returns the part at the specified index
  * Returns empty string if index is out of bounds
@@ -132,14 +134,18 @@ export function matchesElement(element: Element, tagName?: string, className?: s
 }
 
 /**
- * Dispatches a custom event on the window
+ * Dispatches a custom event on the document
  *
  * @param eventName - The name of the custom event
  * @param detail - Optional data to include with the event
+ * @param logger - Optional logger instance for debug logging
  *
  * @example
- * dispatchCustomEvent('partnerCardClick', { cardId: '123' })
+ * dispatchCustomEvent('partnerCardClick', { cardId: '123' }, logger)
  */
-export function dispatchCustomEvent(eventName: string, detail?: unknown): void {
+export function dispatchCustomEvent(eventName: string, detail?: unknown, logger?: Logger): void {
+  if (logger) {
+    logger.log(`Dispatching custom event: ${eventName}`, detail);
+  }
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }

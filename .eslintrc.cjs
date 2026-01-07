@@ -45,7 +45,14 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__filename', '__dirname', '_eventData', '_partnerCardCtx'],
+        allow: [
+          '__filename',
+          '__dirname',
+          '_eventData',
+          '_partnerCardCtx',
+          '_partnerCardObserver',
+          '_partnerCardXdmCache',
+        ],
       },
     ],
   },

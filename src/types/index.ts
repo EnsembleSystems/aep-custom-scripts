@@ -16,12 +16,18 @@ export interface LoggerConfig {
 
 export type FetchResult<T> = T | null;
 
-// Extend Window interface to include _eventData and _partnerCardCtx
+// Extend Window interface to include _eventData, _partnerCardCtx, and _partnerCardObserver
 declare global {
   interface Window {
     _eventData?: {
       apiResponse?: unknown;
     };
     _partnerCardCtx?: PartnerCardCtx | null;
+    _partnerCardObserver?: MutationObserver;
+    _partnerCardXdmCache?: {
+      timestamp: number;
+      data: unknown;
+      sourceData: PartnerCardCtx | null;
+    };
   }
 }
