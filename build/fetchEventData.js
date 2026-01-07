@@ -130,7 +130,10 @@ function extractDates(objects) {
 }
 
 // src/utils/dom.ts
-function dispatchCustomEvent(eventName, detail) {
+function dispatchCustomEvent(eventName, detail, logger) {
+  if (logger) {
+    logger.log(`Dispatching custom event: ${eventName}`, detail);
+  }
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 

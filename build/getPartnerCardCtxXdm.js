@@ -75,19 +75,48 @@ function createLogger(debug, scriptName, isTestMode) {
 }
 
 // src/scripts/getPartnerCardCtxXdm.ts
+var CACHE_DURATION_MS = 500;
+function isCacheValid(logger) {
+  const { _partnerCardXdmCache: cache, _partnerCardCtx: currentData } = window;
+  if (!cache) {
+    logger.log("No cache found");
+    return false;
+  }
+  const now = Date.now();
+  const isExpired = now - cache.timestamp > CACHE_DURATION_MS;
+  if (isExpired) {
+    logger.log("Cache expired");
+    return false;
+  }
+  const dataChanged = JSON.stringify(cache.sourceData) !== JSON.stringify(currentData);
+  if (dataChanged) {
+    logger.log("Source data changed, cache invalid");
+    return false;
+  }
+  logger.log("Cache is valid, returning cached data");
+  return true;
+}
 function formatPartnerCardCtxXdm(logger) {
-  if (!window._partnerCardCtx) {
+  const { _partnerCardCtx } = window;
+  if (!_partnerCardCtx) {
     logger.log("No _partnerCardCtx on window");
     return null;
   }
-  const { _partnerCardCtx } = window;
+  if (isCacheValid(logger)) {
+    return window._partnerCardXdmCache.data;
+  }
   const xdmData = {
     _adobepartners: {
       cardCollection: _partnerCardCtx
       // Wrap in array for XDM schema
     }
   };
-  logger.log("Formatted XDM data", xdmData);
+  window._partnerCardXdmCache = {
+    timestamp: Date.now(),
+    data: xdmData,
+    sourceData: _partnerCardCtx
+  };
+  logger.log("Formatted XDM data (cached for reuse)", xdmData);
   return xdmData;
 }
 function getPartnerCardCtxXdmScript(testMode = false) {
