@@ -148,44 +148,6 @@ function findCardInPath(event: Event, logger: ReturnType<typeof createLogger>): 
 }
 
 /**
- * Handles click events on the shadow host (wrapper)
- * Single Responsibility: Event handling and coordination
- */
-function handleWrapperClick(
-  event: Event,
-  sectionID: string,
-  filterContext: string,
-  logger: ReturnType<typeof createLogger>
-): void {
-  // Find the card element in the composed path
-  const cardElement = findCardInPath(event, logger);
-
-  if (!cardElement) {
-    return;
-  }
-
-  // Extract the card context
-  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
-
-  if (!cardContext) {
-    logger.warn('Failed to extract card context');
-    return;
-  }
-
-  // Ensure window._adobePartners.partnerCard exists
-  window._adobePartners = window._adobePartners ?? {};
-  window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
-
-  // Store in window for AEP to access
-  window._adobePartners.partnerCard.context = cardContext;
-
-  // Trigger custom event for AEP
-  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
-
-  logger.log('Card click processed successfully');
-}
-
-/**
  * Extracts context metadata for a wrapper element
  * Single Responsibility: Context extraction
  */
@@ -212,6 +174,46 @@ function extractWrapperContext(
 }
 
 /**
+ * Handles click events on the shadow host (wrapper)
+ * Single Responsibility: Event handling and coordination
+ */
+function handleWrapperClick(
+  event: Event,
+  wrapper: Element,
+  logger: ReturnType<typeof createLogger>
+): void {
+  // Find the card element in the composed path
+  const cardElement = findCardInPath(event, logger);
+
+  if (!cardElement) {
+    return;
+  }
+
+  // Extract context at click time (not setup time) to ensure DOM is ready
+  const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
+
+  // Extract the card context
+  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
+
+  if (!cardContext) {
+    logger.warn('Failed to extract card context');
+    return;
+  }
+
+  // Ensure window._adobePartners.partnerCard exists
+  window._adobePartners = window._adobePartners ?? {};
+  window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
+
+  // Store in window for AEP to access
+  window._adobePartners.partnerCard.context = cardContext;
+
+  // Trigger custom event for AEP
+  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
+
+  logger.log('Card click processed successfully');
+}
+
+/**
  * Attaches click listener to a single wrapper element
  * Single Responsibility: Single wrapper listener attachment
  */
@@ -225,11 +227,10 @@ function attachListenerToWrapper(
     return false;
   }
 
-  const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
-
   // Use arrow function to preserve context
+  // Extract context at click time (not setup time) by passing wrapper element
   wrapper.addEventListener('click', (event) => {
-    handleWrapperClick(event, sectionID, filterContext, logger);
+    handleWrapperClick(event, wrapper, logger);
   });
 
   // Mark as processed
