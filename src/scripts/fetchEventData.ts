@@ -74,18 +74,9 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
 
       // Store data on window for access by other scripts
       try {
-        // Ensure window._adobePartners exists
-        if (!window._adobePartners || typeof window._adobePartners !== 'object') {
-          window._adobePartners = {};
-        }
-
         // Ensure window._adobePartners.eventData exists
-        if (
-          !window._adobePartners.eventData ||
-          typeof window._adobePartners.eventData !== 'object'
-        ) {
-          window._adobePartners.eventData = {};
-        }
+        window._adobePartners = window._adobePartners ?? {};
+        window._adobePartners.eventData = window._adobePartners.eventData ?? {};
 
         // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
         const dates: string[] = extractDates(data.dates as Array<{ date?: string }>);

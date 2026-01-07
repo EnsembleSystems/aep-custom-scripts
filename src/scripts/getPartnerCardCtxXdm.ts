@@ -106,12 +106,7 @@ function formatPartnerCardCtxXdm(
     },
   };
 
-  // Ensure window._adobePartners.partnerCard exists
-  if (!window._adobePartners.partnerCard) {
-    window._adobePartners.partnerCard = {};
-  }
-
-  // Cache the result
+  // Cache the result (partnerCard guaranteed to exist from line 90 check)
   window._adobePartners.partnerCard.xdmCache = {
     timestamp: Date.now(),
     data: xdmData,

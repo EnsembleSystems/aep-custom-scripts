@@ -17,21 +17,9 @@ export interface EventDataConfig {
  * Gets event data from window._adobePartners.eventData.apiResponse
  */
 function getEventData(logger: ReturnType<typeof createLogger>): unknown {
-  // Check if window._adobePartners exists
-  if (!window._adobePartners) {
-    logger.log('No _adobePartners object on window');
-    return null;
-  }
-
-  // Check if eventData exists
-  if (!window._adobePartners.eventData) {
-    logger.log('No eventData in window._adobePartners');
-    return null;
-  }
-
-  // Check if apiResponse exists
-  if (!window._adobePartners.eventData.apiResponse) {
-    logger.log('No apiResponse in window._adobePartners.eventData');
+  // Check if apiResponse exists using optional chaining
+  if (!window._adobePartners?.eventData?.apiResponse) {
+    logger.log('No apiResponse found in window._adobePartners.eventData');
     return null;
   }
 

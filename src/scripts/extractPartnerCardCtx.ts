@@ -172,15 +172,9 @@ function handleWrapperClick(
     return;
   }
 
-  // Ensure window._adobePartners exists
-  if (!window._adobePartners) {
-    window._adobePartners = {};
-  }
-
   // Ensure window._adobePartners.partnerCard exists
-  if (!window._adobePartners.partnerCard) {
-    window._adobePartners.partnerCard = {};
-  }
+  window._adobePartners = window._adobePartners ?? {};
+  window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
 
   // Store in window for AEP to access
   window._adobePartners.partnerCard.context = cardContext;
@@ -358,15 +352,9 @@ export function extractPartnerCardCtxScript(
   const logger = createLogger(config.debug, 'Partner Card Context', testMode);
 
   try {
-    // Ensure window._adobePartners exists
-    if (!window._adobePartners) {
-      window._adobePartners = {};
-    }
-
     // Ensure window._adobePartners.partnerCard exists
-    if (!window._adobePartners.partnerCard) {
-      window._adobePartners.partnerCard = {};
-    }
+    window._adobePartners = window._adobePartners ?? {};
+    window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
 
     // Check if already initialized - prevent duplicate setup
     if (window._adobePartners.partnerCard.observer) {
