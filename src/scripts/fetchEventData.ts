@@ -79,7 +79,8 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
         window._adobePartners.eventData = window._adobePartners.eventData ?? {};
 
         // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
-        const dates: string[] = extractDates(data.dates as Array<{ date?: string }>);
+        // Use nullish coalescing to ensure we always pass an array to extractDates
+        const dates: string[] = extractDates((data.dates ?? []) as Array<{ date?: string }>);
         logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
 
         // Create transformed data object with extracted dates

@@ -194,6 +194,9 @@ function extractWrapperContext(
   logger: ReturnType<typeof createLogger>
 ): { sectionID: string; filterContext: string } {
   // Get section ID from parent element
+  if (!wrapper.parentElement) {
+    logger.warn('Wrapper has no parent element, sectionID will be empty');
+  }
   const sectionID = getAttribute(wrapper.parentElement, ATTRIBUTES.DAA_LH);
 
   // Get filter context from shadow DOM
