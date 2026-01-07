@@ -13,9 +13,7 @@ export function extractDates(objects: Array<{ date?: string }>): string[] {
   }
 
   return objects
-    .filter(
-      (obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== ''
-    )
+    .filter((obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== '')
     .map((obj) => obj.date as string);
 }
 
@@ -30,9 +28,7 @@ export function extractDatesArray(objects: Array<{ date?: string }>): string[] {
   }
 
   return objects
-    .filter(
-      (obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== ''
-    )
+    .filter((obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== '')
     .map((obj) => new Date(obj.date as string).toISOString());
 }
 
@@ -71,17 +67,13 @@ export function formatDateTimeForAEP(date: string | Date): string {
  * @param objects - Array of objects containing a 'date' field
  * @returns Array of date strings in AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
  */
-export function extractDateTimeArray(
-  objects: Array<{ date?: string }>
-): string[] {
+export function extractDateTimeArray(objects: Array<{ date?: string }>): string[] {
   if (!Array.isArray(objects)) {
     return [];
   }
 
   return objects
-    .filter(
-      (obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== ''
-    )
+    .filter((obj) => obj && typeof obj.date === 'string' && obj.date.trim() !== '')
     .map((obj) => formatDateTimeForAEP(obj.date as string))
     .filter((dateStr) => dateStr !== ''); // Remove any invalid dates
 }

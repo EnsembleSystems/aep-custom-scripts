@@ -86,10 +86,13 @@ This automatically (**using esbuild**):
 
 After building, you'll find these bundled scripts in `build/`:
 
-- **`fetchEventData.js`** - Adobe Events event data fetcher
+- **`fetchEventData.js`** - Adobe Events event data fetcher (API call)
+- **`getEventData.js`** - Adobe Events event data getter (from window object)
 - **`extractAttendeeData.js`** - Adobe Events attendee data extractor
 - **`extractPartnerData.js`** - Partner cookie data extractor
 - **`extractPublisherId.js`** - Publisher/Owner ID extractor
+- **`extractPartnerCardCtx.js`** - Partner card click listener setup
+- **`getPartnerCardCtxXdm.js`** - Partner card XDM formatter
 - **`helloWorld.js`** - Template example (for reference)
 
 ## 📥 Download Latest Scripts
@@ -98,10 +101,13 @@ After building, you'll find these bundled scripts in `build/`:
 
 Ready-to-deploy bundled scripts (committed to repository):
 
-- **[fetchEventData.js](build/fetchEventData.js)** - Adobe Events event data fetcher
+- **[fetchEventData.js](build/fetchEventData.js)** - Adobe Events event data fetcher (API call)
+- **[getEventData.js](build/getEventData.js)** - Adobe Events event data getter (from window)
 - **[extractAttendeeData.js](build/extractAttendeeData.js)** - Adobe Events attendee data extractor
 - **[extractPartnerData.js](build/extractPartnerData.js)** - Partner cookie extractor
 - **[extractPublisherId.js](build/extractPublisherId.js)** - Publisher ID extractor
+- **[extractPartnerCardCtx.js](build/extractPartnerCardCtx.js)** - Partner card click listener setup
+- **[getPartnerCardCtxXdm.js](build/getPartnerCardCtxXdm.js)** - Partner card XDM formatter
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
 
@@ -124,26 +130,35 @@ For stable, versioned deployments see [Releases](../../releases) page.
 aep-custom-scripts/
 ├── src/
 │   ├── scripts/           # Main script implementations
-│   │   ├── fetchEventData.ts
-│   │   ├── extractAttendeeData.ts
-│   │   ├── extractPartnerData.ts
-│   │   ├── extractPublisherId.ts
-│   │   └── helloWorld.ts  # Template for new scripts
+│   │   ├── fetchEventData.ts          # Fetches event data via API
+│   │   ├── getEventData.ts            # Gets event data from window
+│   │   ├── extractAttendeeData.ts     # Extracts attendee data
+│   │   ├── extractPartnerData.ts      # Extracts partner cookie data
+│   │   ├── extractPublisherId.ts      # Extracts publisher ID
+│   │   ├── extractPartnerCardCtx.ts   # Partner card click listeners
+│   │   ├── getPartnerCardCtxXdm.ts    # Partner card XDM formatter
+│   │   └── helloWorld.ts              # Template for new scripts
 │   ├── utils/             # Shared utilities (DRY)
 │   │   ├── logger.ts      # Consistent logging
 │   │   ├── fetch.ts       # Fetch with timeout
 │   │   ├── cookie.ts      # Cookie parsing
 │   │   ├── storage.ts     # LocalStorage helpers
-│   │   └── validation.ts  # Input validation
+│   │   ├── validation.ts  # Input validation
+│   │   ├── dom.ts         # DOM manipulation & shadow DOM helpers
+│   │   ├── object.ts      # Object utilities
+│   │   └── dates.ts       # Date utilities
 │   ├── types/             # TypeScript type definitions
 │   └── index.ts           # Main exports
 ├── scripts/
 │   └── buildWithEsbuild.js  # esbuild-based build script
 ├── build/                 # Bundled scripts (ready for AEP)
 │   ├── fetchEventData.js
+│   ├── getEventData.js
 │   ├── extractAttendeeData.js
 │   ├── extractPartnerData.js
-│   └── extractPublisherId.js
+│   ├── extractPublisherId.js
+│   ├── extractPartnerCardCtx.js
+│   └── getPartnerCardCtxXdm.js
 ├── tsconfig.json          # TypeScript configuration
 └── package.json           # Project metadata
 ```
@@ -156,7 +171,9 @@ Fetches event data from Adobe Events pages via API.
 
 **Use on**: `*.adobeevents.com` pages
 
-**Returns**: Event data object (from `/api/event.json?meta=true`) or `null` on error
+**Returns**: Promise that resolves to event data object (from `/api/event.json?meta=true`) or `null` on error
+
+**Note**: This script makes an API call and stores the result on `window._eventData.apiResponse`. The data is also returned directly as a Promise.
 
 **Configuration** (default in source):
 
@@ -167,7 +184,25 @@ const config = {
 };
 ```
 
-### 2. Attendee Data Extractor (`extractAttendeeData`)
+### 2. Event Data Getter (`getEventData`)
+
+Gets event data from `window._eventData.apiResponse` on Adobe Events pages.
+
+**Use on**: `*.adobeevents.com` pages
+
+**Returns**: Event data object (from `window._eventData.apiResponse`) or `null` if not found
+
+**Note**: This script retrieves data previously stored by `fetchEventData`. Use this in data elements that need the event data after it's been fetched.
+
+**Configuration** (default in source):
+
+```typescript
+const config = {
+  debug: false, // Enable debug logging
+};
+```
+
+### 3. Attendee Data Extractor (`extractAttendeeData`)
 
 Extracts attendee data from localStorage on Adobe Events pages.
 
@@ -183,7 +218,7 @@ const config = {
 };
 ```
 
-### 3. Partner Data Extractor (`extractPartnerData`)
+### 4. Partner Data Extractor (`extractPartnerData`)
 
 Extracts partner data from browser cookies and returns the DXP value.
 
@@ -207,7 +242,7 @@ const config = {
 };
 ```
 
-### 4. Publisher ID Extractor (`extractPublisherId`)
+### 5. Publisher ID Extractor (`extractPublisherId`)
 
 Extracts publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
 
@@ -230,6 +265,79 @@ const config = {
 ```
 
 **No API keys required** - this script uses DOM parsing only.
+
+### 6. Partner Card Context Extractor (`extractPartnerCardCtx`)
+
+Sets up click listeners on partner cards and extracts context data from shadow DOM.
+
+**Use on**: Adobe Partner pages with partner card collections
+
+**Usage in AEP Launch**:
+
+- Use as a **Rule Action** on page load (Page Bottom or DOM Ready event)
+- The script attaches click listeners to all partner card wrappers
+- Click data is stored in `window._partnerCardCtx` and triggers `partnerCardClick` custom event
+- Create a second rule to track clicks: Event Type = "Custom Event", Event Name = "partnerCardClick"
+
+**How it works**:
+
+- Finds all `.dx-card-collection-wrapper` elements (shadow DOM hosts)
+- Extracts section ID and filter context from parent elements
+- Attaches click listeners that extract card metadata when clicked
+- Dispatches custom event for AEP tracking
+
+**Returns**: `{ listenersAttached: number }` (count of listeners attached) or `null` on error
+
+**Configuration** (default in source):
+
+```typescript
+const config = {
+  debug: false, // Enable debug logging
+};
+```
+
+**Shadow DOM Support**: Handles shadow DOM properly using composed event paths.
+
+### 7. Partner Card XDM Formatter (`getPartnerCardCtxXdm`)
+
+Formats partner card data from `window._partnerCardCtx` into XDM structure for AEP.
+
+**Use on**: Adobe Partner pages (as a data element)
+
+**Usage in AEP Launch**:
+
+- Create a Data Element with this script
+- Reference the data element in your "Send Event" action's XDM field
+- The script wraps card data in the `_adobepartners.cardCollection` schema field
+
+**Returns**: XDM-formatted object with partner card data or `null` if no data available
+
+**Example output**:
+
+```typescript
+{
+  _adobepartners: {
+    cardCollection: {
+      cardTitle: "Example Card",
+      contentID: "12345",
+      contentType: "partner_card",
+      ctaText: "Learn More",
+      filterContext: "partner-solutions",
+      name: "Example Card",
+      position: "1",
+      sectionID: "partner-cards-section"
+    }
+  }
+}
+```
+
+**Configuration** (default in source):
+
+```typescript
+const config = {
+  debug: false, // Enable debug logging
+};
+```
 
 ## Browser Console Testing
 
@@ -417,6 +525,26 @@ setStorageItem('key', data);
 ```typescript
 const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce ID formats
 ```
+
+### DOM Utils (`src/utils/dom.ts`)
+
+```typescript
+const element = queryShadow(shadowHost, '.selector'); // Query inside shadow DOM
+const text = getTextContent(element);
+const attr = getAttribute(element, 'attribute-name');
+const value = splitAndGet(string, '|', index);
+const found = findInComposedPath(event, predicate); // Find element in composed path
+const matches = matchesElement(element, tagName, className);
+dispatchCustomEvent('eventName', data); // Dispatch custom event
+```
+
+### Object Utils (`src/utils/object.ts`)
+
+Object manipulation utilities for data transformation.
+
+### Date Utils (`src/utils/dates.ts`)
+
+Date manipulation and formatting utilities for timestamp handling.
 
 ## APIs Used
 

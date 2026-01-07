@@ -14,6 +14,7 @@ import {
 } from '../utils/fetch.js';
 import CONSTANTS from '../utils/constants.js';
 import { extractDates } from '../utils/dates.js';
+import { dispatchCustomEvent } from '../utils/dom.js';
 
 // Types
 export interface EventDataConfig {
@@ -79,9 +80,7 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
         }
 
         // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
-        const dates: string[] = extractDates(
-          data.dates as Array<{ date?: string }>
-        );
+        const dates: string[] = extractDates(data.dates as Array<{ date?: string }>);
         logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
 
         // Create transformed data object with extracted dates
@@ -96,9 +95,7 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
         logger.log('Event data stored in window._eventData.apiResponse');
 
         // Dispatch event to notify other listeners using the global variable
-        document.dispatchEvent(
-          new CustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT)
-        );
+        dispatchCustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT);
 
         return transformedData;
       } catch (err) {

@@ -45,7 +45,14 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__filename', '__dirname', '_eventData'],
+        allow: [
+          '__filename',
+          '__dirname',
+          '_eventData',
+          '_partnerCardCtx',
+          '_partnerCardObserver',
+          '_partnerCardXdmCache',
+        ],
       },
     ],
   },
@@ -78,17 +85,6 @@ module.exports = {
       files: ['src/utils/validation.ts', 'src/utils/dates.ts'],
       rules: {
         'import/prefer-default-export': 'off',
-      },
-    },
-    {
-      files: ['src/scripts/fetchEventData.ts'],
-      rules: {
-        'no-underscore-dangle': [
-          'error',
-          {
-            allow: ['_eventData'],
-          },
-        ],
       },
     },
   ],

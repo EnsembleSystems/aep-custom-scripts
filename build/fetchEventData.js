@@ -106,9 +106,7 @@ function fetchWithTimeout(url, options, timeoutMs) {
 function validateResponseSize(response) {
   const contentLength = response.headers.get("content-length");
   if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
-    throw new Error(
-      `Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`
-    );
+    throw new Error(`Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`);
   }
 }
 function isAbortError(error) {
@@ -128,9 +126,12 @@ function extractDates(objects) {
   if (!Array.isArray(objects)) {
     return [];
   }
-  return objects.filter(
-    (obj) => obj && typeof obj.date === "string" && obj.date.trim() !== ""
-  ).map((obj) => obj.date);
+  return objects.filter((obj) => obj && typeof obj.date === "string" && obj.date.trim() !== "").map((obj) => obj.date);
+}
+
+// src/utils/dom.ts
+function dispatchCustomEvent(eventName, detail) {
+  document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
 // src/scripts/fetchEventData.ts
@@ -170,9 +171,7 @@ function fetchEventDataScript(testMode = false) {
       if (!window._eventData || typeof window._eventData !== "object") {
         window._eventData = {};
       }
-      const dates = extractDates(
-        data.dates
-      );
+      const dates = extractDates(data.dates);
       logger.log("Extracted dates (`yyyy-MM-dd` format):", dates);
       const transformedData = __spreadProps(__spreadValues({}, data), {
         dates
@@ -180,9 +179,7 @@ function fetchEventDataScript(testMode = false) {
       logger.log("Transformed data", transformedData);
       window._eventData.apiResponse = transformedData;
       logger.log("Event data stored in window._eventData.apiResponse");
-      document.dispatchEvent(
-        new CustomEvent(constants_default.EVENT_DATA_READY_EVENT)
-      );
+      dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
       return transformedData;
     } catch (err) {
       logger.warn("Could not store data on window._eventData:", err);

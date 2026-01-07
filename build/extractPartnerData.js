@@ -137,10 +137,7 @@ function getPartnerData(cookieKey, logger) {
     logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
     return cleanedDxpValue;
   }
-  const cleanedPartnerData = removeProperties(
-    partnerData,
-    PROPERTIES_TO_REMOVE
-  );
+  const cleanedPartnerData = removeProperties(partnerData, PROPERTIES_TO_REMOVE);
   logger.log("Found partner data (no DXP key)", cleanedPartnerData);
   return cleanedPartnerData;
 }
@@ -151,10 +148,7 @@ function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_K
   };
   const logger = createLogger(config.debug, "Partner Data", testMode);
   try {
-    logger.testHeader(
-      "PARTNER DATA EXTRACTOR - TEST MODE",
-      `Cookie Key: ${config.cookieKey}`
-    );
+    logger.testHeader("PARTNER DATA EXTRACTOR - TEST MODE", `Cookie Key: ${config.cookieKey}`);
     const partnerData = getPartnerData(config.cookieKey, logger);
     logger.testResult(partnerData);
     if (!testMode) {

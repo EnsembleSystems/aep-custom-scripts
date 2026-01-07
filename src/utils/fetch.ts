@@ -35,9 +35,7 @@ export function fetchWithTimeout(
 export function validateResponseSize(response: Response): void {
   const contentLength = response.headers.get('content-length');
   if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
-    throw new Error(
-      `Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`
-    );
+    throw new Error(`Response too large: ${contentLength} bytes (max: ${MAX_RESPONSE_SIZE})`);
   }
 }
 

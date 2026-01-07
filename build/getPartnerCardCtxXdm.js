@@ -74,70 +74,40 @@ function createLogger(debug, scriptName, isTestMode) {
   return new Logger(debug, prefix, isTestMode);
 }
 
-// src/utils/validation.ts
-function isValidPublisherId(id) {
-  if (!id || typeof id !== "string") {
-    return false;
+// src/scripts/getPartnerCardCtxXdm.ts
+function formatPartnerCardCtxXdm(logger) {
+  if (!window._partnerCardCtx) {
+    logger.log("No _partnerCardCtx on window");
+    return null;
   }
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const salesforcePattern = /^[a-z0-9]{15}([a-z0-9]{3})?$/i;
-  return uuidPattern.test(id) || salesforcePattern.test(id);
-}
-
-// src/scripts/extractPublisherId.ts
-function extractPublisherId(href, logger) {
-  const URL_PARTS = {
-    EMPTY: 0,
-    // ''
-    PUBLISHER: 1,
-    // 'publisher'
-    APP_TYPE: 2,
-    // 'cc' | 'dc' | 'ec'
-    ID: 3,
-    // actual ID
-    NAME: 4
-    // publisher name
-  };
-  const MIN_PARTS = 4;
-  const parts = href.split("/");
-  if (parts.length >= MIN_PARTS && parts[URL_PARTS.PUBLISHER] === "publisher") {
-    const publisherId = parts[URL_PARTS.ID];
-    if (publisherId && isValidPublisherId(publisherId)) {
-      return publisherId;
+  const { _partnerCardCtx } = window;
+  const xdmData = {
+    _adobepartners: {
+      cardCollection: _partnerCardCtx
+      // Wrap in array for XDM schema
     }
-    logger.log("Invalid publisher ID format", publisherId);
-  }
-  return null;
+  };
+  logger.log("Formatted XDM data", xdmData);
+  return xdmData;
 }
-function extractPublisherIdScript(testMode = false) {
+function getPartnerCardCtxXdmScript(testMode = false) {
   const config = {
     debug: testMode
   };
-  const logger = createLogger(config.debug, "Publisher ID", testMode);
+  const logger = createLogger(config.debug, "Partner Card Context XDM", testMode);
   try {
-    logger.testHeader("PUBLISHER ID EXTRACTOR - TEST MODE");
-    logger.log("Searching for publisher links in DOM");
-    const links = document.querySelectorAll('a[href^="/publisher/"]');
-    logger.log(`Found ${links.length} publisher links`);
-    for (let i = 0; i < links.length; i += 1) {
-      const href = links[i].getAttribute("href");
-      if (href) {
-        const publisherId = extractPublisherId(href, logger);
-        if (publisherId) {
-          logger.log("Found valid publisher ID", publisherId);
-          logger.testResult(`Publisher ID: ${publisherId}`);
-          return publisherId;
-        }
-      }
+    logger.testHeader("PARTNER CARD CONTEXT XDM FORMATTER - TEST MODE");
+    const xdmData = formatPartnerCardCtxXdm(logger);
+    logger.testResult(xdmData);
+    if (!testMode) {
+      logger.log("Returning XDM data", xdmData);
     }
-    logger.log("No valid publisher link found in DOM");
-    logger.testResult("null (no publisher link found)");
-    return null;
+    return xdmData;
   } catch (error) {
-    logger.error("Unexpected error parsing publisher ID:", error);
+    logger.error("Unexpected error formatting partner card XDM:", error);
     return null;
   }
 }
 
 
-return extractPublisherIdScript(TEST_MODE);
+return getPartnerCardCtxXdmScript(TEST_MODE);

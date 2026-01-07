@@ -18,10 +18,7 @@
  * const cleaned = removeProperties(data, ['agreement', 'unused']);
  * // Returns: { data: { value: 123 } }
  */
-export default function removeProperties(
-  data: unknown,
-  propertiesToRemove: string[]
-): unknown {
+export default function removeProperties(data: unknown, propertiesToRemove: string[]): unknown {
   if (data === null || data === undefined) {
     return data;
   }
