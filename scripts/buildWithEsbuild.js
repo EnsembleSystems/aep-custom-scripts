@@ -101,13 +101,38 @@ async function buildScript(scriptPath) {
     const testMode =
       process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
-    // NO IIFE wrapper - AEP Launch supports direct Promise returns
-    // Add TEST_MODE constant at the top and call the main function directly
+    // Check if the function signature includes 'event' parameter
+    // Determine parameter order by checking which comes first
+    const functionSignatureMatch = bundledCode.match(
+      new RegExp(`function ${mainFunctionName}\\s*\\([^)]*\\)`)
+    );
+    const needsEventParam =
+      functionSignatureMatch && functionSignatureMatch[0].includes('event');
+
+    // Determine the parameter order
+    // Check if 'event' comes before 'testMode' in the signature
+    let functionCall;
+    if (needsEventParam) {
+      const signature = functionSignatureMatch[0];
+      const eventIndex = signature.indexOf('event');
+      const testModeIndex = signature.indexOf('testMode');
+
+      // If event comes before testMode (or testMode not found), use (event, TEST_MODE)
+      // Otherwise use (TEST_MODE, event)
+      if (testModeIndex === -1 || eventIndex < testModeIndex) {
+        functionCall = `${mainFunctionName}(event, TEST_MODE)`;
+      } else {
+        functionCall = `${mainFunctionName}(TEST_MODE, event)`;
+      }
+    } else {
+      functionCall = `${mainFunctionName}(TEST_MODE)`;
+    }
+
     const wrappedCode = `const TEST_MODE = ${testMode};
 
 ${bundledCode}
 
-return ${mainFunctionName}(TEST_MODE);`;
+return ${functionCall};`;
 
     // Write the final code (no minification - AEP does this for us)
     writeFileSync(outputPath, wrappedCode, 'utf8');

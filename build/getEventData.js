@@ -74,7 +74,7 @@ function createLogger(debug, scriptName, isTestMode) {
   return new Logger(debug, prefix, isTestMode);
 }
 
-// src/scripts/extractEventData.ts
+// src/scripts/getEventData.ts
 function getEventData(logger) {
   if (!window._eventData) {
     logger.log("No _eventData object on window");
@@ -88,13 +88,13 @@ function getEventData(logger) {
   logger.log("Found event data", eventData);
   return eventData;
 }
-function extractEventDataScript(testMode = false) {
+function getEventDataScript(testMode = false) {
   const config = {
     debug: testMode
   };
-  const logger = createLogger(config.debug, "Event Data", testMode);
+  const logger = createLogger(config.debug, "Get Event Data", testMode);
   try {
-    logger.testHeader("EVENT DATA EXTRACTOR - TEST MODE");
+    logger.testHeader("GET EVENT DATA - TEST MODE");
     const eventData = getEventData(logger);
     logger.testResult(eventData);
     if (!testMode) {
@@ -102,10 +102,10 @@ function extractEventDataScript(testMode = false) {
     }
     return eventData;
   } catch (error) {
-    logger.error("Unexpected error extracting event data:", error);
+    logger.error("Unexpected error getting event data:", error);
     return null;
   }
 }
 
 
-return extractEventDataScript(TEST_MODE);
+return getEventDataScript(TEST_MODE);
