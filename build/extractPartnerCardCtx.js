@@ -177,7 +177,10 @@ function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger
   return result;
 }
 function findCardInPath(event, logger) {
-  const cardElement = findInComposedPath(event, (el) => matchesElement(el, CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME));
+  const cardElement = findInComposedPath(
+    event,
+    (el) => matchesElement(el, CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME)
+  );
   if (!cardElement) {
     logger.log("Click was not on a card element");
   }

@@ -117,9 +117,7 @@ function extractPublisherIdScript(testMode = false) {
   try {
     logger.testHeader("PUBLISHER ID EXTRACTOR - TEST MODE");
     logger.log("Searching for publisher links in DOM");
-    const links = document.querySelectorAll(
-      'a[href^="/publisher/"]'
-    );
+    const links = document.querySelectorAll('a[href^="/publisher/"]');
     logger.log(`Found ${links.length} publisher links`);
     for (let i = 0; i < links.length; i += 1) {
       const href = links[i].getAttribute("href");
