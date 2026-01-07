@@ -80,9 +80,7 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
         }
 
         // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
-        const dates: string[] = extractDates(
-          data.dates as Array<{ date?: string }>
-        );
+        const dates: string[] = extractDates(data.dates as Array<{ date?: string }>);
         logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
 
         // Create transformed data object with extracted dates

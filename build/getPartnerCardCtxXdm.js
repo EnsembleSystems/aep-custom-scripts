@@ -74,30 +74,30 @@ function createLogger(debug, scriptName, isTestMode) {
   return new Logger(debug, prefix, isTestMode);
 }
 
-// src/scripts/getPartnerCardXdm.ts
-function formatPartnerCardXdm(logger) {
-  if (!window.partnerCardData) {
-    logger.log("No partnerCardData on window");
+// src/scripts/getPartnerCardCtxXdm.ts
+function formatPartnerCardCtxXdm(logger) {
+  if (!window._partnerCardCtx) {
+    logger.log("No _partnerCardCtx on window");
     return null;
   }
-  const { partnerCardData } = window;
+  const { _partnerCardCtx } = window;
   const xdmData = {
     _adobepartners: {
-      cardCollection: partnerCardData
+      cardCollection: _partnerCardCtx
       // Wrap in array for XDM schema
     }
   };
   logger.log("Formatted XDM data", xdmData);
   return xdmData;
 }
-function getPartnerCardXdmScript(testMode = false) {
+function getPartnerCardCtxXdmScript(testMode = false) {
   const config = {
     debug: testMode
   };
-  const logger = createLogger(config.debug, "Partner Card XDM", testMode);
+  const logger = createLogger(config.debug, "Partner Card Context XDM", testMode);
   try {
-    logger.testHeader("PARTNER CARD XDM FORMATTER - TEST MODE");
-    const xdmData = formatPartnerCardXdm(logger);
+    logger.testHeader("PARTNER CARD CONTEXT XDM FORMATTER - TEST MODE");
+    const xdmData = formatPartnerCardCtxXdm(logger);
     logger.testResult(xdmData);
     if (!testMode) {
       logger.log("Returning XDM data", xdmData);
@@ -110,4 +110,4 @@ function getPartnerCardXdmScript(testMode = false) {
 }
 
 
-return getPartnerCardXdmScript(TEST_MODE);
+return getPartnerCardCtxXdmScript(TEST_MODE);

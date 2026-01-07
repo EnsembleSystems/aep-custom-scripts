@@ -21,10 +21,7 @@ const PROPERTIES_TO_REMOVE = ['latestAgreementAcceptedVersion'];
 /**
  * Gets partner data from cookies and extracts the DXP value
  */
-function getPartnerData(
-  cookieKey: string,
-  logger: ReturnType<typeof createLogger>
-): unknown {
+function getPartnerData(cookieKey: string, logger: ReturnType<typeof createLogger>): unknown {
   const partnerCookie = getCookie(cookieKey);
 
   if (!partnerCookie) {
@@ -40,11 +37,7 @@ function getPartnerData(
   }
 
   // Extract DXP value if it exists
-  if (
-    typeof partnerData === 'object' &&
-    partnerData !== null &&
-    'DXP' in partnerData
-  ) {
+  if (typeof partnerData === 'object' && partnerData !== null && 'DXP' in partnerData) {
     const dxpValue = (partnerData as Record<string, unknown>).DXP;
     const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
     logger.log('Found partner data (DXP extracted)', cleanedDxpValue);
@@ -52,10 +45,7 @@ function getPartnerData(
   }
 
   // If no DXP key, return the whole object
-  const cleanedPartnerData = removeProperties(
-    partnerData,
-    PROPERTIES_TO_REMOVE
-  );
+  const cleanedPartnerData = removeProperties(partnerData, PROPERTIES_TO_REMOVE);
   logger.log('Found partner data (no DXP key)', cleanedPartnerData);
   return cleanedPartnerData;
 }
@@ -77,10 +67,7 @@ export function extractPartnerDataScript(
   const logger = createLogger(config.debug, 'Partner Data', testMode);
 
   try {
-    logger.testHeader(
-      'PARTNER DATA EXTRACTOR - TEST MODE',
-      `Cookie Key: ${config.cookieKey}`
-    );
+    logger.testHeader('PARTNER DATA EXTRACTOR - TEST MODE', `Cookie Key: ${config.cookieKey}`);
 
     // Get partner data from cookies (DXP value extracted)
     const partnerData = getPartnerData(config.cookieKey, logger);

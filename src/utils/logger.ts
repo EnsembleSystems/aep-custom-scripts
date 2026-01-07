@@ -89,11 +89,7 @@ export class Logger {
   }
 }
 
-export function createLogger(
-  debug: boolean,
-  scriptName: string,
-  isTestMode: boolean
-): Logger {
+export function createLogger(debug: boolean, scriptName: string, isTestMode: boolean): Logger {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
   return new Logger(debug, prefix, isTestMode);
 }

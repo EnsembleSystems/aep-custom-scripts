@@ -41,7 +41,7 @@ export interface PartnerCardConfig {
   debug: boolean;
 }
 
-export interface PartnerCardData {
+export interface PartnerCardCtx {
   cardTitle: string;
   contentID: string;
   contentType: string;
@@ -50,13 +50,6 @@ export interface PartnerCardData {
   name: string;
   position: string;
   sectionID: string;
-}
-
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    partnerCardData?: PartnerCardData | null;
-  }
 }
 
 // Constants for security and maintainability
@@ -89,15 +82,15 @@ const DAA_LH_INDICES = {
 } as const;
 
 /**
- * Extracts partner card data from a card element
- * Single Responsibility: Data extraction only
+ * Extracts partner card context from a card element
+ * Single Responsibility: Context extraction only
  */
-function extractCardDataFromElement(
+function extractCardCtxFromElement(
   cardElement: Element,
   sectionID: string,
   filterContext: string,
   logger: ReturnType<typeof createLogger>
-): PartnerCardData | null {
+): PartnerCardCtx | null {
   // Validate input
   if (!cardElement) {
     logger.error('Card element is required');
@@ -123,7 +116,7 @@ function extractCardDataFromElement(
   const ctaText = getAttribute(firstLink, ATTRIBUTES.DAA_LL);
 
   // Build result object
-  const result: PartnerCardData = {
+  const result: PartnerCardCtx = {
     cardTitle,
     contentID,
     contentType: CONTENT_TYPE,
@@ -134,7 +127,7 @@ function extractCardDataFromElement(
     sectionID,
   };
 
-  logger.log('Extracted card data', result);
+  logger.log('Extracted card context', result);
   return result;
 }
 
@@ -142,10 +135,7 @@ function extractCardDataFromElement(
  * Finds the partner card element in the event's composed path
  * Single Responsibility: Card element lookup
  */
-function findCardInPath(
-  event: Event,
-  logger: ReturnType<typeof createLogger>
-): Element | null {
+function findCardInPath(event: Event, logger: ReturnType<typeof createLogger>): Element | null {
   const cardElement = findInComposedPath(event, (el) =>
     matchesElement(el, CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME)
   );
@@ -174,24 +164,19 @@ function handleWrapperClick(
     return;
   }
 
-  // Extract the card data
-  const cardData = extractCardDataFromElement(
-    cardElement,
-    sectionID,
-    filterContext,
-    logger
-  );
+  // Extract the card context
+  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
 
-  if (!cardData) {
-    logger.warn('Failed to extract card data');
+  if (!cardContext) {
+    logger.warn('Failed to extract card context');
     return;
   }
 
   // Store in window for AEP to access
-  window.partnerCardData = cardData;
+  window._partnerCardCtx = cardContext;
 
   // Trigger custom event for AEP
-  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardData);
+  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
 
   logger.log('Card click processed successfully');
 }
@@ -209,9 +194,7 @@ function extractWrapperContext(
 
   // Get filter context from shadow DOM
   const { shadowRoot } = wrapper as Element & { shadowRoot?: ShadowRoot };
-  const partnerCardsElement = shadowRoot?.querySelector(
-    SELECTORS.PARTNER_CARDS
-  );
+  const partnerCardsElement = shadowRoot?.querySelector(SELECTORS.PARTNER_CARDS);
   const filterContext = getAttribute(partnerCardsElement, ATTRIBUTES.DAA_LH);
 
   if (!sectionID) {
@@ -249,40 +232,40 @@ function setupClickListeners(logger: ReturnType<typeof createLogger>): number {
 }
 
 /**
- * Main entry point for the partner card data extractor
+ * Main entry point for the partner card context extractor
  *
  * @param testMode - Set to true for console testing, false for AEP deployment (default: false)
  *
  * USAGE IN LAUNCH RULE ACTION (Page Load):
  * -----------------------------------------
  * Call this script on page load (Page Bottom or DOM Ready event):
- * return extractPartnerCardDataScript();
+ * return extractPartnerCardCtxScript();
  *
  * Then create another rule to track clicks:
  * Event: Custom Event, type='partnerCardClick'
- * Condition: window.partnerCardData exists
- * Action: Send analytics with %window.partnerCardData%
+ * Condition: window._partnerCardCtx exists
+ * Action: Send analytics with %window.partnerCardCtx%
  *
  * TESTING IN BROWSER CONSOLE:
  * ----------------------------
  * // Initialize listeners
- * extractPartnerCardDataScript(true);
+ * extractPartnerCardCtxScript(true);
  *
  * // Now click on any partner card
  * // Check the data:
- * console.log(window.partnerCardData);
+ * console.log(window._partnerCardCtx);
  */
-export function extractPartnerCardDataScript(
+export function extractPartnerCardCtxScript(
   testMode: boolean = false
 ): { listenersAttached: number } | null {
   const config: PartnerCardConfig = {
     debug: testMode,
   };
 
-  const logger = createLogger(config.debug, 'Partner Card Data', testMode);
+  const logger = createLogger(config.debug, 'Partner Card Context', testMode);
 
   try {
-    logger.testHeader('PARTNER CARD DATA EXTRACTOR - SETUP MODE');
+    logger.testHeader('PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE');
 
     // Set up click listeners on all cards
     const listenerCount = setupClickListeners(logger);

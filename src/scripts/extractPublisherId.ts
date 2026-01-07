@@ -18,10 +18,7 @@ export interface PublisherIdConfig {
  * Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"
  * Returns: "2c4c7552-2bb9-4541-b625-04721319c07b" (between 3rd and 4th slash)
  */
-function extractPublisherId(
-  href: string,
-  logger: ReturnType<typeof createLogger>
-): string | null {
+function extractPublisherId(href: string, logger: ReturnType<typeof createLogger>): string | null {
   // URL structure indices for publisher links
   const URL_PARTS = {
     EMPTY: 0, // ''
@@ -57,9 +54,7 @@ function extractPublisherId(
  * Main entry point for the publisher ID extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export function extractPublisherIdScript(
-  testMode: boolean = false
-): string | null {
+export function extractPublisherIdScript(testMode: boolean = false): string | null {
   const config: PublisherIdConfig = {
     debug: testMode,
   };
@@ -73,9 +68,7 @@ export function extractPublisherIdScript(
 
     // Use optimized selector to only query publisher links
     // This is much faster than querying all links and filtering
-    const links = document.querySelectorAll<HTMLAnchorElement>(
-      'a[href^="/publisher/"]'
-    );
+    const links = document.querySelectorAll<HTMLAnchorElement>('a[href^="/publisher/"]');
     logger.log(`Found ${links.length} publisher links`);
 
     // Iterate through publisher links to find valid ID

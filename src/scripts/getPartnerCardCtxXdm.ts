@@ -19,7 +19,7 @@ export interface PartnerCardXdmConfig {
 }
 
 // Define the expected structure of partner card data
-export interface PartnerCardData {
+export interface PartnerCardCtx {
   cardTitle: string;
   contentID: string;
   contentType: string;
@@ -33,35 +33,33 @@ export interface PartnerCardData {
 // Define the XDM structure
 export interface PartnerCardXdm {
   _adobepartners: {
-    cardCollection: PartnerCardData | null;
+    cardCollection: PartnerCardCtx | null;
   };
 }
 
 // Extend Window interface for type safety
 declare global {
   interface Window {
-    partnerCardData?: PartnerCardData | null;
+    partnerCardData?: PartnerCardCtx | null;
   }
 }
 
 /**
  * Formats partner card data into XDM structure
  */
-function formatPartnerCardXdm(
-  logger: ReturnType<typeof createLogger>
-): PartnerCardXdm | null {
-  // Check if window.partnerCardData exists
-  if (!window.partnerCardData) {
-    logger.log('No partnerCardData on window');
+function formatPartnerCardCtxXdm(logger: ReturnType<typeof createLogger>): PartnerCardXdm | null {
+  // Check if window._partnerCardCtx exists
+  if (!window._partnerCardCtx) {
+    logger.log('No _partnerCardCtx on window');
     return null;
   }
 
-  const { partnerCardData } = window;
+  const { _partnerCardCtx } = window;
 
   // Create XDM structure with cardCollection as an array
   const xdmData: PartnerCardXdm = {
     _adobepartners: {
-      cardCollection: partnerCardData, // Wrap in array for XDM schema
+      cardCollection: _partnerCardCtx, // Wrap in array for XDM schema
     },
   };
 
@@ -75,20 +73,18 @@ function formatPartnerCardXdm(
  *
  * RETURNS: XDM-formatted object ready for AEP Web SDK Send Event action
  */
-export function getPartnerCardXdmScript(
-  testMode: boolean = false
-): PartnerCardXdm | null {
+export function getPartnerCardCtxXdmScript(testMode: boolean = false): PartnerCardXdm | null {
   const config: PartnerCardXdmConfig = {
     debug: testMode,
   };
 
-  const logger = createLogger(config.debug, 'Partner Card XDM', testMode);
+  const logger = createLogger(config.debug, 'Partner Card Context XDM', testMode);
 
   try {
-    logger.testHeader('PARTNER CARD XDM FORMATTER - TEST MODE');
+    logger.testHeader('PARTNER CARD CONTEXT XDM FORMATTER - TEST MODE');
 
     // Format the data into XDM structure
-    const xdmData = formatPartnerCardXdm(logger);
+    const xdmData = formatPartnerCardCtxXdm(logger);
 
     logger.testResult(xdmData);
     if (!testMode) {

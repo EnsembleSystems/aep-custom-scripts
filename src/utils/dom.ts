@@ -15,11 +15,7 @@
  * splitAndGet('Card 1 | Title | abc123', '|', 2) // Returns 'abc123'
  * splitAndGet('Card 1 | Title', '|', 5) // Returns ''
  */
-export function splitAndGet(
-  value: string,
-  delimiter: string,
-  index: number
-): string {
+export function splitAndGet(value: string, delimiter: string, index: number): string {
   if (!value || index < 0) {
     return '';
   }
@@ -39,10 +35,7 @@ export function splitAndGet(
  * @example
  * getAttribute(element, 'daa-lh') // Returns attribute value or ''
  */
-export function getAttribute(
-  element: Element | null | undefined,
-  attributeName: string
-): string {
+export function getAttribute(element: Element | null | undefined, attributeName: string): string {
   if (!element) {
     return '';
   }
@@ -77,10 +70,7 @@ export function getTextContent(element: Element | null | undefined): string {
  * @example
  * queryShadow(cardElement, '.card-title') // Returns element or null
  */
-export function queryShadow(
-  element: Element | null | undefined,
-  selector: string
-): Element | null {
+export function queryShadow(element: Element | null | undefined, selector: string): Element | null {
   if (!element) {
     return null;
   }
@@ -111,9 +101,7 @@ export function findInComposedPath(
 ): Element | null {
   const path = event.composedPath();
 
-  const element = path.find(
-    (item): item is Element => item instanceof Element && predicate(item)
-  );
+  const element = path.find((item): item is Element => item instanceof Element && predicate(item));
 
   return element || null;
 }
@@ -129,16 +117,11 @@ export function findInComposedPath(
  * @example
  * matchesElement(el, 'single-partner-card', 'card-wrapper')
  */
-export function matchesElement(
-  element: Element,
-  tagName?: string,
-  className?: string
-): boolean {
+export function matchesElement(element: Element, tagName?: string, className?: string): boolean {
   let matches = false;
 
   if (tagName) {
-    matches =
-      matches || element.tagName.toLowerCase() === tagName.toLowerCase();
+    matches = matches || element.tagName.toLowerCase() === tagName.toLowerCase();
   }
 
   if (className) {

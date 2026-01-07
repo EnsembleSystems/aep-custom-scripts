@@ -14,13 +14,7 @@
  */
 
 import * as esbuild from 'esbuild';
-import {
-  readdirSync,
-  existsSync,
-  mkdirSync,
-  writeFileSync,
-  statSync,
-} from 'fs';
+import { readdirSync, existsSync, mkdirSync, writeFileSync, statSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -92,22 +86,18 @@ async function buildScript(scriptPath) {
 
     // Find the main function name
     const functionMatch = bundledCode.match(/function (\w+Script)/);
-    const mainFunctionName = functionMatch
-      ? functionMatch[1]
-      : `${scriptName}Script`;
+    const mainFunctionName = functionMatch ? functionMatch[1] : `${scriptName}Script`;
 
     // Get TEST_MODE from environment variable (defaults to false for production)
     // Developers can set TEST_MODE=true locally, but it won't be committed
-    const testMode =
-      process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
+    const testMode = process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
     // Check if the function signature includes 'event' parameter
     // Determine parameter order by checking which comes first
     const functionSignatureMatch = bundledCode.match(
       new RegExp(`function ${mainFunctionName}\\s*\\([^)]*\\)`)
     );
-    const needsEventParam =
-      functionSignatureMatch && functionSignatureMatch[0].includes('event');
+    const needsEventParam = functionSignatureMatch && functionSignatureMatch[0].includes('event');
 
     // Determine the parameter order
     // Check if 'event' comes before 'testMode' in the signature
@@ -142,9 +132,7 @@ return ${functionCall};`;
     const wrappedSize = Buffer.byteLength(wrappedCode, 'utf8');
 
     console.log(`✅ ${scriptName}:`);
-    console.log(
-      `   Original:  ${originalSize.toLocaleString()} bytes (TypeScript source)`
-    );
+    console.log(`   Original:  ${originalSize.toLocaleString()} bytes (TypeScript source)`);
     console.log(`   Bundled:   ${bundledSize.toLocaleString()} bytes`);
     console.log(`   Wrapped:   ${wrappedSize.toLocaleString()} bytes`);
     console.log(`   Output:    ${outputPath}`);
@@ -191,9 +179,7 @@ async function build() {
     }
 
     console.log('\n' + '='.repeat(60));
-    console.log(
-      `\n✨ Build completed successfully! (${successCount}/${scripts.length})\n`
-    );
+    console.log(`\n✨ Build completed successfully! (${successCount}/${scripts.length})\n`);
     console.log('📁 Bundled scripts are in: build/\n');
     console.log('📋 To deploy to AEP:');
     console.log('   1. Open the .js file');

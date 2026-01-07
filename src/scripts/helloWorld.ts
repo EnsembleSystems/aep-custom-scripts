@@ -19,11 +19,7 @@
  */
 
 import { createLogger } from '../utils/logger.js';
-import {
-  fetchWithTimeout,
-  isAbortError,
-  isNetworkError,
-} from '../utils/fetch.js';
+import { fetchWithTimeout, isAbortError, isNetworkError } from '../utils/fetch.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -123,10 +119,7 @@ async function fetchExampleData(
  */
 // @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processData(
-  data: unknown,
-  logger: ReturnType<typeof createLogger>
-): unknown {
+function processData(data: unknown, logger: ReturnType<typeof createLogger>): unknown {
   logger.log('Processing data...');
 
   // Add your data processing logic here

@@ -107,9 +107,7 @@ function queryShadow(element, selector) {
 }
 function findInComposedPath(event, predicate) {
   const path = event.composedPath();
-  const element = path.find(
-    (item) => item instanceof Element && predicate(item)
-  );
+  const element = path.find((item) => item instanceof Element && predicate(item));
   return element || null;
 }
 function matchesElement(element, tagName, className) {
@@ -126,7 +124,7 @@ function dispatchCustomEvent(eventName, detail) {
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
-// src/scripts/extractPartnerCardData.ts
+// src/scripts/extractPartnerCardCtx.ts
 var SELECTORS = {
   CARD_COLLECTION_WRAPPER: ".dx-card-collection-wrapper",
   CARD_TITLE: ".card-title",
@@ -149,7 +147,7 @@ var DAA_LH_INDICES = {
   POSITION: 0,
   CONTENT_ID: 2
 };
-function extractCardDataFromElement(cardElement, sectionID, filterContext, logger) {
+function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger) {
   if (!cardElement) {
     logger.error("Card element is required");
     return null;
@@ -175,14 +173,11 @@ function extractCardDataFromElement(cardElement, sectionID, filterContext, logge
     position,
     sectionID
   };
-  logger.log("Extracted card data", result);
+  logger.log("Extracted card context", result);
   return result;
 }
 function findCardInPath(event, logger) {
-  const cardElement = findInComposedPath(
-    event,
-    (el) => matchesElement(el, CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME)
-  );
+  const cardElement = findInComposedPath(event, (el) => matchesElement(el, CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME));
   if (!cardElement) {
     logger.log("Click was not on a card element");
   }
@@ -193,26 +188,19 @@ function handleWrapperClick(event, sectionID, filterContext, logger) {
   if (!cardElement) {
     return;
   }
-  const cardData = extractCardDataFromElement(
-    cardElement,
-    sectionID,
-    filterContext,
-    logger
-  );
-  if (!cardData) {
-    logger.warn("Failed to extract card data");
+  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
+  if (!cardContext) {
+    logger.warn("Failed to extract card context");
     return;
   }
-  window.partnerCardData = cardData;
-  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardData);
+  window._partnerCardCtx = cardContext;
+  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
   logger.log("Card click processed successfully");
 }
 function extractWrapperContext(wrapper, logger) {
   const sectionID = getAttribute(wrapper.parentElement, ATTRIBUTES.DAA_LH);
   const { shadowRoot } = wrapper;
-  const partnerCardsElement = shadowRoot == null ? void 0 : shadowRoot.querySelector(
-    SELECTORS.PARTNER_CARDS
-  );
+  const partnerCardsElement = shadowRoot == null ? void 0 : shadowRoot.querySelector(SELECTORS.PARTNER_CARDS);
   const filterContext = getAttribute(partnerCardsElement, ATTRIBUTES.DAA_LH);
   if (!sectionID) {
     logger.warn("Wrapper missing sectionID (parent daa-lh attribute)");
@@ -234,13 +222,13 @@ function setupClickListeners(logger) {
   logger.log(`Attached ${wrappers.length} click listeners`);
   return wrappers.length;
 }
-function extractPartnerCardDataScript(testMode = false) {
+function extractPartnerCardCtxScript(testMode = false) {
   const config = {
     debug: testMode
   };
-  const logger = createLogger(config.debug, "Partner Card Data", testMode);
+  const logger = createLogger(config.debug, "Partner Card Context", testMode);
   try {
-    logger.testHeader("PARTNER CARD DATA EXTRACTOR - SETUP MODE");
+    logger.testHeader("PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE");
     const listenerCount = setupClickListeners(logger);
     const result = { listenersAttached: listenerCount };
     logger.testResult(result);
@@ -253,4 +241,4 @@ function extractPartnerCardDataScript(testMode = false) {
 }
 
 
-return extractPartnerCardDataScript(TEST_MODE);
+return extractPartnerCardCtxScript(TEST_MODE);
