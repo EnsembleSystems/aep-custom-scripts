@@ -174,18 +174,24 @@ function extractWrapperContext(
 }
 
 /**
- * Handles click events on the shadow host (wrapper)
+ * Handles click events at the document level
  * Single Responsibility: Event handling and coordination
  */
-function handleWrapperClick(
-  event: Event,
-  wrapper: Element,
-  logger: ReturnType<typeof createLogger>
-): void {
+function handleDocumentClick(event: Event, logger: ReturnType<typeof createLogger>): void {
   // Find the card element in the composed path
   const cardElement = findCardInPath(event, logger);
 
   if (!cardElement) {
+    return;
+  }
+
+  // Find the wrapper element to get section context
+  const wrapper = findInComposedPath(event, (el) =>
+    el.classList?.contains('dx-card-collection-wrapper')
+  );
+
+  if (!wrapper) {
+    logger.log('No wrapper found in click path');
     return;
   }
 
@@ -200,11 +206,9 @@ function handleWrapperClick(
     return;
   }
 
-  // Ensure window._adobePartners.partnerCard exists
+  // Store context on window
   window._adobePartners = window._adobePartners ?? {};
   window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
-
-  // Store in window for AEP to access
   window._adobePartners.partnerCard.context = cardContext;
 
   // Trigger custom event for AEP
@@ -214,112 +218,21 @@ function handleWrapperClick(
 }
 
 /**
- * Attaches click listener to a single wrapper element
- * Single Responsibility: Single wrapper listener attachment
- */
-function attachListenerToWrapper(
-  wrapper: Element,
-  logger: ReturnType<typeof createLogger>,
-  processedWrappers: WeakSet<Element>
-): boolean {
-  // Skip if already processed
-  if (processedWrappers.has(wrapper)) {
-    return false;
-  }
-
-  // Use arrow function to preserve context
-  // Extract context at click time (not setup time) by passing wrapper element
-  wrapper.addEventListener('click', (event) => {
-    handleWrapperClick(event, wrapper, logger);
-  });
-
-  // Mark as processed
-  processedWrappers.add(wrapper);
-  return true;
-}
-
-/**
- * Sets up click listeners on shadow host wrappers
+ * Sets up a single document-level click listener to capture all card clicks
  * Single Responsibility: Listener setup
  */
-function setupClickListeners(
-  logger: ReturnType<typeof createLogger>,
-  processedWrappers: WeakSet<Element>
-): number {
-  // Find all card collection wrappers (shadow hosts)
-  const wrappers = document.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
-
-  if (wrappers.length === 0) {
-    logger.warn('No card collection wrappers found on page');
-    return 0;
-  }
-
-  let newListeners = 0;
-
-  // Attach click listener to each wrapper
-  wrappers.forEach((wrapper) => {
-    if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
-      newListeners += 1;
-    }
-  });
-
-  logger.log(
-    `Attached ${newListeners} new click listeners (${wrappers.length} total wrappers on page)`
+function setupClickListener(logger: ReturnType<typeof createLogger>): void {
+  // Attach a single click listener at the document level
+  // Use capture phase to catch the event as early as possible
+  document.addEventListener(
+    'click',
+    (event) => {
+      handleDocumentClick(event, logger);
+    },
+    true // Capture phase - fires before bubble phase
   );
-  return newListeners;
-}
 
-/**
- * Sets up MutationObserver to watch for dynamically added wrappers
- * Single Responsibility: Dynamic content monitoring
- */
-function setupDynamicObserver(
-  logger: ReturnType<typeof createLogger>,
-  processedWrappers: WeakSet<Element>
-): MutationObserver {
-  const observer = new MutationObserver((mutations) => {
-    const newWrappersFound: Element[] = [];
-
-    mutations.forEach((mutation) => {
-      // Check added nodes for card collection wrappers
-      Array.from(mutation.addedNodes).forEach((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) {
-          return;
-        }
-
-        const element = node as Element;
-
-        // Check if the added node itself is a wrapper
-        if (element.matches(SELECTORS.CARD_COLLECTION_WRAPPER)) {
-          if (attachListenerToWrapper(element, logger, processedWrappers)) {
-            newWrappersFound.push(element);
-          }
-        }
-
-        // Check if the added node contains wrappers
-        const childWrappers = element.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
-        Array.from(childWrappers).forEach((wrapper) => {
-          if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
-            newWrappersFound.push(wrapper);
-          }
-        });
-      });
-    });
-
-    if (newWrappersFound.length > 0) {
-      logger.log(`Attached listeners to ${newWrappersFound.length} dynamically loaded wrappers`);
-    }
-  });
-
-  // Start observing the document for DOM changes
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  logger.log('MutationObserver started - watching for dynamic content');
-
-  return observer;
+  logger.log('Document-level click listener attached (capture phase)');
 }
 
 /**
@@ -361,31 +274,24 @@ export function extractPartnerCardCtxScript(
     window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
 
     // Check if already initialized - prevent duplicate setup
-    if (window._adobePartners.partnerCard.observer) {
+    if (window._adobePartners.partnerCard.initialized) {
       logger.log('Script already initialized, skipping duplicate setup');
       return { listenersAttached: 0 };
     }
 
     logger.testHeader('PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE');
 
-    // Track processed wrappers to prevent duplicate listeners
-    const processedWrappers = new WeakSet<Element>();
+    // Set up single document-level click listener (capture phase)
+    // This captures clicks as early as possible before onBeforeEventSend
+    setupClickListener(logger);
 
-    // Set up click listeners on currently available cards
-    const listenerCount = setupClickListeners(logger, processedWrappers);
+    // Mark as initialized
+    window._adobePartners.partnerCard.initialized = true;
 
-    // Set up observer to watch for dynamically added cards
-    const observer = setupDynamicObserver(logger, processedWrappers);
-
-    // Store observer on window so it can be accessed if needed
-    window._adobePartners.partnerCard.observer = observer;
-
-    const result = { listenersAttached: listenerCount };
+    const result = { listenersAttached: 1 };
 
     logger.testResult(result);
-    logger.log(
-      `Setup complete: ${listenerCount} listeners attached, observer watching for dynamic content`
-    );
+    logger.log('Setup complete: Document-level click listener attached (capture phase)');
 
     return result;
   } catch (error) {

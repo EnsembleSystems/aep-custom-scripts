@@ -20,6 +20,9 @@ export type FetchResult<T> = T | null;
 declare global {
   interface Window {
     _adobePartners?: {
+      // Partner data (from extractPartnerData)
+      partnerData?: unknown;
+
       // Event data (from fetchEventData/getEventData)
       eventData?: {
         apiResponse?: unknown;
@@ -28,7 +31,8 @@ declare global {
       // Partner card tracking (from extractPartnerCardCtx/getPartnerCardCtxXdm)
       partnerCard?: {
         context?: PartnerCardCtx | null;
-        observer?: MutationObserver;
+        initialized?: boolean;
+        lastClickEvent?: Event;
         xdmCache?: {
           timestamp: number;
           data: unknown;

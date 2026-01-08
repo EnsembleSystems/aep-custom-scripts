@@ -45,7 +45,7 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__filename', '__dirname', '_adobePartners'],
+        allow: ['__filename', '__dirname', '_adobePartners', '_adobepartners'],
       },
     ],
   },
@@ -69,6 +69,17 @@ module.exports = {
       },
     },
     {
+      files: [
+        'src/scripts/setPartnerDataOnEvent.ts',
+        'src/scripts/customDataCollectionOnBeforeEventSend.ts',
+        'src/scripts/customDataCollectionOnFilterClickCallback.ts',
+      ],
+      rules: {
+        'no-param-reassign': ['error', { props: false }],
+        'no-console': 'off',
+      },
+    },
+    {
       files: ['src/utils/logger.ts'],
       rules: {
         'no-console': 'off',
@@ -88,5 +99,5 @@ module.exports = {
       },
     },
   },
-  ignorePatterns: ['dist/', 'build/', 'node_modules/', '*.min.js'],
+  ignorePatterns: ['dist/', 'build/', 'node_modules/', '*.min.js', 'dataCollecdtionExt-backup.js'],
 };

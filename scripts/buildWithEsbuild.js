@@ -84,35 +84,60 @@ async function buildScript(scriptPath) {
       .replace(/export\s*\{[^}]*\};?\s*/g, '') // Remove export { ... }; blocks first
       .replace(/export\s+/g, ''); // Then remove remaining export keywords
 
-    // Find the main function name
-    const functionMatch = bundledCode.match(/function (\w+Script)/);
-    const mainFunctionName = functionMatch ? functionMatch[1] : `${scriptName}Script`;
+    // Find the main function name - look for 'default function' pattern first
+    // This ensures we match the exported default function, not imported dependencies
+    const functionMatch = bundledCode.match(/default\s+function\s+(\w+)/);
+    let mainFunctionName;
+
+    if (functionMatch) {
+      // Found 'export default function FooScript' pattern (after export keyword removed)
+      [, mainFunctionName] = functionMatch;
+    } else {
+      // Fallback: look for any function ending with 'Script' that matches the file name
+      const expectedFunctionName = `${scriptName}Script`;
+      const specificMatch = bundledCode.match(
+        new RegExp(`function\\s+(${expectedFunctionName})\\s*\\(`)
+      );
+
+      if (specificMatch) {
+        [, mainFunctionName] = specificMatch;
+      } else {
+        // Last resort: use the expected name based on the file
+        mainFunctionName = expectedFunctionName;
+      }
+    }
 
     // Get TEST_MODE from environment variable (defaults to false for production)
     // Developers can set TEST_MODE=true locally, but it won't be committed
     const testMode = process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
 
-    // Check if the function signature includes 'event' parameter
+    // Check if the function signature includes 'event' or 'content' parameter
     // Determine parameter order by checking which comes first
     const functionSignatureMatch = bundledCode.match(
       new RegExp(`function ${mainFunctionName}\\s*\\([^)]*\\)`)
     );
-    const needsEventParam = functionSignatureMatch && functionSignatureMatch[0].includes('event');
+    const needsEventParam =
+      functionSignatureMatch &&
+      (functionSignatureMatch[0].includes('event') ||
+        functionSignatureMatch[0].includes('content'));
 
     // Determine the parameter order
-    // Check if 'event' comes before 'testMode' in the signature
+    // Check if 'event'/'content' comes before 'testMode' in the signature
     let functionCall;
     if (needsEventParam) {
       const signature = functionSignatureMatch[0];
-      const eventIndex = signature.indexOf('event');
+      const eventIndex = Math.min(
+        signature.indexOf('event') !== -1 ? signature.indexOf('event') : Infinity,
+        signature.indexOf('content') !== -1 ? signature.indexOf('content') : Infinity
+      );
       const testModeIndex = signature.indexOf('testMode');
 
-      // If event comes before testMode (or testMode not found), use (event, TEST_MODE)
-      // Otherwise use (TEST_MODE, event)
+      // If event/content comes before testMode (or testMode not found), use (content, TEST_MODE)
+      // Otherwise use (TEST_MODE, content)
       if (testModeIndex === -1 || eventIndex < testModeIndex) {
-        functionCall = `${mainFunctionName}(event, TEST_MODE)`;
+        functionCall = `${mainFunctionName}(content, TEST_MODE)`;
       } else {
-        functionCall = `${mainFunctionName}(TEST_MODE, event)`;
+        functionCall = `${mainFunctionName}(TEST_MODE, content)`;
       }
     } else {
       functionCall = `${mainFunctionName}(TEST_MODE)`;
