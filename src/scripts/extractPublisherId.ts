@@ -5,7 +5,8 @@
  * Looks for <a> tags with href starting with "/publisher/"
  */
 
-import { createLogger } from '../utils/logger.js';
+import { executeScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import { isValidPublisherId } from '../utils/validation.js';
 import { extractAndValidate, createPathStructure } from '../utils/url.js';
 
@@ -21,7 +22,7 @@ const PUBLISHER_URL_STRUCTURE = createPathStructure('nested-resource', {
  * Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"
  * Returns: "2c4c7552-2bb9-4541-b625-04721319c07b" (between 3rd and 4th slash)
  */
-function extractPublisherId(href: string, logger: ReturnType<typeof createLogger>): string | null {
+function extractPublisherId(href: string, logger: Logger): string | null {
   // Extract and validate publisher ID using url utilities
   const publisherId = extractAndValidate(href, PUBLISHER_URL_STRUCTURE, 'id', isValidPublisherId);
 
@@ -38,43 +39,41 @@ function extractPublisherId(href: string, logger: ReturnType<typeof createLogger
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
 export function extractPublisherIdScript(testMode: boolean = false): string | null {
-  const logger = createLogger('Publisher ID', testMode);
+  return executeScript(
+    {
+      scriptName: 'Publisher ID',
+      testMode,
+      testHeaderTitle: 'PUBLISHER ID EXTRACTOR - TEST MODE',
+      onError: (error, logger) => {
+        logger.error('Unexpected error parsing publisher ID:', error);
+        return null;
+      },
+    },
+    (logger) => {
+      logger.log('Searching for publisher links in DOM');
 
-  try {
-    logger.testHeader('PUBLISHER ID EXTRACTOR - TEST MODE');
+      // Use optimized selector to only query publisher links
+      // This is much faster than querying all links and filtering
+      const links = document.querySelectorAll<HTMLAnchorElement>('a[href^="/publisher/"]');
+      logger.log(`Found ${links.length} publisher links`);
 
-    logger.log('Searching for publisher links in DOM');
+      // Iterate through publisher links to find valid ID
+      // eslint-disable-next-line no-plusplus
+      for (let i = 0; i < links.length; i += 1) {
+        const href = links[i].getAttribute('href');
 
-    // Use optimized selector to only query publisher links
-    // This is much faster than querying all links and filtering
-    const links = document.querySelectorAll<HTMLAnchorElement>('a[href^="/publisher/"]');
-    logger.log(`Found ${links.length} publisher links`);
+        if (href) {
+          const publisherId = extractPublisherId(href, logger);
 
-    // Iterate through publisher links to find valid ID
-    // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < links.length; i += 1) {
-      const href = links[i].getAttribute('href');
-
-      if (href) {
-        const publisherId = extractPublisherId(href, logger);
-
-        if (publisherId) {
-          logger.log('Found valid publisher ID', publisherId);
-
-          logger.testResult(`Publisher ID: ${publisherId}`);
-
-          return publisherId;
+          if (publisherId) {
+            logger.log('Found valid publisher ID', publisherId);
+            return publisherId;
+          }
         }
       }
+
+      logger.log('No valid publisher link found in DOM');
+      return null;
     }
-
-    logger.log('No valid publisher link found in DOM');
-
-    logger.testResult('null (no publisher link found)');
-
-    return null;
-  } catch (error) {
-    logger.error('Unexpected error parsing publisher ID:', error);
-    return null;
-  }
+  );
 }

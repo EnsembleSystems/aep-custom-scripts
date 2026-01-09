@@ -15,7 +15,7 @@
  * - No window._adobePartners storage needed
  */
 
-import { createLogger } from '../utils/logger';
+import { executeScript } from '../utils/script';
 import logEventInfo, { isValidUserEvent } from '../utils/events';
 
 /**
@@ -57,37 +57,44 @@ export default function customDataCollectionOnFilterClickCallbackScript(
   event?: PointerEvent | MouseEvent,
   testMode: boolean = false
 ): boolean {
-  const logger = createLogger('Filter Click Callback', testMode);
+  return executeScript(
+    {
+      scriptName: 'Filter Click Callback',
+      testMode,
+      testHeaderTitle: 'FILTER CLICK CALLBACK - TEST MODE',
+      onError: (error, logger) => {
+        logger.error('Unexpected error in filter click callback:', error);
+        return false;
+      },
+    },
+    (logger) => {
+      logger.testInfo('Provided content object', content);
 
-  try {
-    logger.testHeader('FILTER CLICK CALLBACK - TEST MODE');
-    logger.testInfo('Provided content object', content);
+      // Log event information
+      logEventInfo(event, logger);
 
-    // Log event information
-    logEventInfo(event, logger);
+      // Validate event is a trusted user interaction
+      if (!isValidUserEvent(event, logger)) {
+        return false;
+      }
 
-    // Validate event is a trusted user interaction
-    if (!isValidUserEvent(event, logger)) {
-      return false;
+      if (event) {
+        logger.log('✅ Event is trusted (genuine user click)', {
+          isTrusted: event.isTrusted,
+          type: event.type,
+        });
+
+        if (testMode) {
+          logger.testResult({
+            shouldProcess: true,
+            reason: 'Event is trusted',
+            eventType: event.type,
+            isTrusted: event.isTrusted,
+          });
+        }
+      }
+
+      return true;
     }
-
-    logger.log('✅ Event is trusted (genuine user click)', {
-      isTrusted: event.isTrusted,
-      type: event.type,
-    });
-
-    if (testMode) {
-      logger.testResult({
-        shouldProcess: true,
-        reason: 'Event is trusted',
-        eventType: event.type,
-        isTrusted: event.isTrusted,
-      });
-    }
-
-    return true;
-  } catch (error) {
-    logger.error('Unexpected error in filter click callback:', error);
-    return false;
-  }
+  );
 }

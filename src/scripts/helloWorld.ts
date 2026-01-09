@@ -18,7 +18,8 @@
  * 4. Deploy build/yourScript.min.js to AEP
  */
 
-import { createLogger } from '../utils/logger.js';
+import { executeAsyncScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import { fetchWithTimeout, isAbortError, isNetworkError } from '../utils/fetch.js';
 
 // ============================================================================
@@ -80,10 +81,7 @@ const API = {
  */
 // @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function fetchExampleData(
-  config: HelloWorldConfig,
-  logger: ReturnType<typeof createLogger>
-): Promise<unknown> {
+async function fetchExampleData(config: HelloWorldConfig, logger: Logger): Promise<unknown> {
   logger.log('Fetching example data...');
 
   // Example API call (replace with your actual endpoint)
@@ -116,7 +114,7 @@ async function fetchExampleData(
  */
 // @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processData(data: unknown, logger: ReturnType<typeof createLogger>): unknown {
+function processData(data: unknown, logger: Logger): unknown {
   logger.log('Processing data...');
 
   // Add your data processing logic here
@@ -151,92 +149,82 @@ export async function helloWorldScript(
     ...DEFAULT_CONFIG,
   };
 
-  // Create logger instance
-  const logger = createLogger('Hello World', testMode);
+  return executeAsyncScript(
+    {
+      scriptName: 'Hello World',
+      testMode,
+      testHeaderTitle: 'HELLO WORLD SCRIPT - TEST MODE',
+      testHeaderExtraInfo: config,
+      onError: (error) => {
+        // Handle timeout errors
+        if (isAbortError(error)) {
+          return null;
+        }
 
-  try {
-    // Test mode header
-    logger.testHeader('HELLO WORLD SCRIPT - TEST MODE', config);
+        // Handle network errors
+        if (isNetworkError(error)) {
+          return null;
+        }
 
-    // ========================================================================
-    // YOUR SCRIPT LOGIC GOES HERE
-    // ========================================================================
+        // Handle all other errors
+        return null;
+      },
+    },
+    async (logger) => {
+      // ========================================================================
+      // YOUR SCRIPT LOGIC GOES HERE
+      // ========================================================================
 
-    logger.log('Script started');
+      logger.log('Script started');
 
-    // Example 1: Simple data construction
-    const simpleResult = {
-      message: config.message || DEFAULT_CONFIG.message,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      currentUrl: window.location.href,
-    };
+      // Example 1: Simple data construction
+      const simpleResult = {
+        message: config.message || DEFAULT_CONFIG.message,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        currentUrl: window.location.href,
+      };
 
-    logger.log('Simple result created:', simpleResult);
+      logger.log('Simple result created:', simpleResult);
 
-    // Example 2: Fetch data from API (uncomment if needed)
-    // try {
-    //   const apiData = await fetchExampleData(config, logger);
-    //   const processedData = processData(apiData, logger);
-    //   // Use processedData in your result
-    // } catch (error) {
-    //   logger.error('Failed to fetch data:', error);
-    //   // Decide whether to continue or return null
-    // }
+      // Example 2: Fetch data from API (uncomment if needed)
+      // try {
+      //   const apiData = await fetchExampleData(config, logger);
+      //   const processedData = processData(apiData, logger);
+      //   // Use processedData in your result
+      // } catch (error) {
+      //   logger.error('Failed to fetch data:', error);
+      //   // Decide whether to continue or return null
+      // }
 
-    // Example 3: Extract data from DOM (uncomment if needed)
-    // const titleElement = document.querySelector('h1');
-    // const pageTitle = titleElement?.textContent || 'No title found';
-    // logger.log('Page title:', pageTitle);
+      // Example 3: Extract data from DOM (uncomment if needed)
+      // const titleElement = document.querySelector('h1');
+      // const pageTitle = titleElement?.textContent || 'No title found';
+      // logger.log('Page title:', pageTitle);
 
-    // Example 4: Read from localStorage (uncomment if needed)
-    // import { getStorageItem } from '../utils/storage.js';
-    // const userData = getStorageItem('user_data');
-    // logger.log('User data:', userData);
+      // Example 4: Read from localStorage (uncomment if needed)
+      // import { getStorageItem } from '../utils/storage.js';
+      // const userData = getStorageItem('user_data');
+      // logger.log('User data:', userData);
 
-    // Example 5: Read from cookies (uncomment if needed)
-    // import { getCookie, parseJsonCookie } from '../utils/cookie.js';
-    // const cookieValue = getCookie('my_cookie');
-    // const parsedCookie = parseJsonCookie(cookieValue);
-    // logger.log('Cookie data:', parsedCookie);
+      // Example 5: Read from cookies (uncomment if needed)
+      // import { getCookie, parseJsonCookie } from '../utils/cookie.js';
+      // const cookieValue = getCookie('my_cookie');
+      // const parsedCookie = parseJsonCookie(cookieValue);
+      // logger.log('Cookie data:', parsedCookie);
 
-    // ========================================================================
-    // BUILD RESULT OBJECT
-    // ========================================================================
+      // ========================================================================
+      // BUILD RESULT OBJECT
+      // ========================================================================
 
-    const result: HelloWorldResult = {
-      success: true,
-      message: 'Hello World script executed successfully',
-      data: simpleResult,
-      timestamp: new Date().toISOString(),
-    };
+      const result: HelloWorldResult = {
+        success: true,
+        message: 'Hello World script executed successfully',
+        data: simpleResult,
+        timestamp: new Date().toISOString(),
+      };
 
-    // Test mode footer
-    logger.testResult(result);
-    if (!testMode) {
-      logger.log('Returning result:', result);
+      return result;
     }
-
-    return result;
-  } catch (error) {
-    // ========================================================================
-    // ERROR HANDLING
-    // ========================================================================
-
-    // Handle timeout errors
-    if (isAbortError(error)) {
-      logger.error(`Request timeout after ${config.timeout}ms`);
-      return null;
-    }
-
-    // Handle network errors
-    if (isNetworkError(error)) {
-      logger.error('Network error:', error);
-      return null;
-    }
-
-    // Handle all other errors
-    logger.error('Unexpected error in Hello World script:', error);
-    return null;
-  }
+  );
 }

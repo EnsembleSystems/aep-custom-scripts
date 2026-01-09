@@ -14,7 +14,7 @@
  * 3. Paste this script
  */
 
-import { createLogger } from '../utils/logger.js';
+import { executeScript } from '../utils/script.js';
 
 /**
  * Main entry point for the custom on page load script
@@ -31,17 +31,20 @@ import { createLogger } from '../utils/logger.js';
  * customOnPageLoadScript(true);
  */
 export function customOnPageLoadScript(testMode: boolean = false): null {
-  const logger = createLogger('Custom On Page Load', testMode);
-
-  try {
-    logger.testHeader('CUSTOM ON PAGE LOAD SCRIPT');
-
-    // Placeholder - add custom logic here as needed
-    logger.log('Custom on page load script executed');
-
-    return null;
-  } catch (error) {
-    logger.error('Unexpected error in custom on page load script:', error);
-    return null;
-  }
+  return executeScript(
+    {
+      scriptName: 'Custom On Page Load',
+      testMode,
+      testHeaderTitle: 'CUSTOM ON PAGE LOAD SCRIPT',
+      onError: (error, logger) => {
+        logger.error('Unexpected error in custom on page load script:', error);
+        return null;
+      },
+    },
+    (logger) => {
+      // Placeholder - add custom logic here as needed
+      logger.log('Custom on page load script executed');
+      return null;
+    }
+  );
 }

@@ -16,7 +16,7 @@
  * - No window._adobePartners storage needed
  */
 
-import { createLogger } from '../utils/logger';
+import { executeScript } from '../utils/script';
 import { extractPartnerDataScript } from './extractPartnerData';
 import {
   getAttribute,
@@ -275,45 +275,47 @@ export default function customDataCollectionOnBeforeEventSendScript(
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
 ): LaunchEventContent {
-  const logger = createLogger('Before Send Callback', testMode);
+  return executeScript(
+    {
+      scriptName: 'Before Send Callback',
+      testMode,
+      testHeaderTitle: 'BEFORE SEND EVENT CALLBACK - TEST MODE',
+      testHeaderExtraInfo: `Cookie Key: ${cookieKey}`,
+      onError: (error, logger) => {
+        logger.error('Unexpected error in before send callback:', error);
+        return content;
+      },
+    },
+    (logger) => {
+      // Log event information
+      logEventInfo(event, logger);
 
-  try {
-    logger.testHeader('BEFORE SEND EVENT CALLBACK - TEST MODE', `Cookie Key: ${cookieKey}`);
+      // Skip page view events
+      if (
+        !shouldProcessEventType(content.xdm?.eventType, ['web.webpagedetails.pageViews'], logger)
+      ) {
+        return content;
+      }
 
-    // Log event information
-    logEventInfo(event, logger);
+      // Extract partner data from cookie
+      const partnerData = extractPartnerDataScript(testMode, cookieKey);
+      logger.log('Extracted partner data from cookie', partnerData);
 
-    // Skip page view events
-    if (!shouldProcessEventType(content.xdm?.eventType, ['web.webpagedetails.pageViews'], logger)) {
+      // Extract card collection context from event if available
+      const cardCollection = extractCardCollectionFromEvent(event, logger);
+
+      // Set partner data in _adobepartners using nested object utilities
+      setNestedValue(
+        content,
+        'xdm._adobepartners',
+        mergeNonNull(
+          { partnerData },
+          conditionalProperties(cardCollection !== null, { cardCollection })
+        ),
+        true
+      );
+
       return content;
     }
-
-    // Extract partner data from cookie
-    const partnerData = extractPartnerDataScript(testMode, cookieKey);
-    logger.log('Extracted partner data from cookie', partnerData);
-
-    // Extract card collection context from event if available
-    const cardCollection = extractCardCollectionFromEvent(event, logger);
-
-    // Set partner data in _adobepartners using nested object utilities
-    setNestedValue(
-      content,
-      'xdm._adobepartners',
-      mergeNonNull(
-        { partnerData },
-        conditionalProperties(cardCollection !== null, { cardCollection })
-      ),
-      true
-    );
-
-    logger.testResult(content);
-    if (!testMode) {
-      logger.log('Returning content with partner data and card collection', content);
-    }
-
-    return content;
-  } catch (error) {
-    logger.error('Unexpected error in before send callback:', error);
-    return content;
-  }
+  );
 }

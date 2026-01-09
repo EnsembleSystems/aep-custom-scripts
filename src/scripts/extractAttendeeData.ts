@@ -5,7 +5,7 @@
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
-import { createLogger } from '../utils/logger.js';
+import { executeScript } from '../utils/script.js';
 import { getStorageItem } from '../utils/storage.js';
 
 // Constants
@@ -14,42 +14,30 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Gets attendee data from localStorage
- */
-function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
-  const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
-
-  if (!attendeeData) {
-    logger.log('No attendee data in localStorage');
-    return null;
-  }
-
-  logger.log('Found attendee data', attendeeData);
-  return attendeeData;
-}
-
-/**
  * Main entry point for the attendee data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
 export function extractAttendeeDataScript(testMode: boolean = false): unknown {
-  const logger = createLogger('Attendee Data', testMode);
+  return executeScript(
+    {
+      scriptName: 'Attendee Data',
+      testMode,
+      testHeaderTitle: 'ATTENDEE DATA EXTRACTOR - TEST MODE',
+      onError: (error, logger) => {
+        logger.error('Unexpected error extracting attendee data:', error);
+        return null;
+      },
+    },
+    (logger) => {
+      const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
 
-  try {
-    logger.testHeader('ATTENDEE DATA EXTRACTOR - TEST MODE');
+      if (!attendeeData) {
+        logger.log('No attendee data in localStorage');
+        return null;
+      }
 
-    // Get attendee data from localStorage
-    const attendeeData = getAttendeeData(logger);
-
-    logger.testResult(attendeeData);
-    if (!testMode) {
-      logger.log('Returning attendee data', attendeeData);
+      logger.log('Found attendee data', attendeeData);
+      return attendeeData;
     }
-
-    return attendeeData;
-  } catch (error) {
-    // Handle errors
-    logger.error('Unexpected error extracting attendee data:', error);
-    return null;
-  }
+  );
 }

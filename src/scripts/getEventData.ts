@@ -6,45 +6,33 @@
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
-import { createLogger } from '../utils/logger.js';
-
-/**
- * Gets event data from window._adobePartners.eventData.apiResponse
- */
-function getEventData(logger: ReturnType<typeof createLogger>): unknown {
-  // Check if apiResponse exists using optional chaining
-  if (!window._adobePartners?.eventData?.apiResponse) {
-    logger.log('No apiResponse found in window._adobePartners.eventData');
-    return null;
-  }
-
-  const eventData = window._adobePartners.eventData.apiResponse;
-  logger.log('Found event data', eventData);
-  return eventData;
-}
+import { executeScript } from '../utils/script.js';
 
 /**
  * Main entry point for the event data getter
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
 export function getEventDataScript(testMode: boolean = false): unknown {
-  const logger = createLogger('Get Event Data', testMode);
+  return executeScript(
+    {
+      scriptName: 'Get Event Data',
+      testMode,
+      testHeaderTitle: 'GET EVENT DATA - TEST MODE',
+      onError: (error, logger) => {
+        logger.error('Unexpected error getting event data:', error);
+        return null;
+      },
+    },
+    (logger) => {
+      // Check if apiResponse exists using optional chaining
+      if (!window._adobePartners?.eventData?.apiResponse) {
+        logger.log('No apiResponse found in window._adobePartners.eventData');
+        return null;
+      }
 
-  try {
-    logger.testHeader('GET EVENT DATA - TEST MODE');
-
-    // Get event data from window._adobePartners.eventData.apiResponse
-    const eventData = getEventData(logger);
-
-    logger.testResult(eventData);
-    if (!testMode) {
-      logger.log('Returning event data', eventData);
+      const eventData = window._adobePartners.eventData.apiResponse;
+      logger.log('Found event data', eventData);
+      return eventData;
     }
-
-    return eventData;
-  } catch (error) {
-    // Handle errors
-    logger.error('Unexpected error getting event data:', error);
-    return null;
-  }
+  );
 }
