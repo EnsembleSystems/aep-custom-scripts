@@ -41,7 +41,7 @@ declare global {
         apiResponse?: unknown;
       };
 
-      // Partner card tracking (from extractPartnerCardCtx/getPartnerCardCtxXdm)
+      // Partner card tracking (from customOnPageLoad/customDataCollectionOnFilterClickCallback)
       partnerCard?: {
         context?: PartnerCardCtx | null;
         initialized?: boolean;

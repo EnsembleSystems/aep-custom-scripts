@@ -91,8 +91,9 @@ After building, you'll find these bundled scripts in `build/`:
 - **`extractAttendeeData.js`** - Adobe Events attendee data extractor
 - **`extractPartnerData.js`** - Partner cookie data extractor
 - **`extractPublisherId.js`** - Publisher/Owner ID extractor
-- **`extractPartnerCardCtx.js`** - Partner card click listener setup
-- **`getPartnerCardCtxXdm.js`** - Partner card XDM formatter
+- **`customOnPageLoad.js`** - Custom on page load placeholder script
+- **`customDataCollectionOnBeforeEventSend.js`** - Before event send callback
+- **`customDataCollectionOnFilterClickCallback.js`** - Filter click callback with card tracking
 - **`helloWorld.js`** - Template example (for reference)
 
 ## 📥 Download Latest Scripts
@@ -106,8 +107,9 @@ Ready-to-deploy bundled scripts (committed to repository):
 - **[extractAttendeeData.js](build/extractAttendeeData.js)** - Adobe Events attendee data extractor
 - **[extractPartnerData.js](build/extractPartnerData.js)** - Partner cookie extractor
 - **[extractPublisherId.js](build/extractPublisherId.js)** - Publisher ID extractor
-- **[extractPartnerCardCtx.js](build/extractPartnerCardCtx.js)** - Partner card click listener setup
-- **[getPartnerCardCtxXdm.js](build/getPartnerCardCtxXdm.js)** - Partner card XDM formatter
+- **[customOnPageLoad.js](build/customOnPageLoad.js)** - Custom on page load placeholder
+- **[customDataCollectionOnBeforeEventSend.js](build/customDataCollectionOnBeforeEventSend.js)** - Before event send callback
+- **[customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js)** - Filter click callback with card tracking
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
 
@@ -130,14 +132,15 @@ For stable, versioned deployments see [Releases](../../releases) page.
 aep-custom-scripts/
 ├── src/
 │   ├── scripts/           # Main script implementations
-│   │   ├── fetchEventData.ts          # Fetches event data via API
-│   │   ├── getEventData.ts            # Gets event data from window
-│   │   ├── extractAttendeeData.ts     # Extracts attendee data
-│   │   ├── extractPartnerData.ts      # Extracts partner cookie data
-│   │   ├── extractPublisherId.ts      # Extracts publisher ID
-│   │   ├── extractPartnerCardCtx.ts   # Partner card click listeners
-│   │   ├── getPartnerCardCtxXdm.ts    # Partner card XDM formatter
-│   │   └── helloWorld.ts              # Template for new scripts
+│   │   ├── fetchEventData.ts                           # Fetches event data via API
+│   │   ├── getEventData.ts                             # Gets event data from window
+│   │   ├── extractAttendeeData.ts                      # Extracts attendee data
+│   │   ├── extractPartnerData.ts                       # Extracts partner cookie data
+│   │   ├── extractPublisherId.ts                       # Extracts publisher ID
+│   │   ├── customOnPageLoad.ts                         # Custom on page load placeholder
+│   │   ├── customDataCollectionOnBeforeEventSend.ts    # Before event send callback
+│   │   ├── customDataCollectionOnFilterClickCallback.ts # Filter click with card tracking
+│   │   └── helloWorld.ts                               # Template for new scripts
 │   ├── utils/             # Shared utilities (DRY)
 │   │   ├── logger.ts      # Consistent logging
 │   │   ├── fetch.ts       # Fetch with timeout
@@ -146,8 +149,10 @@ aep-custom-scripts/
 │   │   ├── validation.ts  # Input validation
 │   │   ├── dom.ts         # DOM manipulation & shadow DOM helpers
 │   │   ├── object.ts      # Object utilities
+│   │   ├── constants.ts   # Shared constants
 │   │   └── dates.ts       # Date utilities
 │   ├── types/             # TypeScript type definitions
+│   │   └── index.ts       # Common types (PartnerCardCtx, etc.)
 │   └── index.ts           # Main exports
 ├── scripts/
 │   └── buildWithEsbuild.js  # esbuild-based build script
@@ -157,8 +162,9 @@ aep-custom-scripts/
 │   ├── extractAttendeeData.js
 │   ├── extractPartnerData.js
 │   ├── extractPublisherId.js
-│   ├── extractPartnerCardCtx.js
-│   └── getPartnerCardCtxXdm.js
+│   ├── customOnPageLoad.js
+│   ├── customDataCollectionOnBeforeEventSend.js
+│   └── customDataCollectionOnFilterClickCallback.js
 ├── tsconfig.json          # TypeScript configuration
 └── package.json           # Project metadata
 ```
@@ -266,27 +272,18 @@ const config = {
 
 **No API keys required** - this script uses DOM parsing only.
 
-### 6. Partner Card Context Extractor (`extractPartnerCardCtx`)
+### 6. Custom On Page Load (`customOnPageLoad`)
 
-Sets up click listeners on partner cards and extracts context data from shadow DOM.
+A placeholder script for custom on-page load functionality.
 
-**Use on**: Adobe Partner pages with partner card collections
+**Use on**: Any page where you need custom page load logic
 
 **Usage in AEP Launch**:
 
 - Use as a **Rule Action** on page load (Page Bottom or DOM Ready event)
-- The script attaches click listeners to all partner card wrappers
-- Click data is stored in `window._adobePartners.partnerCard.context` and triggers `partnerCardClick` custom event
-- Create a second rule to track clicks: Event Type = "Custom Event", Event Name = "partnerCardClick"
+- Customize the script logic as needed for your use case
 
-**How it works**:
-
-- Finds all `.dx-card-collection-wrapper` elements (shadow DOM hosts)
-- Extracts section ID and filter context from parent elements
-- Attaches click listeners that extract card metadata when clicked
-- Dispatches custom event for AEP tracking
-
-**Returns**: `{ listenersAttached: number }` (count of listeners attached) or `null` on error
+**Returns**: `null` (placeholder implementation)
 
 **Configuration** (default in source):
 
@@ -296,48 +293,77 @@ const config = {
 };
 ```
 
-**Shadow DOM Support**: Handles shadow DOM properly using composed event paths.
+### 7. Custom Data Collection - Before Event Send (`customDataCollectionOnBeforeEventSend`)
 
-### 7. Partner Card XDM Formatter (`getPartnerCardCtxXdm`)
+Callback script for Launch Extension's "before event send" hook.
 
-Formats partner card data from `window._adobePartners.partnerCard.context` into XDM structure for AEP.
-
-**Use on**: Adobe Partner pages (as a data element)
+**Use on**: Adobe Partner pages (in Launch Extension configuration)
 
 **Usage in AEP Launch**:
 
-- Create a Data Element with this script
-- Reference the data element in your "Send Event" action's XDM field
-- The script wraps card data in the `_adobepartners.cardCollection` schema field
+- Paste into Launch Extension → Data Collection → "Edit on before event send callback"
+- Automatically extracts partner data from cookies
+- Retrieves partner card context from `window._adobePartners.partnerCard.context`
+- Sets data in `content.xdm._adobepartners`
 
-**Returns**: XDM-formatted object with partner card data or `null` if no data available
+**How it works**:
 
-**Example output**:
+- Skips page view events
+- Extracts partner data using `extractPartnerDataScript`
+- Retrieves card context from window (pre-populated by filter click callback)
+- Sets both in XDM structure
+
+**Returns**: Modified `content` object with partner data and card collection
+
+**Configuration** (default in source):
+
+```typescript
+const DEFAULT_COOKIE_KEY = 'partner_data';
+```
+
+### 8. Custom Data Collection - Filter Click Callback (`customDataCollectionOnFilterClickCallback`)
+
+Callback script that extracts partner card metadata from clicked elements.
+
+**Use on**: Adobe Partner pages with partner card collections
+
+**Usage in AEP Launch**:
+
+- Use with Launch's before event send callback where `content.clickedElement` is available
+- Automatically extracts card metadata by traversing up from clicked element
+- Stores data in `window._adobePartners.partnerCard.context`
+
+**How it works**:
+
+- Extracts partner data from cookies using `extractPartnerDataScript`
+- Finds partner card element by traversing up from `content.clickedElement`
+- Extracts card metadata from shadow DOM (card title, CTA text, position, etc.)
+- Stores both partner data and card context in `window._adobePartners`
+
+**Returns**: `void` (stores data in window object)
+
+**Example card context**:
 
 ```typescript
 {
-  _adobepartners: {
-    cardCollection: {
-      cardTitle: "Example Card",
-      contentID: "12345",
-      contentType: "partner_card",
-      ctaText: "Learn More",
-      filterContext: "partner-solutions",
-      name: "Example Card",
-      position: "1",
-      sectionID: "partner-cards-section"
-    }
-  }
+  cardTitle: "Example Card",
+  contentID: "12345",
+  contentType: "partner_card",
+  ctaText: "Learn More",
+  filterContext: "partner-solutions",
+  name: "Example Card",
+  position: "1",
+  sectionID: "partner-cards-section"
 }
 ```
 
 **Configuration** (default in source):
 
 ```typescript
-const config = {
-  debug: false, // Enable debug logging
-};
+const DEFAULT_COOKIE_KEY = 'partner_data';
 ```
+
+**Shadow DOM Support**: Handles shadow DOM properly by traversing up through shadow roots.
 
 ## Browser Console Testing
 
