@@ -16,7 +16,7 @@
  */
 
 import { createLogger } from '../utils/logger';
-import logEventInfo from '../utils/events';
+import logEventInfo, { isValidUserEvent } from '../utils/events';
 
 /**
  * Type for the content object passed to Launch's before event send callback
@@ -66,15 +66,8 @@ export default function customDataCollectionOnFilterClickCallbackScript(
     // Log event information
     logEventInfo(event, logger);
 
-    // Check if event is provided
-    if (!event) {
-      logger.log('❌ Ignoring click - no event object provided (treating as programmatic)');
-      return false;
-    }
-
-    // Check if event is trusted (genuine user interaction)
-    if (!event.isTrusted) {
-      logger.log('❌ Ignoring programmatic click (event.isTrusted is false)');
+    // Validate event is a trusted user interaction
+    if (!isValidUserEvent(event, logger)) {
       return false;
     }
 

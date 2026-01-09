@@ -7,6 +7,7 @@
 import { createLogger } from '../utils/logger.js';
 import { getCookie, parseJsonCookie } from '../utils/cookie.js';
 import removeProperties from '../utils/object.js';
+import { hasProperty } from '../utils/validation.js';
 
 // Types
 export interface PartnerDataConfig {
@@ -36,8 +37,8 @@ function getPartnerData(cookieKey: string, logger: ReturnType<typeof createLogge
   }
 
   // Extract DXP value if it exists
-  if (typeof partnerData === 'object' && partnerData !== null && 'DXP' in partnerData) {
-    const dxpValue = (partnerData as Record<string, unknown>).DXP;
+  if (hasProperty(partnerData, 'DXP')) {
+    const dxpValue = partnerData.DXP;
     const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
     logger.log('Found partner data (DXP extracted)', cleanedDxpValue);
     return cleanedDxpValue;

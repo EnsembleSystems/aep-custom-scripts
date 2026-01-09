@@ -26,7 +26,8 @@ import {
   createElementMatcher,
   extractStructuredAttribute,
 } from '../utils/dom';
-import logEventInfo from '../utils/events';
+import logEventInfo, { shouldProcessEventType } from '../utils/events';
+import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
 import type { PartnerCardCtx } from '../types';
 
 const DEFAULT_COOKIE_KEY = 'partner_data';
@@ -236,25 +237,6 @@ function extractCardMetadataFromEvent(
 }
 
 /**
- * Checks if the event should be processed (skips page view events)
- * @param content - Launch event content
- * @param logger - Logger instance
- * @returns true if event should be processed, false if should be skipped
- */
-function shouldProcessEvent(
-  content: LaunchEventContent,
-  logger: ReturnType<typeof createLogger>
-): boolean {
-  const eventType = content.xdm?.eventType;
-
-  if (eventType === 'web.webpagedetails.pageViews') {
-    logger.log('Skipping page view event');
-    return false;
-  }
-  return true;
-}
-
-/**
  * Extracts card collection data from event
  * @param event - The pointer/mouse event
  * @param logger - Logger instance
@@ -302,7 +284,7 @@ export default function customDataCollectionOnBeforeEventSendScript(
     logEventInfo(event, logger);
 
     // Skip page view events
-    if (!shouldProcessEvent(content, logger)) {
+    if (!shouldProcessEventType(content.xdm?.eventType, ['web.webpagedetails.pageViews'], logger)) {
       return content;
     }
 
@@ -313,14 +295,16 @@ export default function customDataCollectionOnBeforeEventSendScript(
     // Extract card collection context from event if available
     const cardCollection = extractCardCollectionFromEvent(event, logger);
 
-    // Set partner data in _adobepartners
-    if (!content.xdm) content.xdm = {};
-    if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
-    content.xdm._adobepartners = {
-      ...content.xdm._adobepartners,
-      partnerData,
-      ...(cardCollection !== null && { cardCollection }),
-    };
+    // Set partner data in _adobepartners using nested object utilities
+    setNestedValue(
+      content,
+      'xdm._adobepartners',
+      mergeNonNull(
+        { partnerData },
+        conditionalProperties(cardCollection !== null, { cardCollection })
+      ),
+      true
+    );
 
     logger.testResult(content);
     if (!testMode) {
