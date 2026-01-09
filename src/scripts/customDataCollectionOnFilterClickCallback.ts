@@ -302,10 +302,6 @@ export default function customDataCollectionOnFilterClickCallbackScript(
       cardCollection = extractCardMetadataFromClick(content.clickedElement, logger);
     } else {
       logger.log('No clicked element provided');
-      // clear window._adobePartners.partnerCard.context if not already cleared
-      if (window._adobePartners?.partnerCard?.context) {
-        window._adobePartners.partnerCard.context = undefined;
-      }
     }
 
     // Store in window._adobePartners

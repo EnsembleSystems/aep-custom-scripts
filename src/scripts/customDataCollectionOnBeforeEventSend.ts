@@ -42,11 +42,13 @@ interface LaunchEventContent {
  * Main script for setting partner data on event
  *
  * @param content - The content object from Launch's before event send callback
+ * @param event - The original event object (PointerEvent or MouseEvent)
  * @param testMode - Enable verbose logging and test output (default: false)
  * @param cookieKey - The cookie key to read partner data from (default: 'partner_data')
  */
 export default function customDataCollectionOnBeforeEventSendScript(
   content: LaunchEventContent,
+  event?: PointerEvent | MouseEvent,
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
 ): LaunchEventContent {
@@ -54,6 +56,16 @@ export default function customDataCollectionOnBeforeEventSendScript(
 
   try {
     logger.testHeader('BEFORE SEND EVENT CALLBACK - TEST MODE', `Cookie Key: ${cookieKey}`);
+
+    // Log event availability
+    if (event) {
+      logger.log('Event object available', { isTrusted: event.isTrusted, type: event.type });
+      if (event.composedPath) {
+        logger.log('Event composed path', event.composedPath());
+      }
+    } else {
+      logger.log('No event object provided');
+    }
 
     // Skip page view events
     if (content.xdm?.eventType === 'web.webpagedetails.pageViews') {
