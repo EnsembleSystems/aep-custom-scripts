@@ -93,6 +93,31 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+async function executeAsyncScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = await execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      const errorResult = config.onError(error, logger);
+      return errorResult instanceof Promise ? errorResult : Promise.resolve(errorResult);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
 // src/utils/fetch.ts
 var MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
 function isAbortError(error) {
@@ -109,40 +134,40 @@ var DEFAULT_CONFIG = {
 };
 async function helloWorldScript(testMode = false) {
   const config = __spreadValues({}, DEFAULT_CONFIG);
-  const logger = createLogger("Hello World", testMode);
-  try {
-    logger.testHeader("HELLO WORLD SCRIPT - TEST MODE", config);
-    logger.log("Script started");
-    const simpleResult = {
-      message: config.message || DEFAULT_CONFIG.message,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      userAgent: navigator.userAgent,
-      currentUrl: window.location.href
-    };
-    logger.log("Simple result created:", simpleResult);
-    const result = {
-      success: true,
-      message: "Hello World script executed successfully",
-      data: simpleResult,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    logger.testResult(result);
-    if (!testMode) {
-      logger.log("Returning result:", result);
+  return executeAsyncScript(
+    {
+      scriptName: "Hello World",
+      testMode,
+      testHeaderTitle: "HELLO WORLD SCRIPT - TEST MODE",
+      testHeaderExtraInfo: config,
+      onError: (error) => {
+        if (isAbortError(error)) {
+          return null;
+        }
+        if (isNetworkError(error)) {
+          return null;
+        }
+        return null;
+      }
+    },
+    async (logger) => {
+      logger.log("Script started");
+      const simpleResult = {
+        message: config.message || DEFAULT_CONFIG.message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        userAgent: navigator.userAgent,
+        currentUrl: window.location.href
+      };
+      logger.log("Simple result created:", simpleResult);
+      const result = {
+        success: true,
+        message: "Hello World script executed successfully",
+        data: simpleResult,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      return result;
     }
-    return result;
-  } catch (error) {
-    if (isAbortError(error)) {
-      logger.error(`Request timeout after ${config.timeout}ms`);
-      return null;
-    }
-    if (isNetworkError(error)) {
-      logger.error("Network error:", error);
-      return null;
-    }
-    logger.error("Unexpected error in Hello World script:", error);
-    return null;
-  }
+  );
 }
 
 

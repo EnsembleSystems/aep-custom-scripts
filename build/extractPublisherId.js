@@ -76,6 +76,30 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
 // src/utils/validation.ts
 function isValidPublisherId(id) {
   if (!id || typeof id !== "string") {
@@ -168,30 +192,34 @@ function extractPublisherId(href, logger) {
   return publisherId;
 }
 function extractPublisherIdScript(testMode = false) {
-  const logger = createLogger("Publisher ID", testMode);
-  try {
-    logger.testHeader("PUBLISHER ID EXTRACTOR - TEST MODE");
-    logger.log("Searching for publisher links in DOM");
-    const links = document.querySelectorAll('a[href^="/publisher/"]');
-    logger.log(`Found ${links.length} publisher links`);
-    for (let i = 0; i < links.length; i += 1) {
-      const href = links[i].getAttribute("href");
-      if (href) {
-        const publisherId = extractPublisherId(href, logger);
-        if (publisherId) {
-          logger.log("Found valid publisher ID", publisherId);
-          logger.testResult(`Publisher ID: ${publisherId}`);
-          return publisherId;
+  return executeScript(
+    {
+      scriptName: "Publisher ID",
+      testMode,
+      testHeaderTitle: "PUBLISHER ID EXTRACTOR - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error parsing publisher ID:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      logger.log("Searching for publisher links in DOM");
+      const links = document.querySelectorAll('a[href^="/publisher/"]');
+      logger.log(`Found ${links.length} publisher links`);
+      for (let i = 0; i < links.length; i += 1) {
+        const href = links[i].getAttribute("href");
+        if (href) {
+          const publisherId = extractPublisherId(href, logger);
+          if (publisherId) {
+            logger.log("Found valid publisher ID", publisherId);
+            return publisherId;
+          }
         }
       }
+      logger.log("No valid publisher link found in DOM");
+      return null;
     }
-    logger.log("No valid publisher link found in DOM");
-    logger.testResult("null (no publisher link found)");
-    return null;
-  } catch (error) {
-    logger.error("Unexpected error parsing publisher ID:", error);
-    return null;
-  }
+  );
 }
 
 

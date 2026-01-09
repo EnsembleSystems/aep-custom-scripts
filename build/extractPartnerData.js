@@ -96,6 +96,50 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
+// src/utils/extraction.ts
+function extractData(config) {
+  var _a, _b, _c;
+  const rawValue = config.source();
+  if (!rawValue) {
+    (_a = config.logger) == null ? void 0 : _a.log(config.notFoundMessage || "No data found");
+    return null;
+  }
+  const parsed = config.parser(rawValue);
+  if (!parsed) {
+    (_b = config.logger) == null ? void 0 : _b.error(config.errorMessage || "Error parsing data");
+    return null;
+  }
+  if (config.validator && !config.validator(parsed)) {
+    (_c = config.logger) == null ? void 0 : _c.error("Data validation failed");
+    return null;
+  }
+  return config.transformer ? config.transformer(parsed) : parsed;
+}
+
 // src/utils/cookie.ts
 function getCookie(name) {
   var _a;
@@ -150,44 +194,40 @@ function hasProperty(value, property) {
 // src/scripts/extractPartnerData.ts
 var DEFAULT_COOKIE_KEY = "partner_data";
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
-function getPartnerData(cookieKey, logger) {
-  const partnerCookie = getCookie(cookieKey);
-  if (!partnerCookie) {
-    logger.log("No partner data in cookies");
-    return null;
-  }
-  const partnerData = parseJsonCookie(partnerCookie);
-  if (!partnerData) {
-    logger.error("Error parsing partner data from cookie");
-    return null;
-  }
-  if (hasProperty(partnerData, "DXP")) {
-    const dxpValue = partnerData.DXP;
-    const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
-    logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
-    return cleanedDxpValue;
-  }
-  const cleanedPartnerData = removeProperties(partnerData, PROPERTIES_TO_REMOVE);
-  logger.log("Found partner data (no DXP key)", cleanedPartnerData);
-  return cleanedPartnerData;
-}
 function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
-  const config = {
-    cookieKey
-  };
-  const logger = createLogger("Partner Data", testMode);
-  try {
-    logger.testHeader("PARTNER DATA EXTRACTOR - TEST MODE", `Cookie Key: ${config.cookieKey}`);
-    const partnerData = getPartnerData(config.cookieKey, logger);
-    logger.testResult(partnerData);
-    if (!testMode) {
-      logger.log("Returning partner data (DXP value)", partnerData);
+  return executeScript(
+    {
+      scriptName: "Partner Data",
+      testMode,
+      testHeaderTitle: "PARTNER DATA EXTRACTOR - TEST MODE",
+      testHeaderExtraInfo: `Cookie Key: ${cookieKey}`,
+      onError: (error, logger) => {
+        logger.error("Unexpected error extracting partner data:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      const partnerData = extractData({
+        source: () => getCookie(cookieKey),
+        parser: parseJsonCookie,
+        transformer: (data) => {
+          if (hasProperty(data, "DXP")) {
+            const dxpValue = data.DXP;
+            const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
+            logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
+            return cleanedDxpValue;
+          }
+          const cleanedPartnerData = removeProperties(data, PROPERTIES_TO_REMOVE);
+          logger.log("Found partner data (no DXP key)", cleanedPartnerData);
+          return cleanedPartnerData;
+        },
+        logger,
+        errorMessage: "Error parsing partner data from cookie",
+        notFoundMessage: "No partner data in cookies"
+      });
+      return partnerData;
     }
-    return partnerData;
-  } catch (error) {
-    logger.error("Unexpected error extracting partner data:", error);
-    return null;
-  }
+  );
 }
 
 

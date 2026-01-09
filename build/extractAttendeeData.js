@@ -76,6 +76,30 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
 // src/utils/storage.ts
 function getStorageItem(key) {
   try {
@@ -93,29 +117,27 @@ function getStorageItem(key) {
 var STORAGE_KEYS = {
   ATTENDEE: "attendeaseMember"
 };
-function getAttendeeData(logger) {
-  const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
-  if (!attendeeData) {
-    logger.log("No attendee data in localStorage");
-    return null;
-  }
-  logger.log("Found attendee data", attendeeData);
-  return attendeeData;
-}
 function extractAttendeeDataScript(testMode = false) {
-  const logger = createLogger("Attendee Data", testMode);
-  try {
-    logger.testHeader("ATTENDEE DATA EXTRACTOR - TEST MODE");
-    const attendeeData = getAttendeeData(logger);
-    logger.testResult(attendeeData);
-    if (!testMode) {
-      logger.log("Returning attendee data", attendeeData);
+  return executeScript(
+    {
+      scriptName: "Attendee Data",
+      testMode,
+      testHeaderTitle: "ATTENDEE DATA EXTRACTOR - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error extracting attendee data:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
+      if (!attendeeData) {
+        logger.log("No attendee data in localStorage");
+        return null;
+      }
+      logger.log("Found attendee data", attendeeData);
+      return attendeeData;
     }
-    return attendeeData;
-  } catch (error) {
-    logger.error("Unexpected error extracting attendee data:", error);
-    return null;
-  }
+  );
 }
 
 

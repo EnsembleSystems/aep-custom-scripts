@@ -96,6 +96,31 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+async function executeAsyncScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = await execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      const errorResult = config.onError(error, logger);
+      return errorResult instanceof Promise ? errorResult : Promise.resolve(errorResult);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
 // src/utils/fetch.ts
 var MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
 function fetchWithTimeout(url, options, timeoutMs) {
@@ -233,51 +258,56 @@ function fetchEventDataScript(testMode = false) {
   const config = {
     timeout: 1e4
   };
-  const logger = createLogger("Event Data", testMode);
-  logger.testHeader("EVENT DATA EXTRACTOR - TEST MODE");
-  const currentDomain = window.location.origin;
-  const apiUrl = `${currentDomain}${API.EVENT_ENDPOINT}`;
-  logger.log("Fetching event data from", apiUrl);
-  return fetchWithTimeout(
-    apiUrl,
+  return executeAsyncScript(
     {
-      method: "GET",
-      headers: {
-        Accept: "application/json"
+      scriptName: "Event Data",
+      testMode,
+      testHeaderTitle: "EVENT DATA EXTRACTOR - TEST MODE",
+      onError: async (error, logger) => {
+        if (isAbortError(error)) {
+          logger.error(`Request timeout after ${config.timeout}ms`);
+          return null;
+        }
+        if (isNetworkError(error)) {
+          logger.error("Network error:", error);
+          return null;
+        }
+        logger.error("Unexpected error fetching event data:", error);
+        return null;
       }
     },
-    config.timeout
-  ).then((response) => {
-    if (!response.ok) {
-      logger.error(`API error: ${response.status} ${response.statusText}`);
-      throw new Error(`API returned ${response.status}`);
+    async (logger) => {
+      const currentDomain = window.location.origin;
+      const apiUrl = `${currentDomain}${API.EVENT_ENDPOINT}`;
+      logger.log("Fetching event data from", apiUrl);
+      const response = await fetchWithTimeout(
+        apiUrl,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json"
+          }
+        },
+        config.timeout
+      );
+      if (!response.ok) {
+        logger.error(`API error: ${response.status} ${response.statusText}`);
+        throw new Error(`API returned ${response.status}`);
+      }
+      validateResponseSize(response);
+      const data = await response.json();
+      logger.log("Event data received", data);
+      try {
+        const transformedData = transformEventData(data, logger);
+        storeEventDataGlobally(transformedData, logger);
+        dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
+        return transformedData;
+      } catch (err) {
+        logger.warn("Could not transform or store data:", err);
+        return data;
+      }
     }
-    validateResponseSize(response);
-    return response.json();
-  }).then((data) => {
-    logger.log("Event data received", data);
-    logger.testResult(data);
-    try {
-      const transformedData = transformEventData(data, logger);
-      storeEventDataGlobally(transformedData, logger);
-      dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
-      return transformedData;
-    } catch (err) {
-      logger.warn("Could not transform or store data:", err);
-      return data;
-    }
-  }).catch((error) => {
-    if (isAbortError(error)) {
-      logger.error(`Request timeout after ${config.timeout}ms`);
-      return null;
-    }
-    if (isNetworkError(error)) {
-      logger.error("Network error:", error);
-      return null;
-    }
-    logger.error("Unexpected error fetching event data:", error);
-    return null;
-  });
+  );
 }
 
 

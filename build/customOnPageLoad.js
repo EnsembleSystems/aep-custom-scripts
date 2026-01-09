@@ -76,17 +76,47 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
-// src/scripts/customOnPageLoad.ts
-function customOnPageLoadScript(testMode = false) {
-  const logger = createLogger("Custom On Page Load", testMode);
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
   try {
-    logger.testHeader("CUSTOM ON PAGE LOAD SCRIPT");
-    logger.log("Custom on page load script executed");
-    return null;
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
   } catch (error) {
-    logger.error("Unexpected error in custom on page load script:", error);
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
     return null;
   }
+}
+
+// src/scripts/customOnPageLoad.ts
+function customOnPageLoadScript(testMode = false) {
+  return executeScript(
+    {
+      scriptName: "Custom On Page Load",
+      testMode,
+      testHeaderTitle: "CUSTOM ON PAGE LOAD SCRIPT",
+      onError: (error, logger) => {
+        logger.error("Unexpected error in custom on page load script:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      logger.log("Custom on page load script executed");
+      return null;
+    }
+  );
 }
 
 

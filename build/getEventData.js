@@ -76,31 +76,53 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
-// src/scripts/getEventData.ts
-function getEventData(logger) {
-  var _a, _b;
-  if (!((_b = (_a = window._adobePartners) == null ? void 0 : _a.eventData) == null ? void 0 : _b.apiResponse)) {
-    logger.log("No apiResponse found in window._adobePartners.eventData");
-    return null;
-  }
-  const eventData = window._adobePartners.eventData.apiResponse;
-  logger.log("Found event data", eventData);
-  return eventData;
-}
-function getEventDataScript(testMode = false) {
-  const logger = createLogger("Get Event Data", testMode);
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
   try {
-    logger.testHeader("GET EVENT DATA - TEST MODE");
-    const eventData = getEventData(logger);
-    logger.testResult(eventData);
-    if (!testMode) {
-      logger.log("Returning event data", eventData);
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
     }
-    return eventData;
+    return result;
   } catch (error) {
-    logger.error("Unexpected error getting event data:", error);
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
     return null;
   }
+}
+
+// src/scripts/getEventData.ts
+function getEventDataScript(testMode = false) {
+  return executeScript(
+    {
+      scriptName: "Get Event Data",
+      testMode,
+      testHeaderTitle: "GET EVENT DATA - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error getting event data:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      var _a, _b;
+      if (!((_b = (_a = window._adobePartners) == null ? void 0 : _a.eventData) == null ? void 0 : _b.apiResponse)) {
+        logger.log("No apiResponse found in window._adobePartners.eventData");
+        return null;
+      }
+      const eventData = window._adobePartners.eventData.apiResponse;
+      logger.log("Found event data", eventData);
+      return eventData;
+    }
+  );
 }
 
 

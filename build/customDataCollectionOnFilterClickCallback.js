@@ -76,6 +76,30 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/script.ts
+function executeScript(config, execute) {
+  const logger = createLogger(config.scriptName, config.testMode);
+  try {
+    logger.testHeader(config.testHeaderTitle, config.testHeaderExtraInfo);
+    const result = execute(logger);
+    logger.testResult(result);
+    if (!config.testMode) {
+      if (config.onSuccess) {
+        config.onSuccess(result, logger);
+      } else {
+        logger.log("Script completed successfully", result);
+      }
+    }
+    return result;
+  } catch (error) {
+    if (config.onError) {
+      return config.onError(error, logger);
+    }
+    logger.error("Unexpected error in script:", error);
+    return null;
+  }
+}
+
 // src/utils/events.ts
 function logEventInfo(event, logger, additionalInfo) {
   if (!event) {
@@ -108,31 +132,39 @@ function isValidUserEvent(event, logger) {
 
 // src/scripts/customDataCollectionOnFilterClickCallback.ts
 function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false) {
-  const logger = createLogger("Filter Click Callback", testMode);
-  try {
-    logger.testHeader("FILTER CLICK CALLBACK - TEST MODE");
-    logger.testInfo("Provided content object", content);
-    logEventInfo(event, logger);
-    if (!isValidUserEvent(event, logger)) {
-      return false;
+  return executeScript(
+    {
+      scriptName: "Filter Click Callback",
+      testMode,
+      testHeaderTitle: "FILTER CLICK CALLBACK - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error in filter click callback:", error);
+        return false;
+      }
+    },
+    (logger) => {
+      logger.testInfo("Provided content object", content);
+      logEventInfo(event, logger);
+      if (!isValidUserEvent(event, logger)) {
+        return false;
+      }
+      if (event) {
+        logger.log("\u2705 Event is trusted (genuine user click)", {
+          isTrusted: event.isTrusted,
+          type: event.type
+        });
+        if (testMode) {
+          logger.testResult({
+            shouldProcess: true,
+            reason: "Event is trusted",
+            eventType: event.type,
+            isTrusted: event.isTrusted
+          });
+        }
+      }
+      return true;
     }
-    logger.log("\u2705 Event is trusted (genuine user click)", {
-      isTrusted: event.isTrusted,
-      type: event.type
-    });
-    if (testMode) {
-      logger.testResult({
-        shouldProcess: true,
-        reason: "Event is trusted",
-        eventType: event.type,
-        isTrusted: event.isTrusted
-      });
-    }
-    return true;
-  } catch (error) {
-    logger.error("Unexpected error in filter click callback:", error);
-    return false;
-  }
+  );
 }
 
 
