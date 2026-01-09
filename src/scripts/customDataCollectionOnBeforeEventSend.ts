@@ -241,7 +241,7 @@ export default function customDataCollectionOnBeforeEventSendScript(
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
 ): LaunchEventContent {
-  const logger = createLogger(testMode, 'Before Send Callback', testMode);
+  const logger = createLogger('Before Send Callback', testMode);
 
   try {
     logger.testHeader('BEFORE SEND EVENT CALLBACK - TEST MODE', `Cookie Key: ${cookieKey}`);

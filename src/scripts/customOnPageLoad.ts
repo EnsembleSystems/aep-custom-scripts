@@ -16,11 +16,6 @@
 
 import { createLogger } from '../utils/logger.js';
 
-// Types
-export interface CustomOnPageLoadConfig {
-  debug: boolean;
-}
-
 /**
  * Main entry point for the custom on page load script
  *
@@ -35,12 +30,9 @@ export interface CustomOnPageLoadConfig {
  * ----------------------------
  * customOnPageLoadScript(true);
  */
+// eslint-disable-next-line import/prefer-default-export
 export function customOnPageLoadScript(testMode: boolean = false): null {
-  const config: CustomOnPageLoadConfig = {
-    debug: testMode,
-  };
-
-  const logger = createLogger(config.debug, 'Custom On Page Load', testMode);
+  const logger = createLogger('Custom On Page Load', testMode);
 
   try {
     logger.testHeader('CUSTOM ON PAGE LOAD SCRIPT');

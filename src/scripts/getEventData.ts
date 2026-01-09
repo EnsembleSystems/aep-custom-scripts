@@ -8,11 +8,6 @@
 
 import { createLogger } from '../utils/logger.js';
 
-// Types
-export interface EventDataConfig {
-  debug: boolean;
-}
-
 /**
  * Gets event data from window._adobePartners.eventData.apiResponse
  */
@@ -32,12 +27,9 @@ function getEventData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the event data getter
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
+// eslint-disable-next-line import/prefer-default-export
 export function getEventDataScript(testMode: boolean = false): unknown {
-  const config: EventDataConfig = {
-    debug: testMode,
-  };
-
-  const logger = createLogger(config.debug, 'Get Event Data', testMode);
+  const logger = createLogger('Get Event Data', testMode);
 
   try {
     logger.testHeader('GET EVENT DATA - TEST MODE');

@@ -56,7 +56,7 @@ export default function customDataCollectionOnFilterClickCallbackScript(
   event?: PointerEvent | MouseEvent,
   testMode: boolean = false
 ): boolean {
-  const logger = createLogger(testMode, 'Filter Click Callback', testMode);
+  const logger = createLogger('Filter Click Callback', testMode);
 
   try {
     logger.testHeader('FILTER CLICK CALLBACK - TEST MODE');

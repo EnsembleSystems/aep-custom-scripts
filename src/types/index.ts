@@ -3,13 +3,12 @@
  */
 
 export interface BaseConfig {
-  debug?: boolean;
   timeout?: number;
 }
 
 export interface LoggerConfig {
-  debug: boolean;
   prefix: string;
+  isTestMode: boolean;
 }
 
 export type FetchResult<T> = T | null;

@@ -545,7 +545,7 @@ All scripts use these common utilities (eliminating duplication):
 ### Logger (`src/utils/logger.ts`)
 
 ```typescript
-const logger = createLogger(debug, 'Script Name', isTestMode);
+const logger = createLogger('Script Name', isTestMode);
 logger.log('message', data);
 logger.error('error message');
 logger.warn('warning message');

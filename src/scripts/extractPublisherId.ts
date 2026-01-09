@@ -8,11 +8,6 @@
 import { createLogger } from '../utils/logger.js';
 import { isValidPublisherId } from '../utils/validation.js';
 
-// Types
-export interface PublisherIdConfig {
-  debug: boolean;
-}
-
 /**
  * Extracts publisher ID from href
  * Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"
@@ -54,12 +49,9 @@ function extractPublisherId(href: string, logger: ReturnType<typeof createLogger
  * Main entry point for the publisher ID extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
+// eslint-disable-next-line import/prefer-default-export
 export function extractPublisherIdScript(testMode: boolean = false): string | null {
-  const config: PublisherIdConfig = {
-    debug: testMode,
-  };
-
-  const logger = createLogger(config.debug, 'Publisher ID', testMode);
+  const logger = createLogger('Publisher ID', testMode);
 
   try {
     logger.testHeader('PUBLISHER ID EXTRACTOR - TEST MODE');

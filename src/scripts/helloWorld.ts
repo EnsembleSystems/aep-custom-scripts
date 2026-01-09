@@ -31,8 +31,6 @@ import { fetchWithTimeout, isAbortError, isNetworkError } from '../utils/fetch.j
 export interface HelloWorldConfig {
   /** Request timeout in milliseconds */
   timeout: number;
-  /** Enable debug logging */
-  debug: boolean;
   /** Custom message to display */
   message?: string;
 }
@@ -60,7 +58,6 @@ export interface HelloWorldResult {
  */
 const DEFAULT_CONFIG: HelloWorldConfig = {
   timeout: 10000,
-  debug: false,
   message: 'Hello from AEP!',
 };
 
@@ -152,11 +149,10 @@ export async function helloWorldScript(
   // Merge default config
   const config: HelloWorldConfig = {
     ...DEFAULT_CONFIG,
-    debug: testMode, // Enable debug logging in test mode
   };
 
   // Create logger instance
-  const logger = createLogger(config.debug, 'Hello World', testMode);
+  const logger = createLogger('Hello World', testMode);
 
   try {
     // Test mode header

@@ -3,16 +3,17 @@
  */
 
 export class Logger {
-  private readonly debug: boolean;
-
   private readonly prefix: string;
 
   private readonly isTestMode: boolean;
 
-  constructor(debug: boolean, prefix: string, isTestMode: boolean) {
-    this.debug = debug;
+  constructor(prefix: string, isTestMode: boolean) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+
+  private get debug(): boolean {
+    return this.isTestMode;
   }
 
   log(message: string, data?: unknown): void {
@@ -89,7 +90,7 @@ export class Logger {
   }
 }
 
-export function createLogger(debug: boolean, scriptName: string, isTestMode: boolean): Logger {
+export function createLogger(scriptName: string, isTestMode: boolean): Logger {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }

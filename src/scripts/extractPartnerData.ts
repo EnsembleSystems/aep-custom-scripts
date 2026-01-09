@@ -10,7 +10,6 @@ import removeProperties from '../utils/object.js';
 
 // Types
 export interface PartnerDataConfig {
-  debug: boolean;
   cookieKey: string;
 }
 
@@ -60,11 +59,10 @@ export function extractPartnerDataScript(
   cookieKey: string = DEFAULT_COOKIE_KEY
 ): unknown {
   const config: PartnerDataConfig = {
-    debug: testMode,
     cookieKey,
   };
 
-  const logger = createLogger(config.debug, 'Partner Data', testMode);
+  const logger = createLogger('Partner Data', testMode);
 
   try {
     logger.testHeader('PARTNER DATA EXTRACTOR - TEST MODE', `Cookie Key: ${config.cookieKey}`);

@@ -19,7 +19,6 @@ import { dispatchCustomEvent } from '../utils/dom.js';
 // Types
 export interface EventDataConfig {
   timeout: number;
-  debug: boolean;
 }
 
 // Constants
@@ -34,10 +33,9 @@ const API = {
 export function fetchEventDataScript(testMode: boolean = false): unknown {
   const config: EventDataConfig = {
     timeout: 10000,
-    debug: testMode,
   };
 
-  const logger = createLogger(config.debug, 'Event Data', testMode);
+  const logger = createLogger('Event Data', testMode);
 
   logger.testHeader('EVENT DATA EXTRACTOR - TEST MODE');
 

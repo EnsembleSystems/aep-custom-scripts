@@ -8,11 +8,6 @@
 import { createLogger } from '../utils/logger.js';
 import { getStorageItem } from '../utils/storage.js';
 
-// Types
-export interface AttendeeDataConfig {
-  debug: boolean;
-}
-
 // Constants
 const STORAGE_KEYS = {
   ATTENDEE: 'attendeaseMember',
@@ -37,12 +32,9 @@ function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the attendee data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
+// eslint-disable-next-line import/prefer-default-export
 export function extractAttendeeDataScript(testMode: boolean = false): unknown {
-  const config: AttendeeDataConfig = {
-    debug: testMode,
-  };
-
-  const logger = createLogger(config.debug, 'Attendee Data', testMode);
+  const logger = createLogger('Attendee Data', testMode);
 
   try {
     logger.testHeader('ATTENDEE DATA EXTRACTOR - TEST MODE');
