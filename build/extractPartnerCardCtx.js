@@ -189,23 +189,6 @@ function findCardInPath(event, logger) {
   }
   return cardElement;
 }
-function handleWrapperClick(event, sectionID, filterContext, logger) {
-  var _a, _b;
-  const cardElement = findCardInPath(event, logger);
-  if (!cardElement) {
-    return;
-  }
-  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
-  if (!cardContext) {
-    logger.warn("Failed to extract card context");
-    return;
-  }
-  window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
-  window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
-  window._adobePartners.partnerCard.context = cardContext;
-  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
-  logger.log("Card click processed successfully");
-}
 function extractWrapperContext(wrapper, logger) {
   if (!wrapper.parentElement) {
     logger.warn("Wrapper has no parent element, sectionID will be empty");
@@ -219,66 +202,45 @@ function extractWrapperContext(wrapper, logger) {
   }
   return { sectionID, filterContext };
 }
-function attachListenerToWrapper(wrapper, logger, processedWrappers) {
-  if (processedWrappers.has(wrapper)) {
-    return false;
+function handleDocumentClick(event, logger) {
+  var _a, _b;
+  const cardElement = findCardInPath(event, logger);
+  if (!cardElement) {
+    return;
+  }
+  const wrapper = findInComposedPath(
+    event,
+    (el) => {
+      var _a2;
+      return (_a2 = el.classList) == null ? void 0 : _a2.contains("dx-card-collection-wrapper");
+    }
+  );
+  if (!wrapper) {
+    logger.log("No wrapper found in click path");
+    return;
   }
   const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
-  wrapper.addEventListener("click", (event) => {
-    handleWrapperClick(event, sectionID, filterContext, logger);
-  });
-  processedWrappers.add(wrapper);
-  return true;
-}
-function setupClickListeners(logger, processedWrappers) {
-  const wrappers = document.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
-  if (wrappers.length === 0) {
-    logger.warn("No card collection wrappers found on page");
-    return 0;
+  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
+  if (!cardContext) {
+    logger.warn("Failed to extract card context");
+    return;
   }
-  let newListeners = 0;
-  wrappers.forEach((wrapper) => {
-    if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
-      newListeners += 1;
-    }
-  });
-  logger.log(
-    `Attached ${newListeners} new click listeners (${wrappers.length} total wrappers on page)`
-  );
-  return newListeners;
+  window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
+  window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
+  window._adobePartners.partnerCard.context = cardContext;
+  dispatchCustomEvent(EVENT_NAMES.PARTNER_CARD_CLICK, cardContext);
+  logger.log("Card click processed successfully");
 }
-function setupDynamicObserver(logger, processedWrappers) {
-  const observer = new MutationObserver((mutations) => {
-    const newWrappersFound = [];
-    mutations.forEach((mutation) => {
-      Array.from(mutation.addedNodes).forEach((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) {
-          return;
-        }
-        const element = node;
-        if (element.matches(SELECTORS.CARD_COLLECTION_WRAPPER)) {
-          if (attachListenerToWrapper(element, logger, processedWrappers)) {
-            newWrappersFound.push(element);
-          }
-        }
-        const childWrappers = element.querySelectorAll(SELECTORS.CARD_COLLECTION_WRAPPER);
-        Array.from(childWrappers).forEach((wrapper) => {
-          if (attachListenerToWrapper(wrapper, logger, processedWrappers)) {
-            newWrappersFound.push(wrapper);
-          }
-        });
-      });
-    });
-    if (newWrappersFound.length > 0) {
-      logger.log(`Attached listeners to ${newWrappersFound.length} dynamically loaded wrappers`);
-    }
-  });
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  logger.log("MutationObserver started - watching for dynamic content");
-  return observer;
+function setupClickListener(logger) {
+  document.addEventListener(
+    "click",
+    (event) => {
+      handleDocumentClick(event, logger);
+    },
+    true
+    // Capture phase - fires before bubble phase
+  );
+  logger.log("Document-level click listener attached (capture phase)");
 }
 function extractPartnerCardCtxScript(testMode = false) {
   var _a, _b;
@@ -289,20 +251,16 @@ function extractPartnerCardCtxScript(testMode = false) {
   try {
     window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
     window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
-    if (window._adobePartners.partnerCard.observer) {
+    if (window._adobePartners.partnerCard.initialized) {
       logger.log("Script already initialized, skipping duplicate setup");
       return { listenersAttached: 0 };
     }
     logger.testHeader("PARTNER CARD CONTEXT EXTRACTOR - SETUP MODE");
-    const processedWrappers = /* @__PURE__ */ new WeakSet();
-    const listenerCount = setupClickListeners(logger, processedWrappers);
-    const observer = setupDynamicObserver(logger, processedWrappers);
-    window._adobePartners.partnerCard.observer = observer;
-    const result = { listenersAttached: listenerCount };
+    setupClickListener(logger);
+    window._adobePartners.partnerCard.initialized = true;
+    const result = { listenersAttached: 1 };
     logger.testResult(result);
-    logger.log(
-      `Setup complete: ${listenerCount} listeners attached, observer watching for dynamic content`
-    );
+    logger.log("Setup complete: Document-level click listener attached (capture phase)");
     return result;
   } catch (error) {
     logger.error("Unexpected error during setup:", error);
