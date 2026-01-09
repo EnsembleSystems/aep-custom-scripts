@@ -16,6 +16,7 @@
  */
 
 import { createLogger } from '../utils/logger';
+import logEventInfo from '../utils/events';
 
 /**
  * Type for the content object passed to Launch's before event send callback
@@ -61,7 +62,9 @@ export default function customDataCollectionOnFilterClickCallbackScript(
   try {
     logger.testHeader('FILTER CLICK CALLBACK - TEST MODE');
     logger.testInfo('Provided content object', content);
-    logger.testInfo('Event object', event);
+
+    // Log event information
+    logEventInfo(event, logger);
 
     // Check if event is provided
     if (!event) {

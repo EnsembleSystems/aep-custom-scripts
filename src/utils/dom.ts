@@ -149,3 +149,69 @@ export function dispatchCustomEvent(eventName: string, detail?: unknown, logger?
   }
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
+
+/**
+ * Creates an element matcher predicate for use with findInComposedPath
+ * @param tagName - Optional tag name to match (case-insensitive)
+ * @param className - Optional class name to match
+ * @returns Predicate function
+ *
+ * @example
+ * const isCard = createElementMatcher('single-partner-card', 'card-wrapper');
+ * findInComposedPath(event, isCard);
+ */
+export function createElementMatcher(
+  tagName?: string,
+  className?: string
+): (element: Element) => boolean {
+  return (element: Element) => {
+    if (tagName && element.tagName.toLowerCase() === tagName.toLowerCase()) {
+      return true;
+    }
+    if (className && element.classList.contains(className)) {
+      return true;
+    }
+    return false;
+  };
+}
+
+/**
+ * Extracts a structured value from a delimited attribute
+ * @param element - Element to extract from
+ * @param attributeName - Name of the attribute
+ * @param delimiter - Delimiter to split by
+ * @param indices - Object mapping names to indices
+ * @returns Object with extracted values
+ *
+ * @example
+ * extractStructuredAttribute(
+ *   element,
+ *   'daa-lh',
+ *   '|',
+ *   { position: 0, contentID: 2 }
+ * )
+ * // Returns { position: '1', contentID: 'abc123' }
+ */
+export function extractStructuredAttribute(
+  element: Element | null | undefined,
+  attributeName: string,
+  delimiter: string,
+  indices: Record<string, number>
+): Record<string, string> {
+  const attrValue = getAttribute(element, attributeName);
+
+  if (!attrValue) {
+    return {};
+  }
+
+  const result: Record<string, string> = {};
+
+  Object.entries(indices).forEach(([key, index]) => {
+    const value = splitAndGet(attrValue, delimiter, index);
+    if (value) {
+      result[key] = value;
+    }
+  });
+
+  return result;
+}

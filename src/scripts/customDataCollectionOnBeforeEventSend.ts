@@ -19,12 +19,14 @@
 import { createLogger } from '../utils/logger';
 import { extractPartnerDataScript } from './extractPartnerData';
 import {
-  splitAndGet,
   getAttribute,
   getTextContent,
   queryShadow,
   findInComposedPath,
+  createElementMatcher,
+  extractStructuredAttribute,
 } from '../utils/dom';
+import logEventInfo from '../utils/events';
 import type { PartnerCardCtx } from '../types';
 
 const DEFAULT_COOKIE_KEY = 'partner_data';
@@ -69,22 +71,9 @@ interface LaunchEventContent {
   [key: string]: unknown;
 }
 
-/**
- * Checks if an element is or matches a partner card
- */
-function isPartnerCard(element: Element): boolean {
-  const tagName = element.tagName.toLowerCase();
-  const hasClass = element.classList.contains(CARD_TYPES.CLASS_NAME);
-
-  return tagName === CARD_TYPES.TAG_NAME || hasClass;
-}
-
-/**
- * Checks if an element is a card collection wrapper
- */
-function isCardWrapper(element: Element): boolean {
-  return element.classList.contains(WRAPPER_CLASS);
-}
+// Create element matchers using utility functions
+const isPartnerCard = createElementMatcher(CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME);
+const isCardWrapper = createElementMatcher(undefined, WRAPPER_CLASS);
 
 /**
  * Extracts context metadata for a wrapper element
@@ -117,10 +106,13 @@ function extractWrapperContext(
  * @returns Object with contentID and position
  */
 function extractCardMetadata(cardElement: Element): { contentID: string; position: string } {
-  const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
+  const metadata = extractStructuredAttribute(cardElement, ATTRIBUTES.DAA_LH, '|', {
+    contentID: DAA_LH_INDICES.CONTENT_ID,
+    position: DAA_LH_INDICES.POSITION,
+  });
   return {
-    contentID: splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.CONTENT_ID),
-    position: splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.POSITION),
+    contentID: metadata.contentID || '',
+    position: metadata.position || '',
   };
 }
 
@@ -253,30 +245,13 @@ function shouldProcessEvent(
   content: LaunchEventContent,
   logger: ReturnType<typeof createLogger>
 ): boolean {
-  if (content.xdm?.eventType === 'web.webpagedetails.pageViews') {
+  const eventType = content.xdm?.eventType;
+
+  if (eventType === 'web.webpagedetails.pageViews') {
     logger.log('Skipping page view event');
     return false;
   }
   return true;
-}
-
-/**
- * Logs event information for debugging
- * @param event - The pointer/mouse event
- * @param logger - Logger instance
- */
-function logEventInfo(
-  event: PointerEvent | MouseEvent | undefined,
-  logger: ReturnType<typeof createLogger>
-): void {
-  if (event) {
-    logger.log('Event object available', { isTrusted: event.isTrusted, type: event.type });
-    if (event.composedPath) {
-      logger.log('Event composed path available', event.composedPath());
-    }
-  } else {
-    logger.log('No event object provided');
-  }
 }
 
 /**

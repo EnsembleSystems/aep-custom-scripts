@@ -15,6 +15,8 @@ import {
 import CONSTANTS from '../utils/constants.js';
 import { extractDates } from '../utils/dates.js';
 import { dispatchCustomEvent } from '../utils/dom.js';
+import { mergeWithTransforms } from '../utils/transform.js';
+import setGlobalValue from '../utils/globalState.js';
 
 // Types
 export interface EventDataConfig {
@@ -42,11 +44,10 @@ function transformEventData(
   const dates: string[] = extractDates((rawData.dates ?? []) as Array<{ date?: string }>);
   logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
 
-  // Create transformed data object with extracted dates
-  const transformedData = {
-    ...rawData,
-    dates,
-  };
+  // Use transform utility to merge the transformed dates back into the data
+  const transformedData = mergeWithTransforms(rawData, [
+    { source: 'dates', target: 'dates', transform: () => dates },
+  ]);
   logger.log('Transformed data', transformedData);
 
   return transformedData;
@@ -61,13 +62,13 @@ function storeEventDataGlobally(
   transformedData: Record<string, unknown>,
   logger: ReturnType<typeof createLogger>
 ): void {
-  // Ensure window._adobePartners.eventData exists
-  window._adobePartners = window._adobePartners ?? {};
-  window._adobePartners.eventData = window._adobePartners.eventData ?? {};
-
-  // Store the API response in window._adobePartners.eventData.apiResponse global variable
-  window._adobePartners.eventData.apiResponse = transformedData;
-  logger.log('Event data stored in window._adobePartners.eventData.apiResponse');
+  // Use global state utility to safely set nested window property
+  setGlobalValue(
+    window as unknown as Record<string, unknown>,
+    ['_adobePartners', 'eventData', 'apiResponse'],
+    transformedData,
+    logger
+  );
 }
 
 /**
