@@ -1,10 +1,11 @@
 /**
- * Hello World Template Script for AEP
+ * Template Script for AEP (Async Version)
  *
- * This is a basic template demonstrating how to create a new AEP data fetcher.
- * Copy this file and modify it to create your own custom script.
+ * Use this template when your script needs to perform asynchronous operations
+ * such as API calls, async data fetching, or Promise-based operations.
  *
  * Features demonstrated:
+ * - Async/await patterns with executeAsyncScript wrapper
  * - Logger integration
  * - Fetch with timeout
  * - Error handling patterns
@@ -12,10 +13,11 @@
  * - Type safety
  *
  * Usage:
- * 1. Copy this file to create your own script: src/scripts/yourScript.ts
- * 2. Modify the logic to suit your needs
- * 3. Run `npm run build` - wrapper will be auto-generated
- * 4. Deploy build/yourScript.min.js to AEP
+ * 1. Copy this file: cp src/scripts/templateAsync.ts src/scripts/yourScript.ts
+ * 2. Replace "Template" with your script name in types and functions
+ * 3. Modify the logic to suit your needs
+ * 4. Run `npm run build`
+ * 5. Deploy build/yourScript.js to AEP
  */
 
 import { executeAsyncScript } from '../utils/script.js';
@@ -29,7 +31,7 @@ import { fetchWithTimeout, isAbortError, isNetworkError } from '../utils/fetch.j
 /**
  * Configuration for the script
  */
-export interface HelloWorldConfig {
+export interface TemplateConfig {
   /** Request timeout in milliseconds */
   timeout: number;
   /** Custom message to display */
@@ -39,7 +41,7 @@ export interface HelloWorldConfig {
 /**
  * Result returned by the script
  */
-export interface HelloWorldResult {
+export interface TemplateResult {
   /** Success status */
   success: boolean;
   /** Message from the script */
@@ -57,9 +59,9 @@ export interface HelloWorldResult {
 /**
  * Default configuration values
  */
-const DEFAULT_CONFIG: HelloWorldConfig = {
+const DEFAULT_CONFIG: TemplateConfig = {
   timeout: 10000,
-  message: 'Hello from AEP!',
+  message: 'Template script executed',
 };
 
 /**
@@ -81,7 +83,7 @@ const API = {
  */
 // @ts-expect-error - Example function for template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function fetchExampleData(config: HelloWorldConfig, logger: Logger): Promise<unknown> {
+async function fetchExampleData(config: TemplateConfig, logger: Logger): Promise<unknown> {
   logger.log('Fetching example data...');
 
   // Example API call (replace with your actual endpoint)
@@ -128,32 +130,32 @@ function processData(data: unknown, logger: Logger): unknown {
 // ============================================================================
 
 /**
- * Main entry point for the Hello World script
+ * Main entry point for the Template script
  *
  * @param testMode - Set to true for browser console testing, false for AEP deployment
- * @returns Result object or null on error
+ * @returns Promise that resolves to result object or null on error
  *
  * @example
  * // In browser console (with TEST_MODE = true in wrapper):
- * await (async () => { ... })();
+ * // Result will be logged to console automatically
  *
  * @example
  * // In AEP Data Element:
- * return (async () => { ... })();
+ * // Promise is returned and AEP Launch will await it
  */
-export async function helloWorldScript(
+export async function templateAsyncScript(
   testMode: boolean = false
-): Promise<HelloWorldResult | null> {
+): Promise<TemplateResult | null> {
   // Merge default config
-  const config: HelloWorldConfig = {
+  const config: TemplateConfig = {
     ...DEFAULT_CONFIG,
   };
 
   return executeAsyncScript(
     {
-      scriptName: 'Hello World',
+      scriptName: 'Template',
       testMode,
-      testHeaderTitle: 'HELLO WORLD SCRIPT - TEST MODE',
+      testHeaderTitle: 'TEMPLATE SCRIPT (ASYNC) - TEST MODE',
       testHeaderExtraInfo: config,
       onError: (error) => {
         // Handle timeout errors
@@ -217,9 +219,9 @@ export async function helloWorldScript(
       // BUILD RESULT OBJECT
       // ========================================================================
 
-      const result: HelloWorldResult = {
+      const result: TemplateResult = {
         success: true,
-        message: 'Hello World script executed successfully',
+        message: 'Template script executed successfully',
         data: simpleResult,
         timestamp: new Date().toISOString(),
       };

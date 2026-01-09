@@ -57,9 +57,27 @@ cp .env.example .env
 
 ### Creating a New Script (Streamlined!)
 
+Choose the appropriate template based on your needs:
+
+**For async operations** (API calls, fetch, promises):
+
 ```bash
-# 1. Copy the template
-cp src/scripts/helloWorld.ts src/scripts/myScript.ts
+# 1. Copy the async template
+cp src/scripts/templateAsync.ts src/scripts/myScript.ts
+
+# 2. Edit your script (add your logic)
+
+# 3. Build
+TEST_MODE=false npm run build
+
+# 4. Deploy build/myScript.js to AEP
+```
+
+**For sync operations** (cookies, localStorage, DOM):
+
+```bash
+# 1. Copy the sync template
+cp src/scripts/templateSync.ts src/scripts/myScript.ts
 
 # 2. Edit your script (add your logic)
 
@@ -103,7 +121,8 @@ After building, you'll find these bundled scripts in `build/`:
 - **`customOnPageLoad.js`** - Custom on page load placeholder script
 - **`customDataCollectionOnBeforeEventSend.js`** - Before event send callback
 - **`customDataCollectionOnFilterClickCallback.js`** - Filter click callback with card tracking
-- **`helloWorld.js`** - Template example (for reference)
+- **`templateAsync.js`** - Template for async scripts (for reference)
+- **`templateSync.js`** - Template for sync scripts (for reference)
 
 ## 📥 Download Latest Scripts
 
@@ -149,7 +168,8 @@ aep-custom-scripts/
 │   │   ├── customOnPageLoad.ts                         # Custom on page load placeholder
 │   │   ├── customDataCollectionOnBeforeEventSend.ts    # Before event send callback
 │   │   ├── customDataCollectionOnFilterClickCallback.ts # Filter click with card tracking
-│   │   └── helloWorld.ts                               # Template for new scripts
+│   │   ├── templateAsync.ts                            # Template for async scripts
+│   │   └── templateSync.ts                             # Template for sync scripts
 │   ├── utils/             # Shared utilities (DRY)
 │   │   ├── script.ts      # Script execution wrappers
 │   │   ├── logger.ts      # Consistent logging
@@ -523,14 +543,23 @@ Teammates can then download from the [Releases](../../releases) page for stable,
 
 ### Adding a New Script
 
-1. **Copy the template**:
+1. **Copy the appropriate template**:
+
+   For async operations (API calls, fetch):
 
    ```bash
-   cp src/scripts/helloWorld.ts src/scripts/yourScript.ts
+   cp src/scripts/templateAsync.ts src/scripts/yourScript.ts
+   ```
+
+   For sync operations (cookies, localStorage, DOM):
+
+   ```bash
+   cp src/scripts/templateSync.ts src/scripts/yourScript.ts
    ```
 
 2. **Edit your script**:
-   - Update types, config, and logic
+   - Replace "Template" with your script name in types and functions
+   - Update config and logic
    - Import utilities you need from `src/utils/`
    - Follow existing patterns for error handling
 
