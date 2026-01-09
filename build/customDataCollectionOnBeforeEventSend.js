@@ -138,6 +138,50 @@ function removeProperties(data, propertiesToRemove) {
   }
   return data;
 }
+function ensureNestedPath(obj, path) {
+  const keys = Array.isArray(path) ? path : path.split(".");
+  let current = obj;
+  keys.forEach((key) => {
+    if (!(key in current) || typeof current[key] !== "object" || current[key] === null) {
+      current[key] = {};
+    }
+    current = current[key];
+  });
+  return current;
+}
+function setNestedValue(obj, path, value, merge = false) {
+  const keys = Array.isArray(path) ? path : path.split(".");
+  const lastKey = keys.pop();
+  if (!lastKey) return;
+  const target = ensureNestedPath(obj, keys);
+  if (merge && typeof target[lastKey] === "object" && target[lastKey] !== null && typeof value === "object" && value !== null) {
+    target[lastKey] = __spreadValues(__spreadValues({}, target[lastKey]), value);
+  } else {
+    target[lastKey] = value;
+  }
+}
+function conditionalProperties(condition, properties) {
+  return condition ? properties : {};
+}
+function mergeNonNull(...objects) {
+  return objects.reduce((acc, obj) => {
+    if (!obj) return acc;
+    Object.entries(obj).forEach(([key, value]) => {
+      if (value !== null && value !== void 0) {
+        acc[key] = value;
+      }
+    });
+    return acc;
+  }, {});
+}
+
+// src/utils/validation.ts
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function hasProperty(value, property) {
+  return isObject(value) && property in value;
+}
 
 // src/scripts/extractPartnerData.ts
 var DEFAULT_COOKIE_KEY = "partner_data";
@@ -153,7 +197,7 @@ function getPartnerData(cookieKey, logger) {
     logger.error("Error parsing partner data from cookie");
     return null;
   }
-  if (typeof partnerData === "object" && partnerData !== null && "DXP" in partnerData) {
+  if (hasProperty(partnerData, "DXP")) {
     const dxpValue = partnerData.DXP;
     const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
     logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
@@ -262,6 +306,16 @@ function logEventInfo(event, logger, additionalInfo) {
   }
   logger.log("Event information", eventInfo);
 }
+function shouldProcessEventType(eventType, skipTypes, logger) {
+  if (!eventType) {
+    return true;
+  }
+  if (skipTypes.includes(eventType)) {
+    logger == null ? void 0 : logger.log(`Skipping event type: ${eventType}`);
+    return false;
+  }
+  return true;
+}
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
 var DEFAULT_COOKIE_KEY2 = "partner_data";
@@ -368,15 +422,6 @@ function extractCardMetadataFromEvent(event, logger) {
   }
   return cardContext;
 }
-function shouldProcessEvent(content, logger) {
-  var _a;
-  const eventType = (_a = content.xdm) == null ? void 0 : _a.eventType;
-  if (eventType === "web.webpagedetails.pageViews") {
-    logger.log("Skipping page view event");
-    return false;
-  }
-  return true;
-}
 function extractCardCollectionFromEvent(event, logger) {
   if (!event) {
     logger.log("No event provided, skipping card collection extraction");
@@ -391,21 +436,26 @@ function extractCardCollectionFromEvent(event, logger) {
   return cardCollection;
 }
 function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
+  var _a;
   const logger = createLogger("Before Send Callback", testMode);
   try {
     logger.testHeader("BEFORE SEND EVENT CALLBACK - TEST MODE", `Cookie Key: ${cookieKey}`);
     logEventInfo(event, logger);
-    if (!shouldProcessEvent(content, logger)) {
+    if (!shouldProcessEventType((_a = content.xdm) == null ? void 0 : _a.eventType, ["web.webpagedetails.pageViews"], logger)) {
       return content;
     }
     const partnerData = extractPartnerDataScript(testMode, cookieKey);
     logger.log("Extracted partner data from cookie", partnerData);
     const cardCollection = extractCardCollectionFromEvent(event, logger);
-    if (!content.xdm) content.xdm = {};
-    if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
-    content.xdm._adobepartners = __spreadValues(__spreadProps(__spreadValues({}, content.xdm._adobepartners), {
-      partnerData
-    }), cardCollection !== null && { cardCollection });
+    setNestedValue(
+      content,
+      "xdm._adobepartners",
+      mergeNonNull(
+        { partnerData },
+        conditionalProperties(cardCollection !== null, { cardCollection })
+      ),
+      true
+    );
     logger.testResult(content);
     if (!testMode) {
       logger.log("Returning content with partner data and card collection", content);
