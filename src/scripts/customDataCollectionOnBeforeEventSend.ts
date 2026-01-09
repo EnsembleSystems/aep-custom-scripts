@@ -316,8 +316,11 @@ export default function customDataCollectionOnBeforeEventSendScript(
     // Set partner data in _adobepartners
     if (!content.xdm) content.xdm = {};
     if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
-    content.xdm._adobepartners.partnerData = partnerData;
-    content.xdm._adobepartners.cardCollection = cardCollection;
+    content.xdm._adobepartners = {
+      ...content.xdm._adobepartners,
+      partnerData,
+      ...(cardCollection !== null && { cardCollection }),
+    };
 
     logger.testResult(content);
     if (!testMode) {
