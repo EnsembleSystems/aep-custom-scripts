@@ -33,24 +33,9 @@ export interface PartnerCardCtx {
 declare global {
   interface Window {
     _adobePartners?: {
-      // Partner data (from extractPartnerData)
-      partnerData?: unknown;
-
       // Event data (from fetchEventData/getEventData)
       eventData?: {
         apiResponse?: unknown;
-      };
-
-      // Partner card tracking (from customOnPageLoad/customDataCollectionOnFilterClickCallback)
-      partnerCard?: {
-        context?: PartnerCardCtx | null;
-        initialized?: boolean;
-        lastClickEvent?: Event;
-        xdmCache?: {
-          timestamp: number;
-          data: unknown;
-          sourceData: PartnerCardCtx | null;
-        };
       };
     };
   }
