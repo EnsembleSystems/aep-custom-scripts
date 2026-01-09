@@ -28,16 +28,15 @@ export default function removeProperties(data: unknown, propertiesToRemove: stri
   }
 
   if (typeof data === 'object') {
-    const entries = Object.entries(data);
-    const cleaned: Record<string, unknown> = {};
-
-    entries.forEach(([key, value]) => {
-      if (!propertiesToRemove.includes(key)) {
-        cleaned[key] = removeProperties(value, propertiesToRemove);
+    return Object.entries(data).reduce<Record<string, unknown>>((cleaned, [key, value]) => {
+      if (propertiesToRemove.includes(key)) {
+        return cleaned;
       }
-    });
-
-    return cleaned;
+      return {
+        ...cleaned,
+        [key]: removeProperties(value, propertiesToRemove),
+      };
+    }, {});
   }
 
   return data;

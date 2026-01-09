@@ -112,6 +112,50 @@ function extractWrapperContext(
 }
 
 /**
+ * Extracts card metadata (contentID, position) from daa-lh attribute
+ * @param cardElement - The card element
+ * @returns Object with contentID and position
+ */
+function extractCardMetadata(cardElement: Element): { contentID: string; position: string } {
+  const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
+  return {
+    contentID: splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.CONTENT_ID),
+    position: splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.POSITION),
+  };
+}
+
+/**
+ * Extracts card title from shadow DOM
+ * @param cardElement - The card element
+ * @param logger - Logger instance
+ * @returns Card title or null if not found
+ */
+function extractCardTitle(
+  cardElement: Element,
+  logger: ReturnType<typeof createLogger>
+): string | null {
+  const cardTitleElement = queryShadow(cardElement, SELECTORS.CARD_TITLE);
+  const cardTitle = getTextContent(cardTitleElement);
+
+  if (!cardTitle) {
+    logger.error('Card title not found in shadow DOM');
+    return null;
+  }
+
+  return cardTitle;
+}
+
+/**
+ * Extracts CTA text from first link in card
+ * @param cardElement - The card element
+ * @returns CTA text from daa-ll attribute
+ */
+function extractCtaText(cardElement: Element): string {
+  const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
+  return getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+}
+
+/**
  * Extracts partner card context from a card element
  */
 function extractCardCtxFromElement(
@@ -126,23 +170,15 @@ function extractCardCtxFromElement(
     return null;
   }
 
-  // Extract card metadata from daa-lh attribute
-  const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
-  const contentID = splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.CONTENT_ID);
-  const position = splitAndGet(cardDaaLh, '|', DAA_LH_INDICES.POSITION);
-
-  // Extract card title from shadow DOM
-  const cardTitleElement = queryShadow(cardElement, SELECTORS.CARD_TITLE);
-  const cardTitle = getTextContent(cardTitleElement);
+  // Extract all card data
+  const { contentID, position } = extractCardMetadata(cardElement);
+  const cardTitle = extractCardTitle(cardElement, logger);
 
   if (!cardTitle) {
-    logger.error('Card title not found in shadow DOM');
     return null;
   }
 
-  // Extract CTA text from first link
-  const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
-  const ctaText = getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+  const ctaText = extractCtaText(cardElement);
 
   // Build result object
   const result: PartnerCardCtx = {
@@ -208,6 +244,67 @@ function extractCardMetadataFromEvent(
 }
 
 /**
+ * Checks if the event should be processed (skips page view events)
+ * @param content - Launch event content
+ * @param logger - Logger instance
+ * @returns true if event should be processed, false if should be skipped
+ */
+function shouldProcessEvent(
+  content: LaunchEventContent,
+  logger: ReturnType<typeof createLogger>
+): boolean {
+  if (content.xdm?.eventType === 'web.webpagedetails.pageViews') {
+    logger.log('Skipping page view event');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Logs event information for debugging
+ * @param event - The pointer/mouse event
+ * @param logger - Logger instance
+ */
+function logEventInfo(
+  event: PointerEvent | MouseEvent | undefined,
+  logger: ReturnType<typeof createLogger>
+): void {
+  if (event) {
+    logger.log('Event object available', { isTrusted: event.isTrusted, type: event.type });
+    if (event.composedPath) {
+      logger.log('Event composed path available', event.composedPath());
+    }
+  } else {
+    logger.log('No event object provided');
+  }
+}
+
+/**
+ * Extracts card collection data from event
+ * @param event - The pointer/mouse event
+ * @param logger - Logger instance
+ * @returns Card collection context or null
+ */
+function extractCardCollectionFromEvent(
+  event: PointerEvent | MouseEvent | undefined,
+  logger: ReturnType<typeof createLogger>
+): PartnerCardCtx | null {
+  if (!event) {
+    logger.log('No event provided, skipping card collection extraction');
+    return null;
+  }
+
+  const cardCollection = extractCardMetadataFromEvent(event, logger);
+  if (cardCollection) {
+    logger.log('Extracted card collection from event', cardCollection);
+  } else {
+    logger.log('No card collection found in event (click was not on a partner card)');
+  }
+
+  return cardCollection;
+}
+
+/**
  * Main script for setting partner data on event
  *
  * @param content - The content object from Launch's before event send callback
@@ -226,19 +323,11 @@ export default function customDataCollectionOnBeforeEventSendScript(
   try {
     logger.testHeader('BEFORE SEND EVENT CALLBACK - TEST MODE', `Cookie Key: ${cookieKey}`);
 
-    // Log event availability
-    if (event) {
-      logger.log('Event object available', { isTrusted: event.isTrusted, type: event.type });
-      if (event.composedPath) {
-        logger.log('Event composed path available', event.composedPath());
-      }
-    } else {
-      logger.log('No event object provided');
-    }
+    // Log event information
+    logEventInfo(event, logger);
 
     // Skip page view events
-    if (content.xdm?.eventType === 'web.webpagedetails.pageViews') {
-      logger.log('Skipping page view event');
+    if (!shouldProcessEvent(content, logger)) {
       return content;
     }
 
@@ -247,17 +336,7 @@ export default function customDataCollectionOnBeforeEventSendScript(
     logger.log('Extracted partner data from cookie', partnerData);
 
     // Extract card collection context from event if available
-    let cardCollection = null;
-    if (event) {
-      cardCollection = extractCardMetadataFromEvent(event, logger);
-      if (cardCollection) {
-        logger.log('Extracted card collection from event', cardCollection);
-      } else {
-        logger.log('No card collection found in event (click was not on a partner card)');
-      }
-    } else {
-      logger.log('No event provided, skipping card collection extraction');
-    }
+    const cardCollection = extractCardCollectionFromEvent(event, logger);
 
     // Set partner data in _adobepartners
     if (!content.xdm) content.xdm = {};
