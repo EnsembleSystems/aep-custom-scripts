@@ -116,28 +116,34 @@ async function buildScript(scriptPath) {
     const functionSignatureMatch = bundledCode.match(
       new RegExp(`function ${mainFunctionName}\\s*\\([^)]*\\)`)
     );
-    const needsEventParam =
-      functionSignatureMatch &&
-      (functionSignatureMatch[0].includes('event') ||
-        functionSignatureMatch[0].includes('content'));
 
-    // Determine the parameter order
-    // Check if 'event'/'content' comes before 'testMode' in the signature
     let functionCall;
-    if (needsEventParam) {
+    if (functionSignatureMatch) {
       const signature = functionSignatureMatch[0];
-      const eventIndex = Math.min(
-        signature.indexOf('event') !== -1 ? signature.indexOf('event') : Infinity,
-        signature.indexOf('content') !== -1 ? signature.indexOf('content') : Infinity
-      );
-      const testModeIndex = signature.indexOf('testMode');
+      const hasContent = signature.includes('content');
+      const hasEvent = signature.includes('event');
 
-      // If event/content comes before testMode (or testMode not found), use (content, TEST_MODE)
-      // Otherwise use (TEST_MODE, content)
-      if (testModeIndex === -1 || eventIndex < testModeIndex) {
-        functionCall = `${mainFunctionName}(content, TEST_MODE)`;
+      if (hasContent && hasEvent) {
+        // Function has both content and event parameters (e.g., customDataCollectionOnFilterClickCallback)
+        functionCall = `${mainFunctionName}(content, event, TEST_MODE)`;
+      } else if (hasContent || hasEvent) {
+        // Function has either content or event parameter
+        const eventIndex = Math.min(
+          signature.indexOf('event') !== -1 ? signature.indexOf('event') : Infinity,
+          signature.indexOf('content') !== -1 ? signature.indexOf('content') : Infinity
+        );
+        const testModeIndex = signature.indexOf('testMode');
+
+        // If event/content comes before testMode (or testMode not found), use (content, TEST_MODE)
+        // Otherwise use (TEST_MODE, content)
+        if (testModeIndex === -1 || eventIndex < testModeIndex) {
+          functionCall = `${mainFunctionName}(content, TEST_MODE)`;
+        } else {
+          functionCall = `${mainFunctionName}(TEST_MODE, content)`;
+        }
       } else {
-        functionCall = `${mainFunctionName}(TEST_MODE, content)`;
+        // No content or event parameter
+        functionCall = `${mainFunctionName}(TEST_MODE)`;
       }
     } else {
       functionCall = `${mainFunctionName}(TEST_MODE)`;

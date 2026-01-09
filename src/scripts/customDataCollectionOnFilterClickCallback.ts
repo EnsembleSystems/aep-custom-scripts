@@ -246,30 +246,50 @@ function extractCardMetadataFromClick(
  * Main script for setting partner data in window._adobePartners on filter click
  *
  * @param content - The content object from Launch's before event send callback
+ * @param event - The original event object (PointerEvent or MouseEvent)
  * @param testMode - Enable verbose logging and test output (default: false)
  * @param cookieKey - The cookie key to read partner data from (default: 'partner_data')
+ * @returns true if the click was processed, false if it was ignored
  *
  * @example
  * // In Launch Extension before event send callback:
- * customDataCollectionOnFilterClickCallback(content);
+ * const processed = customDataCollectionOnFilterClickCallback(content, event);
+ * if (!processed) {
+ *   console.log('Click was ignored (programmatic)');
+ * }
  *
  * @example
  * // Test mode:
  * const mockContent = {
  *   clickedElement: document.querySelector('single-partner-card')
  * };
- * customDataCollectionOnFilterClickCallback(mockContent, true);
+ * const mockEvent = new PointerEvent('click', { isTrusted: true });
+ * customDataCollectionOnFilterClickCallback(mockContent, mockEvent, true);
  */
 export default function customDataCollectionOnFilterClickCallbackScript(
   content: LaunchEventContent,
+  event?: PointerEvent | MouseEvent,
   testMode: boolean = false,
   cookieKey: string = DEFAULT_COOKIE_KEY
-): void {
+): boolean {
   const logger = createLogger(testMode, 'Filter Click Callback', testMode);
 
   try {
     logger.testHeader('FILTER CLICK CALLBACK', `Cookie Key: ${cookieKey}`);
     logger.testInfo('Provided content object', content);
+
+    // Check if event is trusted (genuine user interaction)
+    if (!event) {
+      logger.log('Ignoring click - no event object provided (treating as programmatic)');
+      return false;
+    }
+
+    if (!event.isTrusted) {
+      logger.log('Ignoring programmatic click (event.isTrusted is false)');
+      return false;
+    }
+
+    logger.log('Event is trusted (genuine user click)', { isTrusted: event.isTrusted });
 
     // Get partner data using extractPartnerDataScript
     const partnerData = extractPartnerDataScript(testMode, cookieKey);
@@ -282,6 +302,10 @@ export default function customDataCollectionOnFilterClickCallbackScript(
       cardCollection = extractCardMetadataFromClick(content.clickedElement, logger);
     } else {
       logger.log('No clicked element provided');
+      // clear window._adobePartners.partnerCard.context if not already cleared
+      if (window._adobePartners?.partnerCard?.context) {
+        window._adobePartners.partnerCard.context = undefined;
+      }
     }
 
     // Store in window._adobePartners
@@ -292,6 +316,10 @@ export default function customDataCollectionOnFilterClickCallbackScript(
       window._adobePartners.partnerCard = window._adobePartners.partnerCard ?? {};
       window._adobePartners.partnerCard.context = cardCollection;
       logger.log('Stored partner data and card context in window._adobePartners');
+    } else if (window._adobePartners.partnerCard?.context) {
+      // Clear card context if no card was found (click was on non-card element)
+      window._adobePartners.partnerCard.context = undefined;
+      logger.log('Cleared previous card context (click was not on a card)');
     } else {
       logger.log('Stored partner data in window._adobePartners (no card context)');
     }
@@ -299,7 +327,10 @@ export default function customDataCollectionOnFilterClickCallbackScript(
     if (testMode) {
       logger.testResult(window._adobePartners);
     }
+
+    return true;
   } catch (error) {
     logger.error('Unexpected error in filter click callback:', error);
+    return false;
   }
 }
