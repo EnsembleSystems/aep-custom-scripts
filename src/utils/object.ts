@@ -131,7 +131,7 @@ export function setNestedValue(
 export function conditionalProperties<T extends Record<string, unknown>>(
   condition: boolean,
   properties: T
-): T | Record<string, never> {
+): T | Record<string, unknown> {
   return condition ? properties : {};
 }
 

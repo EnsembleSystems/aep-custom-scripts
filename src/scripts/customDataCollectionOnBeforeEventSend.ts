@@ -29,6 +29,7 @@ import {
 import logEventInfo, { shouldProcessEventType } from '../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
 import type { PartnerCardCtx } from '../types';
+import { createLogger } from '../utils/logger';
 
 const DEFAULT_COOKIE_KEY = 'partner_data';
 
@@ -309,7 +310,7 @@ export default function customDataCollectionOnBeforeEventSendScript(
         content,
         'xdm._adobepartners',
         mergeNonNull(
-          { partnerData },
+          { partnerData: partnerData as Record<string, never> },
           conditionalProperties(cardCollection !== null, { cardCollection })
         ),
         true
