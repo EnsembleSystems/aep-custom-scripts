@@ -1,5 +1,25 @@
 const TEST_MODE = false;
 
+var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+
 // src/utils/logger.ts
 var Logger = class {
   constructor(prefix, isTestMode) {
@@ -107,14 +127,14 @@ function removeProperties(data, propertiesToRemove) {
     return data.map((item) => removeProperties(item, propertiesToRemove));
   }
   if (typeof data === "object") {
-    const entries = Object.entries(data);
-    const cleaned = {};
-    entries.forEach(([key, value]) => {
-      if (!propertiesToRemove.includes(key)) {
-        cleaned[key] = removeProperties(value, propertiesToRemove);
+    return Object.entries(data).reduce((cleaned, [key, value]) => {
+      if (propertiesToRemove.includes(key)) {
+        return cleaned;
       }
-    });
-    return cleaned;
+      return __spreadProps(__spreadValues({}, cleaned), {
+        [key]: removeProperties(value, propertiesToRemove)
+      });
+    }, {});
   }
   return data;
 }
@@ -241,22 +261,37 @@ function extractWrapperContext(wrapper, logger) {
   }
   return { sectionID, filterContext };
 }
-function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger) {
-  if (!cardElement) {
-    logger.error("Card element is required");
-    return null;
-  }
+function extractCardMetadata(cardElement) {
   const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
-  const contentID = splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.CONTENT_ID);
-  const position = splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.POSITION);
+  return {
+    contentID: splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.CONTENT_ID),
+    position: splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.POSITION)
+  };
+}
+function extractCardTitle(cardElement, logger) {
   const cardTitleElement = queryShadow(cardElement, SELECTORS.CARD_TITLE);
   const cardTitle = getTextContent(cardTitleElement);
   if (!cardTitle) {
     logger.error("Card title not found in shadow DOM");
     return null;
   }
+  return cardTitle;
+}
+function extractCtaText(cardElement) {
   const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
-  const ctaText = getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+  return getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+}
+function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger) {
+  if (!cardElement) {
+    logger.error("Card element is required");
+    return null;
+  }
+  const { contentID, position } = extractCardMetadata(cardElement);
+  const cardTitle = extractCardTitle(cardElement, logger);
+  if (!cardTitle) {
+    return null;
+  }
+  const ctaText = extractCtaText(cardElement);
   const result = {
     cardTitle,
     contentID,
@@ -292,36 +327,48 @@ function extractCardMetadataFromEvent(event, logger) {
   }
   return cardContext;
 }
-function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
+function shouldProcessEvent(content, logger) {
   var _a;
+  if (((_a = content.xdm) == null ? void 0 : _a.eventType) === "web.webpagedetails.pageViews") {
+    logger.log("Skipping page view event");
+    return false;
+  }
+  return true;
+}
+function logEventInfo(event, logger) {
+  if (event) {
+    logger.log("Event object available", { isTrusted: event.isTrusted, type: event.type });
+    if (event.composedPath) {
+      logger.log("Event composed path available", event.composedPath());
+    }
+  } else {
+    logger.log("No event object provided");
+  }
+}
+function extractCardCollectionFromEvent(event, logger) {
+  if (!event) {
+    logger.log("No event provided, skipping card collection extraction");
+    return null;
+  }
+  const cardCollection = extractCardMetadataFromEvent(event, logger);
+  if (cardCollection) {
+    logger.log("Extracted card collection from event", cardCollection);
+  } else {
+    logger.log("No card collection found in event (click was not on a partner card)");
+  }
+  return cardCollection;
+}
+function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
   const logger = createLogger("Before Send Callback", testMode);
   try {
     logger.testHeader("BEFORE SEND EVENT CALLBACK - TEST MODE", `Cookie Key: ${cookieKey}`);
-    if (event) {
-      logger.log("Event object available", { isTrusted: event.isTrusted, type: event.type });
-      if (event.composedPath) {
-        logger.log("Event composed path available", event.composedPath());
-      }
-    } else {
-      logger.log("No event object provided");
-    }
-    if (((_a = content.xdm) == null ? void 0 : _a.eventType) === "web.webpagedetails.pageViews") {
-      logger.log("Skipping page view event");
+    logEventInfo(event, logger);
+    if (!shouldProcessEvent(content, logger)) {
       return content;
     }
     const partnerData = extractPartnerDataScript(testMode, cookieKey);
     logger.log("Extracted partner data from cookie", partnerData);
-    let cardCollection = null;
-    if (event) {
-      cardCollection = extractCardMetadataFromEvent(event, logger);
-      if (cardCollection) {
-        logger.log("Extracted card collection from event", cardCollection);
-      } else {
-        logger.log("No card collection found in event (click was not on a partner card)");
-      }
-    } else {
-      logger.log("No event provided, skipping card collection extraction");
-    }
+    const cardCollection = extractCardCollectionFromEvent(event, logger);
     if (!content.xdm) content.xdm = {};
     if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
     content.xdm._adobepartners.partnerData = partnerData;

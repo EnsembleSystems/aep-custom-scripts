@@ -87,8 +87,8 @@ function isValidPublisherId(id) {
 }
 
 // src/scripts/extractPublisherId.ts
-function extractPublisherId(href, logger) {
-  const URL_PARTS = {
+var PUBLISHER_URL_STRUCTURE = {
+  PARTS: {
     EMPTY: 0,
     // ''
     PUBLISHER: 1,
@@ -99,16 +99,22 @@ function extractPublisherId(href, logger) {
     // actual ID
     NAME: 4
     // publisher name
-  };
-  const MIN_PARTS = 4;
+  },
+  MIN_PARTS: 4
+};
+function isValidPublisherUrl(parts) {
+  return parts.length >= PUBLISHER_URL_STRUCTURE.MIN_PARTS && parts[PUBLISHER_URL_STRUCTURE.PARTS.PUBLISHER] === "publisher";
+}
+function extractPublisherId(href, logger) {
   const parts = href.split("/");
-  if (parts.length >= MIN_PARTS && parts[URL_PARTS.PUBLISHER] === "publisher") {
-    const publisherId = parts[URL_PARTS.ID];
-    if (publisherId && isValidPublisherId(publisherId)) {
-      return publisherId;
-    }
-    logger.log("Invalid publisher ID format", publisherId);
+  if (!isValidPublisherUrl(parts)) {
+    return null;
   }
+  const publisherId = parts[PUBLISHER_URL_STRUCTURE.PARTS.ID];
+  if (publisherId && isValidPublisherId(publisherId)) {
+    return publisherId;
+  }
+  logger.log("Invalid publisher ID format", publisherId);
   return null;
 }
 function extractPublisherIdScript(testMode = false) {
