@@ -86,36 +86,86 @@ function isValidPublisherId(id) {
   return uuidPattern.test(id) || salesforcePattern.test(id);
 }
 
-// src/scripts/extractPublisherId.ts
-var PUBLISHER_URL_STRUCTURE = {
-  PARTS: {
-    EMPTY: 0,
-    // ''
-    PUBLISHER: 1,
-    // 'publisher'
-    APP_TYPE: 2,
-    // 'cc' | 'dc' | 'ec'
-    ID: 3,
-    // actual ID
-    NAME: 4
-    // publisher name
-  },
-  MIN_PARTS: 4
-};
-function isValidPublisherUrl(parts) {
-  return parts.length >= PUBLISHER_URL_STRUCTURE.MIN_PARTS && parts[PUBLISHER_URL_STRUCTURE.PARTS.PUBLISHER] === "publisher";
+// src/utils/url.ts
+function splitPath(path) {
+  if (!path || typeof path !== "string") {
+    return [];
+  }
+  return path.split("/");
 }
-function extractPublisherId(href, logger) {
-  const parts = href.split("/");
-  if (!isValidPublisherUrl(parts)) {
+function validatePathStructure(segments, structure) {
+  if (structure.minSegments && segments.length < structure.minSegments) {
+    return false;
+  }
+  if (structure.requiredSegments) {
+    const allMatch = Object.entries(structure.requiredSegments).every(([key, expectedValue]) => {
+      const segmentIndex = structure.segments[key];
+      if (segmentIndex === void 0) return true;
+      return segments[segmentIndex] === expectedValue;
+    });
+    if (!allMatch) {
+      return false;
+    }
+  }
+  return true;
+}
+function extractPathSegments(path, structure) {
+  const segments = splitPath(path);
+  if (!validatePathStructure(segments, structure)) {
     return null;
   }
-  const publisherId = parts[PUBLISHER_URL_STRUCTURE.PARTS.ID];
-  if (publisherId && isValidPublisherId(publisherId)) {
-    return publisherId;
+  const result = {};
+  Object.entries(structure.segments).forEach(([key, index]) => {
+    const value = segments[index];
+    if (value) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+function extractAndValidate(path, structure, segmentKey, validator) {
+  const extracted = extractPathSegments(path, structure);
+  if (!extracted || !extracted[segmentKey]) {
+    return null;
   }
-  logger.log("Invalid publisher ID format", publisherId);
-  return null;
+  const value = extracted[segmentKey];
+  if (validator && !validator(value)) {
+    return null;
+  }
+  return value;
+}
+function createPathStructure(type, config) {
+  var _a;
+  switch (type) {
+    case "nested-resource":
+      return {
+        segments: {
+          empty: 0,
+          resourceType: 1,
+          subtype: 2,
+          id: 3,
+          name: 4
+        },
+        minSegments: (_a = config.minSegments) != null ? _a : 4,
+        requiredSegments: config.resourceType ? { resourceType: config.resourceType } : void 0
+      };
+    default:
+      throw new Error(`Unsupported path structure type: ${type}`);
+  }
+}
+
+// src/scripts/extractPublisherId.ts
+var PUBLISHER_URL_STRUCTURE = createPathStructure("nested-resource", {
+  resourceType: "publisher",
+  minSegments: 4
+});
+function extractPublisherId(href, logger) {
+  const publisherId = extractAndValidate(href, PUBLISHER_URL_STRUCTURE, "id", isValidPublisherId);
+  if (!publisherId) {
+    logger.log("Invalid or missing publisher ID in URL", href);
+    return null;
+  }
+  return publisherId;
 }
 function extractPublisherIdScript(testMode = false) {
   const logger = createLogger("Publisher ID", testMode);

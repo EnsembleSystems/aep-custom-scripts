@@ -218,6 +218,50 @@ function findInComposedPath(event, predicate) {
   const element = path.find((item) => item instanceof Element && predicate(item));
   return element || null;
 }
+function createElementMatcher(tagName, className) {
+  return (element) => {
+    if (tagName && element.tagName.toLowerCase() === tagName.toLowerCase()) {
+      return true;
+    }
+    if (className && element.classList.contains(className)) {
+      return true;
+    }
+    return false;
+  };
+}
+function extractStructuredAttribute(element, attributeName, delimiter, indices) {
+  const attrValue = getAttribute(element, attributeName);
+  if (!attrValue) {
+    return {};
+  }
+  const result = {};
+  Object.entries(indices).forEach(([key, index]) => {
+    const value = splitAndGet(attrValue, delimiter, index);
+    if (value) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+
+// src/utils/events.ts
+function logEventInfo(event, logger, additionalInfo) {
+  if (!event) {
+    logger.log("No event object provided");
+    return;
+  }
+  const eventInfo = {
+    type: "type" in event ? event.type : "unknown",
+    isTrusted: "isTrusted" in event ? event.isTrusted : void 0
+  };
+  if (event instanceof Event && "composedPath" in event && typeof event.composedPath === "function") {
+    eventInfo.composedPath = event.composedPath();
+  }
+  if (additionalInfo) {
+    Object.assign(eventInfo, additionalInfo);
+  }
+  logger.log("Event information", eventInfo);
+}
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
 var DEFAULT_COOKIE_KEY2 = "partner_data";
@@ -240,14 +284,8 @@ var DAA_LH_INDICES = {
   POSITION: 0,
   CONTENT_ID: 2
 };
-function isPartnerCard(element) {
-  const tagName = element.tagName.toLowerCase();
-  const hasClass = element.classList.contains(CARD_TYPES.CLASS_NAME);
-  return tagName === CARD_TYPES.TAG_NAME || hasClass;
-}
-function isCardWrapper(element) {
-  return element.classList.contains(WRAPPER_CLASS);
-}
+var isPartnerCard = createElementMatcher(CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME);
+var isCardWrapper = createElementMatcher(void 0, WRAPPER_CLASS);
 function extractWrapperContext(wrapper, logger) {
   if (!wrapper.parentElement) {
     logger.warn("Wrapper has no parent element, sectionID will be empty");
@@ -262,10 +300,13 @@ function extractWrapperContext(wrapper, logger) {
   return { sectionID, filterContext };
 }
 function extractCardMetadata(cardElement) {
-  const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
+  const metadata = extractStructuredAttribute(cardElement, ATTRIBUTES.DAA_LH, "|", {
+    contentID: DAA_LH_INDICES.CONTENT_ID,
+    position: DAA_LH_INDICES.POSITION
+  });
   return {
-    contentID: splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.CONTENT_ID),
-    position: splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.POSITION)
+    contentID: metadata.contentID || "",
+    position: metadata.position || ""
   };
 }
 function extractCardTitle(cardElement, logger) {
@@ -329,21 +370,12 @@ function extractCardMetadataFromEvent(event, logger) {
 }
 function shouldProcessEvent(content, logger) {
   var _a;
-  if (((_a = content.xdm) == null ? void 0 : _a.eventType) === "web.webpagedetails.pageViews") {
+  const eventType = (_a = content.xdm) == null ? void 0 : _a.eventType;
+  if (eventType === "web.webpagedetails.pageViews") {
     logger.log("Skipping page view event");
     return false;
   }
   return true;
-}
-function logEventInfo(event, logger) {
-  if (event) {
-    logger.log("Event object available", { isTrusted: event.isTrusted, type: event.type });
-    if (event.composedPath) {
-      logger.log("Event composed path available", event.composedPath());
-    }
-  } else {
-    logger.log("No event object provided");
-  }
 }
 function extractCardCollectionFromEvent(event, logger) {
   if (!event) {
@@ -371,8 +403,9 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
     const cardCollection = extractCardCollectionFromEvent(event, logger);
     if (!content.xdm) content.xdm = {};
     if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
-    content.xdm._adobepartners.partnerData = partnerData;
-    content.xdm._adobepartners.cardCollection = cardCollection;
+    content.xdm._adobepartners = __spreadValues(__spreadProps(__spreadValues({}, content.xdm._adobepartners), {
+      partnerData
+    }), cardCollection !== null && { cardCollection });
     logger.testResult(content);
     if (!testMode) {
       logger.log("Returning content with partner data and card collection", content);

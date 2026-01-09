@@ -76,13 +76,32 @@ function createLogger(scriptName, isTestMode) {
   return new Logger(prefix, isTestMode);
 }
 
+// src/utils/events.ts
+function logEventInfo(event, logger, additionalInfo) {
+  if (!event) {
+    logger.log("No event object provided");
+    return;
+  }
+  const eventInfo = {
+    type: "type" in event ? event.type : "unknown",
+    isTrusted: "isTrusted" in event ? event.isTrusted : void 0
+  };
+  if (event instanceof Event && "composedPath" in event && typeof event.composedPath === "function") {
+    eventInfo.composedPath = event.composedPath();
+  }
+  if (additionalInfo) {
+    Object.assign(eventInfo, additionalInfo);
+  }
+  logger.log("Event information", eventInfo);
+}
+
 // src/scripts/customDataCollectionOnFilterClickCallback.ts
 function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false) {
   const logger = createLogger("Filter Click Callback", testMode);
   try {
     logger.testHeader("FILTER CLICK CALLBACK - TEST MODE");
     logger.testInfo("Provided content object", content);
-    logger.testInfo("Event object", event);
+    logEventInfo(event, logger);
     if (!event) {
       logger.log("\u274C Ignoring click - no event object provided (treating as programmatic)");
       return false;

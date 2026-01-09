@@ -139,6 +139,73 @@ function dispatchCustomEvent(eventName, detail, logger) {
   document.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
+// src/utils/transform.ts
+function getNestedProperty(obj, path, defaultValue) {
+  const keys = path.split(".");
+  const current = keys.reduce((acc, key) => {
+    if (acc && typeof acc === "object" && key in acc) {
+      return acc[key];
+    }
+    return void 0;
+  }, obj);
+  return current !== void 0 ? current : defaultValue;
+}
+function setNestedProperty(obj, path, value) {
+  const keys = path.split(".");
+  const lastKey = keys.pop();
+  if (!lastKey) return;
+  const current = keys.reduce((acc, key) => {
+    if (!(key in acc) || typeof acc[key] !== "object" || acc[key] === null) {
+      acc[key] = {};
+    }
+    return acc[key];
+  }, obj);
+  current[lastKey] = value;
+}
+function transformFields(data, transforms) {
+  const result = {};
+  transforms.forEach((transform) => {
+    const value = getNestedProperty(data, transform.source);
+    if (value !== void 0) {
+      const transformedValue = transform.transform ? transform.transform(value) : value;
+      const targetKey = transform.target || transform.source;
+      setNestedProperty(result, targetKey, transformedValue);
+    }
+  });
+  return result;
+}
+function mergeWithTransforms(data, transforms) {
+  const transformed = transformFields(data, transforms);
+  return __spreadValues(__spreadValues({}, data), transformed);
+}
+
+// src/utils/globalState.ts
+function ensurePath(obj, path) {
+  let current = obj;
+  path.forEach((key) => {
+    if (!(key in current) || typeof current[key] !== "object" || current[key] === null) {
+      current[key] = {};
+    }
+    current = current[key];
+  });
+  return current;
+}
+function setGlobalValue(obj, path, value, logger) {
+  const pathArray = Array.isArray(path) ? path : path.split(".");
+  const lastKey = pathArray.pop();
+  if (!lastKey) {
+    if (logger) {
+      logger.error("Invalid path: empty path provided");
+    }
+    return;
+  }
+  const target = ensurePath(obj, pathArray);
+  target[lastKey] = value;
+  if (logger) {
+    logger.log(`Set global value at ${pathArray.concat(lastKey).join(".")}`, value);
+  }
+}
+
 // src/scripts/fetchEventData.ts
 var API = {
   EVENT_ENDPOINT: "/api/event.json?meta=true"
@@ -148,18 +215,19 @@ function transformEventData(data, logger) {
   const rawData = data;
   const dates = extractDates((_a = rawData.dates) != null ? _a : []);
   logger.log("Extracted dates (`yyyy-MM-dd` format):", dates);
-  const transformedData = __spreadProps(__spreadValues({}, rawData), {
-    dates
-  });
+  const transformedData = mergeWithTransforms(rawData, [
+    { source: "dates", target: "dates", transform: () => dates }
+  ]);
   logger.log("Transformed data", transformedData);
   return transformedData;
 }
 function storeEventDataGlobally(transformedData, logger) {
-  var _a, _b;
-  window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
-  window._adobePartners.eventData = (_b = window._adobePartners.eventData) != null ? _b : {};
-  window._adobePartners.eventData.apiResponse = transformedData;
-  logger.log("Event data stored in window._adobePartners.eventData.apiResponse");
+  setGlobalValue(
+    window,
+    ["_adobePartners", "eventData", "apiResponse"],
+    transformedData,
+    logger
+  );
 }
 function fetchEventDataScript(testMode = false) {
   const config = {
