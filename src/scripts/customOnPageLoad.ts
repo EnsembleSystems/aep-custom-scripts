@@ -30,7 +30,6 @@ import { createLogger } from '../utils/logger.js';
  * ----------------------------
  * customOnPageLoadScript(true);
  */
-// eslint-disable-next-line import/prefer-default-export
 export function customOnPageLoadScript(testMode: boolean = false): null {
   const logger = createLogger('Custom On Page Load', testMode);
 

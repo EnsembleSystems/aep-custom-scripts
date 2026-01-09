@@ -91,6 +91,12 @@ module.exports = {
         'import/prefer-default-export': 'off',
       },
     },
+    {
+      files: ['src/scripts/**/*.ts'],
+      rules: {
+        'import/prefer-default-export': 'off',
+      },
+    },
   ],
   settings: {
     'import/resolver': {

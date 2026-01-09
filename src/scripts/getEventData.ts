@@ -27,7 +27,6 @@ function getEventData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the event data getter
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-// eslint-disable-next-line import/prefer-default-export
 export function getEventDataScript(testMode: boolean = false): unknown {
   const logger = createLogger('Get Event Data', testMode);
 

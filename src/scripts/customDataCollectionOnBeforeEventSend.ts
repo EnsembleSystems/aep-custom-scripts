@@ -18,7 +18,13 @@
 
 import { createLogger } from '../utils/logger';
 import { extractPartnerDataScript } from './extractPartnerData';
-import { splitAndGet, getAttribute, getTextContent, queryShadow } from '../utils/dom';
+import {
+  splitAndGet,
+  getAttribute,
+  getTextContent,
+  queryShadow,
+  findInComposedPath,
+} from '../utils/dom';
 import type { PartnerCardCtx } from '../types';
 
 const DEFAULT_COOKIE_KEY = 'partner_data';
@@ -78,32 +84,6 @@ function isPartnerCard(element: Element): boolean {
  */
 function isCardWrapper(element: Element): boolean {
   return element.classList.contains(WRAPPER_CLASS);
-}
-
-/**
- * Finds an element in the composed path that matches a predicate
- *
- * @param event - The event with composedPath()
- * @param predicate - Function to test each element
- * @returns The first matching element or null
- */
-function findInComposedPath(
-  event: PointerEvent | MouseEvent,
-  predicate: (el: Element) => boolean
-): Element | null {
-  if (!event.composedPath) {
-    return null;
-  }
-
-  const path = event.composedPath();
-  for (let i = 0; i < path.length; i += 1) {
-    const node = path[i];
-    if (node instanceof Element && predicate(node)) {
-      return node;
-    }
-  }
-
-  return null;
 }
 
 /**

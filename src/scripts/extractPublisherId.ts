@@ -49,7 +49,6 @@ function extractPublisherId(href: string, logger: ReturnType<typeof createLogger
  * Main entry point for the publisher ID extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-// eslint-disable-next-line import/prefer-default-export
 export function extractPublisherIdScript(testMode: boolean = false): string | null {
   const logger = createLogger('Publisher ID', testMode);
 

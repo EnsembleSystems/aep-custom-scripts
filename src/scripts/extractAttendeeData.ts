@@ -32,7 +32,6 @@ function getAttendeeData(logger: ReturnType<typeof createLogger>): unknown {
  * Main entry point for the attendee data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-// eslint-disable-next-line import/prefer-default-export
 export function extractAttendeeDataScript(testMode: boolean = false): unknown {
   const logger = createLogger('Attendee Data', testMode);
 
