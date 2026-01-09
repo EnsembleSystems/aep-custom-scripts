@@ -193,6 +193,11 @@ function queryShadow(element, selector) {
   }
   return shadowRoot.querySelector(selector);
 }
+function findInComposedPath(event, predicate) {
+  const path = event.composedPath();
+  const element = path.find((item) => item instanceof Element && predicate(item));
+  return element || null;
+}
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
 var DEFAULT_COOKIE_KEY2 = "partner_data";
@@ -222,19 +227,6 @@ function isPartnerCard(element) {
 }
 function isCardWrapper(element) {
   return element.classList.contains(WRAPPER_CLASS);
-}
-function findInComposedPath(event, predicate) {
-  if (!event.composedPath) {
-    return null;
-  }
-  const path = event.composedPath();
-  for (let i = 0; i < path.length; i += 1) {
-    const node = path[i];
-    if (node instanceof Element && predicate(node)) {
-      return node;
-    }
-  }
-  return null;
 }
 function extractWrapperContext(wrapper, logger) {
   if (!wrapper.parentElement) {
