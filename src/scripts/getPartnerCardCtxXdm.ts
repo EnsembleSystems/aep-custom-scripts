@@ -12,22 +12,11 @@
  */
 
 import { createLogger } from '../utils/logger.js';
+import type { PartnerCardCtx } from '../types';
 
 // Types
 export interface PartnerCardXdmConfig {
   debug: boolean;
-}
-
-// Define the expected structure of partner card data
-export interface PartnerCardCtx {
-  cardTitle: string;
-  contentID: string;
-  contentType: string;
-  ctaText: string;
-  filterContext: string;
-  name: string;
-  position: string;
-  sectionID: string;
 }
 
 // Define the XDM structure

@@ -2,8 +2,6 @@
  * Common types for AEP Custom Scripts
  */
 
-import { PartnerCardCtx } from '../scripts/extractPartnerCardCtx';
-
 export interface BaseConfig {
   debug?: boolean;
   timeout?: number;
@@ -15,6 +13,21 @@ export interface LoggerConfig {
 }
 
 export type FetchResult<T> = T | null;
+
+/**
+ * Partner Card Context type
+ * Used by partner card tracking scripts
+ */
+export interface PartnerCardCtx {
+  cardTitle: string;
+  contentID: string;
+  contentType: string;
+  ctaText: string;
+  filterContext: string;
+  name: string;
+  position: string;
+  sectionID: string;
+}
 
 // Extend Window interface to include Adobe Partners namespace
 declare global {

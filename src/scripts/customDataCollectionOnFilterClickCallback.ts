@@ -19,7 +19,7 @@
 import { createLogger } from '../utils/logger';
 import { extractPartnerDataScript } from './extractPartnerData';
 import { splitAndGet, getAttribute, getTextContent, queryShadow } from '../utils/dom';
-import type { PartnerCardCtx } from './extractPartnerCardCtx';
+import type { PartnerCardCtx } from '../types';
 
 const DEFAULT_COOKIE_KEY = 'partner_data';
 
