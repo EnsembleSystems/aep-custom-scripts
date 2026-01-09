@@ -308,12 +308,21 @@ function extractCardMetadataFromClick(clickedElement, logger) {
   }
   return cardContext;
 }
-function customDataCollectionOnFilterClickCallbackScript(content, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
-  var _a, _b;
+function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
+  var _a, _b, _c, _d, _e;
   const logger = createLogger(testMode, "Filter Click Callback", testMode);
   try {
     logger.testHeader("FILTER CLICK CALLBACK", `Cookie Key: ${cookieKey}`);
     logger.testInfo("Provided content object", content);
+    if (!event) {
+      logger.log("Ignoring click - no event object provided (treating as programmatic)");
+      return false;
+    }
+    if (!event.isTrusted) {
+      logger.log("Ignoring programmatic click (event.isTrusted is false)");
+      return false;
+    }
+    logger.log("Event is trusted (genuine user click)", { isTrusted: event.isTrusted });
     const partnerData = extractPartnerDataScript(testMode, cookieKey);
     logger.log("Extracted partner data", partnerData);
     let cardCollection = null;
@@ -322,23 +331,31 @@ function customDataCollectionOnFilterClickCallbackScript(content, testMode = fal
       cardCollection = extractCardMetadataFromClick(content.clickedElement, logger);
     } else {
       logger.log("No clicked element provided");
+      if ((_b = (_a = window._adobePartners) == null ? void 0 : _a.partnerCard) == null ? void 0 : _b.context) {
+        window._adobePartners.partnerCard.context = void 0;
+      }
     }
-    window._adobePartners = (_a = window._adobePartners) != null ? _a : {};
+    window._adobePartners = (_c = window._adobePartners) != null ? _c : {};
     window._adobePartners.partnerData = partnerData;
     if (cardCollection) {
-      window._adobePartners.partnerCard = (_b = window._adobePartners.partnerCard) != null ? _b : {};
+      window._adobePartners.partnerCard = (_d = window._adobePartners.partnerCard) != null ? _d : {};
       window._adobePartners.partnerCard.context = cardCollection;
       logger.log("Stored partner data and card context in window._adobePartners");
+    } else if ((_e = window._adobePartners.partnerCard) == null ? void 0 : _e.context) {
+      window._adobePartners.partnerCard.context = void 0;
+      logger.log("Cleared previous card context (click was not on a card)");
     } else {
       logger.log("Stored partner data in window._adobePartners (no card context)");
     }
     if (testMode) {
       logger.testResult(window._adobePartners);
     }
+    return true;
   } catch (error) {
     logger.error("Unexpected error in filter click callback:", error);
+    return false;
   }
 }
 
 
-return customDataCollectionOnFilterClickCallbackScript(content, TEST_MODE);
+return customDataCollectionOnFilterClickCallbackScript(content, event, TEST_MODE);
