@@ -2,10 +2,12 @@ const TEST_MODE = false;
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -69,14 +71,14 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/scripts/customDataCollectionOnFilterClickCallback.ts
 function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false) {
-  const logger = createLogger(testMode, "Filter Click Callback", testMode);
+  const logger = createLogger("Filter Click Callback", testMode);
   try {
     logger.testHeader("FILTER CLICK CALLBACK - TEST MODE");
     logger.testInfo("Provided content object", content);

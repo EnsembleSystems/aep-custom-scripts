@@ -1,8 +1,6 @@
 const TEST_MODE = false;
 
 var __defProp = Object.defineProperty;
-var __defProps = Object.defineProperties;
-var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
@@ -18,14 +16,15 @@ var __spreadValues = (a, b) => {
     }
   return a;
 };
-var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -89,9 +88,9 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/utils/fetch.ts
@@ -106,15 +105,11 @@ function isNetworkError(error) {
 // src/scripts/helloWorld.ts
 var DEFAULT_CONFIG = {
   timeout: 1e4,
-  debug: false,
   message: "Hello from AEP!"
 };
 async function helloWorldScript(testMode = false) {
-  const config = __spreadProps(__spreadValues({}, DEFAULT_CONFIG), {
-    debug: testMode
-    // Enable debug logging in test mode
-  });
-  const logger = createLogger(config.debug, "Hello World", testMode);
+  const config = __spreadValues({}, DEFAULT_CONFIG);
+  const logger = createLogger("Hello World", testMode);
   try {
     logger.testHeader("HELLO WORLD SCRIPT - TEST MODE", config);
     logger.log("Script started");

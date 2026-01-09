@@ -22,10 +22,12 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -89,9 +91,9 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/utils/fetch.ts
@@ -143,10 +145,9 @@ var API = {
 };
 function fetchEventDataScript(testMode = false) {
   const config = {
-    timeout: 1e4,
-    debug: testMode
+    timeout: 1e4
   };
-  const logger = createLogger(config.debug, "Event Data", testMode);
+  const logger = createLogger("Event Data", testMode);
   logger.testHeader("EVENT DATA EXTRACTOR - TEST MODE");
   const currentDomain = window.location.origin;
   const apiUrl = `${currentDomain}${API.EVENT_ENDPOINT}`;

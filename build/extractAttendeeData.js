@@ -2,10 +2,12 @@ const TEST_MODE = false;
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -69,9 +71,9 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/utils/storage.ts
@@ -101,10 +103,7 @@ function getAttendeeData(logger) {
   return attendeeData;
 }
 function extractAttendeeDataScript(testMode = false) {
-  const config = {
-    debug: testMode
-  };
-  const logger = createLogger(config.debug, "Attendee Data", testMode);
+  const logger = createLogger("Attendee Data", testMode);
   try {
     logger.testHeader("ATTENDEE DATA EXTRACTOR - TEST MODE");
     const attendeeData = getAttendeeData(logger);

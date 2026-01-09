@@ -2,10 +2,12 @@ const TEST_MODE = false;
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -69,9 +71,9 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/scripts/getEventData.ts
@@ -86,10 +88,7 @@ function getEventData(logger) {
   return eventData;
 }
 function getEventDataScript(testMode = false) {
-  const config = {
-    debug: testMode
-  };
-  const logger = createLogger(config.debug, "Get Event Data", testMode);
+  const logger = createLogger("Get Event Data", testMode);
   try {
     logger.testHeader("GET EVENT DATA - TEST MODE");
     const eventData = getEventData(logger);

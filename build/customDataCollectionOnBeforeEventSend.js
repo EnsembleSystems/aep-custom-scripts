@@ -2,10 +2,12 @@ const TEST_MODE = false;
 
 // src/utils/logger.ts
 var Logger = class {
-  constructor(debug, prefix, isTestMode) {
-    this.debug = debug;
+  constructor(prefix, isTestMode) {
     this.prefix = prefix;
     this.isTestMode = isTestMode;
+  }
+  get debug() {
+    return this.isTestMode;
   }
   log(message, data) {
     if (this.debug) {
@@ -69,9 +71,9 @@ var Logger = class {
     }
   }
 };
-function createLogger(debug, scriptName, isTestMode) {
+function createLogger(scriptName, isTestMode) {
   const prefix = isTestMode ? `[${scriptName} Test]` : `[AEP ${scriptName}]`;
-  return new Logger(debug, prefix, isTestMode);
+  return new Logger(prefix, isTestMode);
 }
 
 // src/utils/cookie.ts
@@ -143,10 +145,9 @@ function getPartnerData(cookieKey, logger) {
 }
 function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
   const config = {
-    debug: testMode,
     cookieKey
   };
-  const logger = createLogger(config.debug, "Partner Data", testMode);
+  const logger = createLogger("Partner Data", testMode);
   try {
     logger.testHeader("PARTNER DATA EXTRACTOR - TEST MODE", `Cookie Key: ${config.cookieKey}`);
     const partnerData = getPartnerData(config.cookieKey, logger);
@@ -301,7 +302,7 @@ function extractCardMetadataFromEvent(event, logger) {
 }
 function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
   var _a;
-  const logger = createLogger(testMode, "Before Send Callback", testMode);
+  const logger = createLogger("Before Send Callback", testMode);
   try {
     logger.testHeader("BEFORE SEND EVENT CALLBACK - TEST MODE", `Cookie Key: ${cookieKey}`);
     if (event) {
