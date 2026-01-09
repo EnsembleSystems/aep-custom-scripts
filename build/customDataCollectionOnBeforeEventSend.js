@@ -161,17 +161,153 @@ function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_K
   }
 }
 
+// src/utils/dom.ts
+function splitAndGet(value, delimiter, index) {
+  if (!value || index < 0) {
+    return "";
+  }
+  const parts = value.split(delimiter).map((part) => part.trim());
+  return parts[index] || "";
+}
+function getAttribute(element, attributeName) {
+  if (!element) {
+    return "";
+  }
+  return element.getAttribute(attributeName) || "";
+}
+function getTextContent(element) {
+  var _a;
+  if (!element) {
+    return "";
+  }
+  return ((_a = element.textContent) == null ? void 0 : _a.trim()) || "";
+}
+function queryShadow(element, selector) {
+  if (!element) {
+    return null;
+  }
+  const { shadowRoot } = element;
+  if (!shadowRoot) {
+    return null;
+  }
+  return shadowRoot.querySelector(selector);
+}
+
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
 var DEFAULT_COOKIE_KEY2 = "partner_data";
+var SELECTORS = {
+  CARD_TITLE: ".card-title",
+  PARTNER_CARDS: ".partner-cards",
+  FIRST_LINK: "a"
+};
+var ATTRIBUTES = {
+  DAA_LH: "daa-lh",
+  DAA_LL: "daa-ll"
+};
+var CARD_TYPES = {
+  TAG_NAME: "single-partner-card",
+  CLASS_NAME: "card-wrapper"
+};
+var WRAPPER_CLASS = "dx-card-collection-wrapper";
+var CONTENT_TYPE = "partner_card";
+var DAA_LH_INDICES = {
+  POSITION: 0,
+  CONTENT_ID: 2
+};
+function isPartnerCard(element) {
+  const tagName = element.tagName.toLowerCase();
+  const hasClass = element.classList.contains(CARD_TYPES.CLASS_NAME);
+  return tagName === CARD_TYPES.TAG_NAME || hasClass;
+}
+function isCardWrapper(element) {
+  return element.classList.contains(WRAPPER_CLASS);
+}
+function findInComposedPath(event, predicate) {
+  if (!event.composedPath) {
+    return null;
+  }
+  const path = event.composedPath();
+  for (let i = 0; i < path.length; i += 1) {
+    const node = path[i];
+    if (node instanceof Element && predicate(node)) {
+      return node;
+    }
+  }
+  return null;
+}
+function extractWrapperContext(wrapper, logger) {
+  if (!wrapper.parentElement) {
+    logger.warn("Wrapper has no parent element, sectionID will be empty");
+  }
+  const sectionID = getAttribute(wrapper.parentElement, ATTRIBUTES.DAA_LH);
+  const { shadowRoot } = wrapper;
+  const partnerCardsElement = shadowRoot == null ? void 0 : shadowRoot.querySelector(SELECTORS.PARTNER_CARDS);
+  const filterContext = getAttribute(partnerCardsElement, ATTRIBUTES.DAA_LH);
+  if (!sectionID) {
+    logger.warn("Wrapper missing sectionID (parent daa-lh attribute)");
+  }
+  return { sectionID, filterContext };
+}
+function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger) {
+  if (!cardElement) {
+    logger.error("Card element is required");
+    return null;
+  }
+  const cardDaaLh = getAttribute(cardElement, ATTRIBUTES.DAA_LH);
+  const contentID = splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.CONTENT_ID);
+  const position = splitAndGet(cardDaaLh, "|", DAA_LH_INDICES.POSITION);
+  const cardTitleElement = queryShadow(cardElement, SELECTORS.CARD_TITLE);
+  const cardTitle = getTextContent(cardTitleElement);
+  if (!cardTitle) {
+    logger.error("Card title not found in shadow DOM");
+    return null;
+  }
+  const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
+  const ctaText = getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+  const result = {
+    cardTitle,
+    contentID,
+    contentType: CONTENT_TYPE,
+    ctaText,
+    filterContext,
+    name: cardTitle,
+    position,
+    sectionID
+  };
+  logger.log("Extracted card context", result);
+  return result;
+}
+function extractCardMetadataFromEvent(event, logger) {
+  logger.log("Extracting card metadata from event.composedPath()");
+  const cardElement = findInComposedPath(event, isPartnerCard);
+  if (!cardElement) {
+    logger.log("Event did not occur within a partner card");
+    return null;
+  }
+  logger.log("Found partner card element in composed path", cardElement);
+  const wrapper = findInComposedPath(event, isCardWrapper);
+  if (!wrapper) {
+    logger.log("No wrapper found in composed path");
+    return null;
+  }
+  logger.log("Found wrapper element in composed path", wrapper);
+  const { sectionID, filterContext } = extractWrapperContext(wrapper, logger);
+  const cardContext = extractCardCtxFromElement(cardElement, sectionID, filterContext, logger);
+  if (!cardContext) {
+    logger.warn("Failed to extract card context");
+    return null;
+  }
+  return cardContext;
+}
 function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
-  var _a, _b, _c, _d;
+  var _a;
   const logger = createLogger(testMode, "Before Send Callback", testMode);
   try {
     logger.testHeader("BEFORE SEND EVENT CALLBACK - TEST MODE", `Cookie Key: ${cookieKey}`);
     if (event) {
       logger.log("Event object available", { isTrusted: event.isTrusted, type: event.type });
       if (event.composedPath) {
-        logger.log("Event composed path", event.composedPath());
+        logger.log("Event composed path available", event.composedPath());
       }
     } else {
       logger.log("No event object provided");
@@ -180,15 +316,19 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       logger.log("Skipping page view event");
       return content;
     }
-    let partnerData = (_b = window == null ? void 0 : window._adobePartners) == null ? void 0 : _b.partnerData;
-    if (!partnerData) {
-      partnerData = extractPartnerDataScript(testMode, cookieKey);
-      logger.log("Extracted partner data from cookie", partnerData);
+    const partnerData = extractPartnerDataScript(testMode, cookieKey);
+    logger.log("Extracted partner data from cookie", partnerData);
+    let cardCollection = null;
+    if (event) {
+      cardCollection = extractCardMetadataFromEvent(event, logger);
+      if (cardCollection) {
+        logger.log("Extracted card collection from event", cardCollection);
+      } else {
+        logger.log("No card collection found in event (click was not on a partner card)");
+      }
     } else {
-      logger.log("Using existing partner data from window", partnerData);
+      logger.log("No event provided, skipping card collection extraction");
     }
-    const cardCollection = (_d = (_c = window == null ? void 0 : window._adobePartners) == null ? void 0 : _c.partnerCard) == null ? void 0 : _d.context;
-    logger.log("Retrieved card collection from window", cardCollection);
     if (!content.xdm) content.xdm = {};
     if (!content.xdm._adobepartners) content.xdm._adobepartners = {};
     content.xdm._adobepartners.partnerData = partnerData;
