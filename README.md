@@ -151,13 +151,19 @@ aep-custom-scripts/
 │   │   ├── customDataCollectionOnFilterClickCallback.ts # Filter click with card tracking
 │   │   └── helloWorld.ts                               # Template for new scripts
 │   ├── utils/             # Shared utilities (DRY)
+│   │   ├── script.ts      # Script execution wrappers
 │   │   ├── logger.ts      # Consistent logging
 │   │   ├── fetch.ts       # Fetch with timeout
 │   │   ├── cookie.ts      # Cookie parsing
 │   │   ├── storage.ts     # LocalStorage helpers
 │   │   ├── validation.ts  # Input validation
 │   │   ├── dom.ts         # DOM manipulation & shadow DOM helpers
+│   │   ├── extraction.ts  # Data extraction pipeline
 │   │   ├── object.ts      # Object utilities
+│   │   ├── events.ts      # Event handling utilities
+│   │   ├── transform.ts   # Data transformation
+│   │   ├── url.ts         # URL utilities
+│   │   ├── globalState.ts # Window state management
 │   │   ├── constants.ts   # Shared constants
 │   │   └── dates.ts       # Date utilities
 │   ├── types/             # TypeScript type definitions
@@ -482,6 +488,10 @@ npm run build              # Full build: clean + bundle with esbuild
 npm run clean              # Remove dist/ and build/
 npm run dev                # TypeScript watch mode
 npm run type-check         # Type-check without emitting files
+npm run lint               # Lint code
+npm run lint:fix           # Lint and fix code
+npm run format             # Format code with Prettier
+npm run format:check       # Check code formatting
 ```
 
 ### Creating Production Releases
@@ -536,66 +546,25 @@ That's it! The esbuild system:
 - ✅ Transpiles to ES2017 automatically
 - ✅ Outputs readable code (AEP handles minification)
 
-**See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed examples and patterns.**
-
 ## Shared Utilities
 
-All scripts use these common utilities (eliminating duplication):
+All scripts use common utilities from `src/utils/` (eliminating duplication):
 
-### Logger (`src/utils/logger.ts`)
-
-```typescript
-const logger = createLogger('Script Name', isTestMode);
-logger.log('message', data);
-logger.error('error message');
-logger.warn('warning message');
-```
-
-### Fetch with Timeout (`src/utils/fetch.ts`)
-
-```typescript
-const response = await fetchWithTimeout(url, options, timeoutMs);
-```
-
-### Cookie Utils (`src/utils/cookie.ts`)
-
-```typescript
-const cookie = getCookie('cookie_name');
-const parsed = parseJsonCookie(cookie);
-```
-
-### LocalStorage Utils (`src/utils/storage.ts`)
-
-```typescript
-const data = getStorageItem<MyType>('storage_key');
-setStorageItem('key', data);
-```
-
-### Validation Utils (`src/utils/validation.ts`)
-
-```typescript
-const isValid = isValidPublisherId(publisherId); // Validates UUID or Salesforce ID formats
-```
-
-### DOM Utils (`src/utils/dom.ts`)
-
-```typescript
-const element = queryShadow(shadowHost, '.selector'); // Query inside shadow DOM
-const text = getTextContent(element);
-const attr = getAttribute(element, 'attribute-name');
-const value = splitAndGet(string, '|', index);
-const found = findInComposedPath(event, predicate); // Find element in composed path
-const matches = matchesElement(element, tagName, className);
-dispatchCustomEvent('eventName', data); // Dispatch custom event
-```
-
-### Object Utils (`src/utils/object.ts`)
-
-Object manipulation utilities for data transformation.
-
-### Date Utils (`src/utils/dates.ts`)
-
-Date manipulation and formatting utilities for timestamp handling.
+- **`script.ts`** - Script execution wrappers (`executeScript`, `executeAsyncScript`)
+- **`logger.ts`** - Consistent logging (`createLogger`)
+- **`fetch.ts`** - Fetch with timeout and error helpers
+- **`cookie.ts`** - Cookie parsing (`getCookie`, `parseJsonCookie`)
+- **`storage.ts`** - LocalStorage helpers (`getStorageItem`, `setStorageItem`)
+- **`validation.ts`** - Input validation (UUID, Salesforce ID formats)
+- **`dom.ts`** - DOM manipulation with shadow DOM support (`queryShadow`, `findInComposedPath`)
+- **`extraction.ts`** - Data extraction pipeline pattern
+- **`object.ts`** - Object manipulation utilities
+- **`events.ts`** - Event handling utilities
+- **`transform.ts`** - Data transformation helpers
+- **`url.ts`** - URL utilities
+- **`globalState.ts`** - Window state management
+- **`constants.ts`** - Shared constants
+- **`dates.ts`** - Date utilities
 
 ## APIs Used
 
@@ -668,12 +637,12 @@ The build process with **esbuild** produces AEP-compatible code:
 
 **Key Features**:
 
-- ✅ **ES2015+ output**: Promises with `.then()` chains (no `async/await` keywords)
+- ✅ **ES2017 output**: Promises with `.then()` chains (no `async/await` keywords)
 - ✅ **Readable code**: Full variable names and formatting for easier debugging
-- ✅ **Consistent wrapping**: All scripts use synchronous IIFE wrapper
-  - `return (() => { ... })()` for all scripts
+- ✅ **Direct Promise returns**: No IIFE wrapper needed
+  - Pattern: `const TEST_MODE = false; ... return scriptName(TEST_MODE);`
   - Scripts with async operations return Promises via `.then()` chains
-  - Maximum AEP compatibility
+  - AEP Launch natively awaits returned Promises
 - ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
 - ✅ **Tree-shaking**: Dead code elimination
 
@@ -710,8 +679,8 @@ The project uses strict TypeScript settings for maximum type safety:
 
 **Key ES2017 Features Used**:
 
-- Native async/await
-- Object spread operator (transpiled)
+- Promises (`.then()` chains, no `async/await` keywords in output)
+- Object spread operator
 - Template literals
 - Arrow functions
 - Classes
@@ -724,6 +693,6 @@ ISC
 
 For issues or questions:
 
-1. Check existing documentation in this README
+1. Check this README for quick start and script descriptions
 2. Review TypeScript types and JSDoc comments in source files
-3. Examine the original JavaScript files for behavior reference
+3. Examine the source code for implementation details
