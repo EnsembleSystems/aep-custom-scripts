@@ -2,7 +2,16 @@
 
 TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection. These scripts are designed to be embedded as custom code in AEP Data Elements and can also be tested standalone in browser consoles.
 
-> **⚡ Recent Updates (Dec 2025)**:
+> **⚡ Recent Updates**:
+>
+> **January 2026 - v2.0 Architecture Refactor**:
+>
+> - **Separated filtering from data extraction**: Filter callback now only checks `event.isTrusted` (3KB, 71% smaller)
+> - **All data extraction in before-send**: Uses `event.composedPath()` to extract partner data and card metadata
+> - **Removed window.\_adobePartners**: No shared state between callbacks - cleaner architecture
+> - **Better performance**: Lightweight filter callback, focused responsibilities
+>
+> **December 2025**:
 >
 > - **Direct Promise Returns**: Removed IIFE wrapper for proper AEP Launch Promise support
 > - **Clean Formatting**: Output code now starts at column 0 with no extra indentation
@@ -295,7 +304,7 @@ const config = {
 
 ### 7. Custom Data Collection - Before Event Send (`customDataCollectionOnBeforeEventSend`)
 
-Callback script for Launch Extension's "before event send" hook.
+Callback script for Launch Extension's "before event send" hook. **Handles ALL data extraction**.
 
 **Use on**: Adobe Partner pages (in Launch Extension configuration)
 
@@ -303,44 +312,20 @@ Callback script for Launch Extension's "before event send" hook.
 
 - Paste into Launch Extension → Data Collection → "Edit on before event send callback"
 - Automatically extracts partner data from cookies
-- Retrieves partner card context from `window._adobePartners.partnerCard.context`
-- Sets data in `content.xdm._adobepartners`
+- Extracts partner card metadata from `event.composedPath()`
+- Sets both in `content.xdm._adobepartners`
 
-**How it works**:
+**How it works** (v2.0 - Refactored Architecture):
 
 - Skips page view events
-- Extracts partner data using `extractPartnerDataScript`
-- Retrieves card context from window (pre-populated by filter click callback)
-- Sets both in XDM structure
+- Extracts partner data from cookie using `extractPartnerDataScript`
+- Extracts card metadata from event's composed path (uses `event.composedPath()`)
+- Finds partner card and wrapper elements in the event path
+- Extracts card metadata from shadow DOM (card title, CTA text, position, etc.)
+- Sets both partner data and card collection in XDM structure
+- **No window.\_adobePartners storage needed** - direct extraction
 
 **Returns**: Modified `content` object with partner data and card collection
-
-**Configuration** (default in source):
-
-```typescript
-const DEFAULT_COOKIE_KEY = 'partner_data';
-```
-
-### 8. Custom Data Collection - Filter Click Callback (`customDataCollectionOnFilterClickCallback`)
-
-Callback script that extracts partner card metadata from clicked elements.
-
-**Use on**: Adobe Partner pages with partner card collections
-
-**Usage in AEP Launch**:
-
-- Use with Launch's before event send callback where `content.clickedElement` is available
-- Automatically extracts card metadata by traversing up from clicked element
-- Stores data in `window._adobePartners.partnerCard.context`
-
-**How it works**:
-
-- Extracts partner data from cookies using `extractPartnerDataScript`
-- Finds partner card element by traversing up from `content.clickedElement`
-- Extracts card metadata from shadow DOM (card title, CTA text, position, etc.)
-- Stores both partner data and card context in `window._adobePartners`
-
-**Returns**: `void` (stores data in window object)
 
 **Example card context**:
 
@@ -363,7 +348,47 @@ Callback script that extracts partner card metadata from clicked elements.
 const DEFAULT_COOKIE_KEY = 'partner_data';
 ```
 
-**Shadow DOM Support**: Handles shadow DOM properly by traversing up through shadow roots.
+**Shadow DOM Support**: Uses `event.composedPath()` to traverse through shadow DOM boundaries.
+
+### 8. Custom Data Collection - Filter Click Callback (`customDataCollectionOnFilterClickCallback`)
+
+Click filter callback that validates user-initiated clicks. **Handles ONLY filtering logic**.
+
+**Use on**: Adobe Partner pages with partner card collections
+
+**Usage in AEP Launch**:
+
+- Use with Launch's before event send callback
+- Filters out programmatic (non-trusted) click events
+- Returns `true` for genuine user clicks, `false` for programmatic clicks
+
+**How it works** (v2.0 - Refactored Architecture):
+
+- Checks if event object is provided
+- Validates `event.isTrusted` property
+- Returns `false` to suppress programmatic clicks
+- Returns `true` to allow genuine user clicks
+- **No data extraction** - that happens in before event send callback
+- **No window.\_adobePartners storage** - clean separation of concerns
+
+**Returns**: `boolean` - `true` if click should be processed, `false` if suppressed
+
+**Example usage**:
+
+```javascript
+// In Launch Extension before event send callback:
+const shouldProcess = customDataCollectionOnFilterClickCallback(content, event);
+if (!shouldProcess) {
+  return; // Suppress programmatic click
+}
+```
+
+**Architecture Benefits**:
+
+- **Lightweight**: Only ~3KB (was 11KB before refactor)
+- **Single responsibility**: Filtering only, no data extraction
+- **No side effects**: No window object manipulation
+- **Easy to test**: Simple boolean return value
 
 ## Browser Console Testing
 
