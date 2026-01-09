@@ -94,6 +94,17 @@ function logEventInfo(event, logger, additionalInfo) {
   }
   logger.log("Event information", eventInfo);
 }
+function isValidUserEvent(event, logger) {
+  if (!event) {
+    logger == null ? void 0 : logger.log("Event is missing");
+    return false;
+  }
+  if ("isTrusted" in event && !event.isTrusted) {
+    logger == null ? void 0 : logger.log("Event is not trusted (programmatic)");
+    return false;
+  }
+  return true;
+}
 
 // src/scripts/customDataCollectionOnFilterClickCallback.ts
 function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false) {
@@ -102,12 +113,7 @@ function customDataCollectionOnFilterClickCallbackScript(content, event, testMod
     logger.testHeader("FILTER CLICK CALLBACK - TEST MODE");
     logger.testInfo("Provided content object", content);
     logEventInfo(event, logger);
-    if (!event) {
-      logger.log("\u274C Ignoring click - no event object provided (treating as programmatic)");
-      return false;
-    }
-    if (!event.isTrusted) {
-      logger.log("\u274C Ignoring programmatic click (event.isTrusted is false)");
+    if (!isValidUserEvent(event, logger)) {
       return false;
     }
     logger.log("\u2705 Event is trusted (genuine user click)", {

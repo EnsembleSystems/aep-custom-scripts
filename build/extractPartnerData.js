@@ -139,6 +139,14 @@ function removeProperties(data, propertiesToRemove) {
   return data;
 }
 
+// src/utils/validation.ts
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function hasProperty(value, property) {
+  return isObject(value) && property in value;
+}
+
 // src/scripts/extractPartnerData.ts
 var DEFAULT_COOKIE_KEY = "partner_data";
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
@@ -153,7 +161,7 @@ function getPartnerData(cookieKey, logger) {
     logger.error("Error parsing partner data from cookie");
     return null;
   }
-  if (typeof partnerData === "object" && partnerData !== null && "DXP" in partnerData) {
+  if (hasProperty(partnerData, "DXP")) {
     const dxpValue = partnerData.DXP;
     const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
     logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
