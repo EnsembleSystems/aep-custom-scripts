@@ -163,11 +163,19 @@ function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_K
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
 var DEFAULT_COOKIE_KEY2 = "partner_data";
-function customDataCollectionOnBeforeEventSendScript(content, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
+function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
   var _a, _b, _c, _d;
   const logger = createLogger(testMode, "Before Send Callback", testMode);
   try {
     logger.testHeader("BEFORE SEND EVENT CALLBACK - TEST MODE", `Cookie Key: ${cookieKey}`);
+    if (event) {
+      logger.log("Event object available", { isTrusted: event.isTrusted, type: event.type });
+      if (event.composedPath) {
+        logger.log("Event composed path", event.composedPath());
+      }
+    } else {
+      logger.log("No event object provided");
+    }
     if (((_a = content.xdm) == null ? void 0 : _a.eventType) === "web.webpagedetails.pageViews") {
       logger.log("Skipping page view event");
       return content;
@@ -197,4 +205,4 @@ function customDataCollectionOnBeforeEventSendScript(content, testMode = false, 
 }
 
 
-return customDataCollectionOnBeforeEventSendScript(content, TEST_MODE);
+return customDataCollectionOnBeforeEventSendScript(content, event, TEST_MODE);
