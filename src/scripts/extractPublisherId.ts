@@ -8,40 +8,53 @@
 import { createLogger } from '../utils/logger.js';
 import { isValidPublisherId } from '../utils/validation.js';
 
+// URL structure constants for publisher links
+// Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"
+// Split: ['', 'publisher', 'cc', '2c4c7552-2bb9-4541-b625-04721319c07b', 'picture-instruments']
+// Index:   0      1          2               3                              4
+const PUBLISHER_URL_STRUCTURE = {
+  PARTS: {
+    EMPTY: 0, // ''
+    PUBLISHER: 1, // 'publisher'
+    APP_TYPE: 2, // 'cc' | 'dc' | 'ec'
+    ID: 3, // actual ID
+    NAME: 4, // publisher name
+  },
+  MIN_PARTS: 4,
+} as const;
+
+/**
+ * Validates if URL parts represent a valid publisher URL structure
+ * @param parts - URL split by '/'
+ * @returns true if valid publisher URL structure
+ */
+function isValidPublisherUrl(parts: string[]): boolean {
+  return (
+    parts.length >= PUBLISHER_URL_STRUCTURE.MIN_PARTS &&
+    parts[PUBLISHER_URL_STRUCTURE.PARTS.PUBLISHER] === 'publisher'
+  );
+}
+
 /**
  * Extracts publisher ID from href
  * Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"
  * Returns: "2c4c7552-2bb9-4541-b625-04721319c07b" (between 3rd and 4th slash)
  */
 function extractPublisherId(href: string, logger: ReturnType<typeof createLogger>): string | null {
-  // URL structure indices for publisher links
-  const URL_PARTS = {
-    EMPTY: 0, // ''
-    PUBLISHER: 1, // 'publisher'
-    APP_TYPE: 2, // 'cc' | 'dc' | 'ec'
-    ID: 3, // actual ID
-    NAME: 4, // publisher name
-  } as const;
-  const MIN_PARTS = 4;
-
-  // Split by slash and get the part between 3rd and 4th slash
-  // /publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments
-  // Split: ['', 'publisher', 'cc', '2c4c7552-2bb9-4541-b625-04721319c07b', 'picture-instruments']
-  // Index:   0      1          2               3                              4
   const parts = href.split('/');
 
-  // We want index 3 (between 3rd and 4th slash)
-  if (parts.length >= MIN_PARTS && parts[URL_PARTS.PUBLISHER] === 'publisher') {
-    const publisherId = parts[URL_PARTS.ID];
-
-    // Validate the ID format for security
-    if (publisherId && isValidPublisherId(publisherId)) {
-      return publisherId;
-    }
-
-    logger.log('Invalid publisher ID format', publisherId);
+  if (!isValidPublisherUrl(parts)) {
+    return null;
   }
 
+  const publisherId = parts[PUBLISHER_URL_STRUCTURE.PARTS.ID];
+
+  // Validate the ID format for security
+  if (publisherId && isValidPublisherId(publisherId)) {
+    return publisherId;
+  }
+
+  logger.log('Invalid publisher ID format', publisherId);
   return null;
 }
 

@@ -27,6 +27,50 @@ const API = {
 };
 
 /**
+ * Transforms event data by extracting and formatting dates
+ * @param data - Raw event data from API
+ * @param logger - Logger instance
+ * @returns Transformed data with formatted dates
+ */
+function transformEventData(
+  data: unknown,
+  logger: ReturnType<typeof createLogger>
+): Record<string, unknown> {
+  const rawData = data as Record<string, unknown>;
+
+  // Extract dates from the data and format to AEP DateTime format
+  const dates: string[] = extractDates((rawData.dates ?? []) as Array<{ date?: string }>);
+  logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
+
+  // Create transformed data object with extracted dates
+  const transformedData = {
+    ...rawData,
+    dates,
+  };
+  logger.log('Transformed data', transformedData);
+
+  return transformedData;
+}
+
+/**
+ * Stores transformed event data in window global for access by other scripts
+ * @param transformedData - Transformed event data
+ * @param logger - Logger instance
+ */
+function storeEventDataGlobally(
+  transformedData: Record<string, unknown>,
+  logger: ReturnType<typeof createLogger>
+): void {
+  // Ensure window._adobePartners.eventData exists
+  window._adobePartners = window._adobePartners ?? {};
+  window._adobePartners.eventData = window._adobePartners.eventData ?? {};
+
+  // Store the API response in window._adobePartners.eventData.apiResponse global variable
+  window._adobePartners.eventData.apiResponse = transformedData;
+  logger.log('Event data stored in window._adobePartners.eventData.apiResponse');
+}
+
+/**
  * Main entry point for the event data fetcher
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
@@ -70,34 +114,17 @@ export function fetchEventDataScript(testMode: boolean = false): unknown {
       logger.log('Event data received', data);
       logger.testResult(data);
 
-      // Store data on window for access by other scripts
+      // Transform and store data on window for access by other scripts
       try {
-        // Ensure window._adobePartners.eventData exists
-        window._adobePartners = window._adobePartners ?? {};
-        window._adobePartners.eventData = window._adobePartners.eventData ?? {};
+        const transformedData = transformEventData(data, logger);
+        storeEventDataGlobally(transformedData, logger);
 
-        // Extract dates from the data and format to AEP DateTime format (yyyy-MM-ddTHH:mm:ss+00:00)
-        // Use nullish coalescing to ensure we always pass an array to extractDates
-        const dates: string[] = extractDates((data.dates ?? []) as Array<{ date?: string }>);
-        logger.log('Extracted dates (`yyyy-MM-dd` format):', dates);
-
-        // Create transformed data object with extracted dates
-        const transformedData = {
-          ...data,
-          dates,
-        };
-        logger.log('Transformed data', transformedData);
-
-        // Store the API response in window._adobePartners.eventData.apiResponse global variable
-        window._adobePartners.eventData.apiResponse = transformedData;
-        logger.log('Event data stored in window._adobePartners.eventData.apiResponse');
-
-        // Dispatch event to notify other listeners using the global variable
+        // Dispatch event to notify other listeners
         dispatchCustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT);
 
         return transformedData;
       } catch (err) {
-        logger.warn('Could not store data on window._adobePartners.eventData:', err);
+        logger.warn('Could not transform or store data:', err);
         return data;
       }
     })
