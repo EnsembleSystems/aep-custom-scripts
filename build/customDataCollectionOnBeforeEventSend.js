@@ -227,41 +227,45 @@ function hasProperty(value, property) {
   return isObject(value) && property in value;
 }
 
+// src/utils/constants.ts
+var DEFAULT_COOKIE_KEYS = ["partner_data", "partner_info"];
+
 // src/scripts/extractPartnerData.ts
-var DEFAULT_COOKIE_KEY = "partner_data";
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
-function extractPartnerDataScript(testMode = false, cookieKey = DEFAULT_COOKIE_KEY) {
+function extractPartnerDataScript(testMode = false, cookieKeys = DEFAULT_COOKIE_KEYS) {
   return executeScript(
     {
       scriptName: "Partner Data",
       testMode,
       testHeaderTitle: "PARTNER DATA EXTRACTOR - TEST MODE",
-      testHeaderExtraInfo: `Cookie Key: ${cookieKey}`,
+      testHeaderExtraInfo: `Cookie Keys: ${cookieKeys.join(", ")}`,
       onError: (error, logger) => {
         logger.error("Unexpected error extracting partner data:", error);
         return null;
       }
     },
     (logger) => {
-      const partnerData = extractData({
-        source: () => getCookie(cookieKey),
+      const extractFromCookie = (key, notFoundMessage) => extractData({
+        source: () => getCookie(key),
         parser: parseJsonCookie,
         transformer: (data) => {
-          if (hasProperty(data, "DXP")) {
-            const dxpValue = data.DXP;
-            const cleanedDxpValue = removeProperties(dxpValue, PROPERTIES_TO_REMOVE);
-            logger.log("Found partner data (DXP extracted)", cleanedDxpValue);
-            return cleanedDxpValue;
-          }
-          const cleanedPartnerData = removeProperties(data, PROPERTIES_TO_REMOVE);
-          logger.log("Found partner data (no DXP key)", cleanedPartnerData);
-          return cleanedPartnerData;
+          const source = hasProperty(data, "DXP") ? data.DXP : data;
+          return removeProperties(source, PROPERTIES_TO_REMOVE);
         },
         logger,
-        errorMessage: "Error parsing partner data from cookie",
-        notFoundMessage: "No partner data in cookies"
+        errorMessage: `Error parsing ${key} from cookie`,
+        notFoundMessage
       });
-      return partnerData;
+      const mergedData = cookieKeys.reduce(
+        (acc, key) => mergeNonNull(acc, extractFromCookie(key, `No data in ${key} cookie`)),
+        {}
+      );
+      if (Object.keys(mergedData).length === 0) {
+        logger.log("No partner data found in any cookie");
+        return null;
+      }
+      logger.log("Found partner data (merged from cookies)", mergedData);
+      return mergedData;
     }
   );
 }
@@ -358,7 +362,6 @@ function shouldProcessEventType(eventType, skipTypes, logger) {
 }
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
-var DEFAULT_COOKIE_KEY2 = "partner_data";
 var SELECTORS = {
   CARD_TITLE: ".card-title",
   PARTNER_CARDS: ".partner-cards",
@@ -475,13 +478,13 @@ function extractCardCollectionFromEvent(event, logger) {
   }
   return cardCollection;
 }
-function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKey = DEFAULT_COOKIE_KEY2) {
+function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKeys = DEFAULT_COOKIE_KEYS) {
   return executeScript(
     {
       scriptName: "Before Send Callback",
       testMode,
       testHeaderTitle: "BEFORE SEND EVENT CALLBACK - TEST MODE",
-      testHeaderExtraInfo: `Cookie Key: ${cookieKey}`,
+      testHeaderExtraInfo: `Cookie Keys: ${cookieKeys.join(", ")}`,
       onError: (error, logger) => {
         logger.error("Unexpected error in before send callback:", error);
         return content;
@@ -493,7 +496,7 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       if (!shouldProcessEventType((_a = content.xdm) == null ? void 0 : _a.eventType, ["web.webpagedetails.pageViews"], logger)) {
         return content;
       }
-      const partnerData = extractPartnerDataScript(testMode, cookieKey);
+      const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log("Extracted partner data from cookie", partnerData);
       const cardCollection = extractCardCollectionFromEvent(event, logger);
       setNestedValue(
