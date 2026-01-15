@@ -30,8 +30,7 @@ import logEventInfo, { shouldProcessEventType } from '../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
 import type { PartnerCardCtx } from '../types';
 import { createLogger } from '../utils/logger';
-
-const DEFAULT_COOKIE_KEY = 'partner_data';
+import { DEFAULT_COOKIE_KEYS } from '../utils/constants';
 
 // Constants for card metadata extraction
 const SELECTORS = {
@@ -268,20 +267,20 @@ function extractCardCollectionFromEvent(
  * @param content - The content object from Launch's before event send callback
  * @param event - The original event object (PointerEvent or MouseEvent)
  * @param testMode - Enable verbose logging and test output (default: false)
- * @param cookieKey - The cookie key to read partner data from (default: 'partner_data')
+ * @param cookieKeys - Array of cookie keys to extract from (later keys take precedence when merging)
  */
 export default function customDataCollectionOnBeforeEventSendScript(
   content: LaunchEventContent,
   event?: PointerEvent | MouseEvent,
   testMode: boolean = false,
-  cookieKey: string = DEFAULT_COOKIE_KEY
+  cookieKeys: string[] = DEFAULT_COOKIE_KEYS
 ): LaunchEventContent {
   return executeScript(
     {
       scriptName: 'Before Send Callback',
       testMode,
       testHeaderTitle: 'BEFORE SEND EVENT CALLBACK - TEST MODE',
-      testHeaderExtraInfo: `Cookie Key: ${cookieKey}`,
+      testHeaderExtraInfo: `Cookie Keys: ${cookieKeys.join(', ')}`,
       onError: (error, logger) => {
         logger.error('Unexpected error in before send callback:', error);
         return content;
@@ -298,8 +297,8 @@ export default function customDataCollectionOnBeforeEventSendScript(
         return content;
       }
 
-      // Extract partner data from cookie
-      const partnerData = extractPartnerDataScript(testMode, cookieKey);
+      // Extract partner data from cookies
+      const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log('Extracted partner data from cookie', partnerData);
 
       // Extract card collection context from event if available
