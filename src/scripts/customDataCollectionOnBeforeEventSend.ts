@@ -66,6 +66,7 @@ interface LaunchEventContent {
     _adobepartners?: {
       partnerData?: unknown;
       cardCollection?: unknown;
+      linkClickLabel?: string;
     };
     [key: string]: unknown;
   };
@@ -146,6 +147,26 @@ function extractCardTitle(
 function extractCtaText(cardElement: Element): string {
   const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
   return getAttribute(firstLink, ATTRIBUTES.DAA_LL);
+}
+
+/**
+ * Extracts daa-ll from clicked link in event's composed path
+ * Works for all link clicks, not just partner cards
+ * @param event - The click event
+ * @returns daa-ll attribute value from the clicked link, or empty string if not found
+ */
+export function extractLinkDaaLl(event: PointerEvent | MouseEvent | undefined): string {
+  console.log('[extractLinkDaaLl] Called with event:', event);
+  if (!event) {
+    console.log('[extractLinkDaaLl] No event provided, returning empty string');
+    return '';
+  }
+  const isLink = createElementMatcher('a');
+  const linkElement = findInComposedPath(event, isLink);
+  console.log('[extractLinkDaaLl] Found link element:', linkElement);
+  const daaLlValue = getAttribute(linkElement, ATTRIBUTES.DAA_LL);
+  console.log('[extractLinkDaaLl] daa-ll value:', daaLlValue);
+  return daaLlValue;
 }
 
 /**
@@ -304,13 +325,20 @@ export default function customDataCollectionOnBeforeEventSendScript(
       // Extract card collection context from event if available
       const cardCollection = extractCardCollectionFromEvent(event, logger);
 
+      // Extract daa-ll from any clicked link
+      const linkClickLabel = extractLinkDaaLl(event);
+      if (linkClickLabel) {
+        logger.log('Extracted link daa-ll', linkClickLabel);
+      }
+
       // Set partner data in _adobepartners using nested object utilities
       setNestedValue(
         content,
         'xdm._adobepartners',
         mergeNonNull(
           { partnerData: partnerData as Record<string, never> },
-          conditionalProperties(cardCollection !== null, { cardCollection })
+          conditionalProperties(cardCollection !== null, { cardCollection }),
+          conditionalProperties(linkClickLabel !== '', { linkClickLabel })
         ),
         true
       );
