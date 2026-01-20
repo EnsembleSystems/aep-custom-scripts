@@ -205,8 +205,41 @@ function hasProperty(value, property) {
 // src/utils/constants.ts
 var DEFAULT_COOKIE_KEYS = ["partner_data", "partner_info"];
 
+// src/utils/storage.ts
+function getStorageItem(key) {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) {
+      return null;
+    }
+    return JSON.parse(item);
+  } catch (e) {
+    return null;
+  }
+}
+
 // src/scripts/extractPartnerData.ts
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
+var MAGE_CACHE_STORAGE_KEY = "mage-cache-storage";
+function extractFromCookie(key, logger) {
+  return extractData({
+    source: () => getCookie(key),
+    parser: parseJsonCookie,
+    transformer: (data) => {
+      const source = hasProperty(data, "DXP") ? data.DXP : data;
+      return removeProperties(source, PROPERTIES_TO_REMOVE);
+    },
+    logger,
+    errorMessage: `Error parsing ${key} from cookie`,
+    notFoundMessage: `No data in ${key} cookie`
+  });
+}
+function extractEmailFromStorage() {
+  const mageCache = getStorageItem(MAGE_CACHE_STORAGE_KEY);
+  const customer = mageCache == null ? void 0 : mageCache.customer;
+  const email = customer == null ? void 0 : customer.email;
+  return typeof email === "string" && email ? email : null;
+}
 function extractPartnerDataScript(testMode = false, cookieKeys = DEFAULT_COOKIE_KEYS) {
   return executeScript(
     {
@@ -220,26 +253,22 @@ function extractPartnerDataScript(testMode = false, cookieKeys = DEFAULT_COOKIE_
       }
     },
     (logger) => {
-      const extractFromCookie = (key, notFoundMessage) => extractData({
-        source: () => getCookie(key),
-        parser: parseJsonCookie,
-        transformer: (data) => {
-          const source = hasProperty(data, "DXP") ? data.DXP : data;
-          return removeProperties(source, PROPERTIES_TO_REMOVE);
-        },
-        logger,
-        errorMessage: `Error parsing ${key} from cookie`,
-        notFoundMessage
-      });
       const mergedData = cookieKeys.reduce(
-        (acc, key) => mergeNonNull(acc, extractFromCookie(key, `No data in ${key} cookie`)),
+        (acc, key) => mergeNonNull(acc, extractFromCookie(key, logger)),
         {}
       );
+      if (!mergedData.email) {
+        const email = extractEmailFromStorage();
+        if (email) {
+          mergedData.email = email;
+          logger.log("Email extracted from mage-cache-storage");
+        }
+      }
       if (Object.keys(mergedData).length === 0) {
-        logger.log("No partner data found in any cookie");
+        logger.log("No partner data found in cookies or storage");
         return null;
       }
-      logger.log("Found partner data (merged from cookies)", mergedData);
+      logger.log("Found partner data", mergedData);
       return mergedData;
     }
   );
