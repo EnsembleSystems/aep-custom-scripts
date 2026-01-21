@@ -140,13 +140,9 @@ jobs:
               fs.writeFileSync(outputFilename, ndjsonLines.join('\n'));
 
               console.log(`Wrote ${ndjsonLines.length} records to ${outputFilename}`);
-              console.log('::set-output name=success::true');
-              console.log(`::set-output name=filename::${outputFilename}`);
-              console.log(`::set-output name=card_count::${ndjsonLines.length}`);
 
             } catch (error) {
               console.error(`Error: ${error.message}`);
-              console.log('::set-output name=success::false');
               process.exit(1);
             }
           }
