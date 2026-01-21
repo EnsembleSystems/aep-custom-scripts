@@ -154,7 +154,7 @@ jobs:
           if [ -f "chimera-collection-${{ matrix.env_name }}.ndjson" ]; then
             echo "success=true" >> $GITHUB_OUTPUT
             echo "filename=chimera-collection-${{ matrix.env_name }}.ndjson" >> $GITHUB_OUTPUT
-            CARD_COUNT=$(wc -l < "chimera-collection-${{ matrix.env_name }}.ndjson" | tr -d ' ')
+            CARD_COUNT=$(grep -c '' "chimera-collection-${{ matrix.env_name }}.ndjson")
             echo "card_count=$CARD_COUNT" >> $GITHUB_OUTPUT
           else
             echo "success=false" >> $GITHUB_OUTPUT
