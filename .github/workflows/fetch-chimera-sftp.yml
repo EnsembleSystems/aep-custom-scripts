@@ -1,0 +1,231 @@
+name: Fetch Chimera Collection to SFTP
+
+on:
+  schedule:
+    # Run every 15 minutes
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to fetch (leave empty for all)"
+        required: false
+        type: choice
+        options:
+          - all
+          - dev
+          - stage
+          - prod
+        default: all
+
+jobs:
+  fetch-and-upload:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - env_name: dev
+            chimera_url_var: CHIMERA_URL_DEV
+          - env_name: stage
+            chimera_url_var: CHIMERA_URL_STAGE
+          - env_name: prod
+            chimera_url_var: CHIMERA_URL_PROD
+      fail-fast: false # Continue other environments if one fails
+
+    steps:
+      - name: Check if environment should run
+        id: should-run
+        run: |
+          INPUT_ENV="${{ github.event.inputs.environment || 'all' }}"
+          CURRENT_ENV="${{ matrix.env_name }}"
+          if [ "$INPUT_ENV" == "all" ] || [ "$INPUT_ENV" == "$CURRENT_ENV" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.should-run.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Fetch and Transform Chimera Collection (${{ matrix.env_name }})
+        if: steps.should-run.outputs.should_run == 'true'
+        id: fetch
+        env:
+          CHIMERA_URL: ${{ vars[matrix.chimera_url_var] }}
+          ENV_NAME: ${{ matrix.env_name }}
+        run: |
+          if [ -z "$CHIMERA_URL" ]; then
+            echo "::warning::Chimera URL variable not configured for ${{ matrix.env_name }} environment (vars.${{ matrix.chimera_url_var }})"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Fetching from Chimera API for ${{ matrix.env_name }}..."
+
+          # Create inline Node.js script to fetch and transform
+          node --experimental-fetch << 'NODESCRIPT'
+          const CHIMERA_URL = process.env.CHIMERA_URL;
+          const ENV_NAME = process.env.ENV_NAME;
+          const fs = require('fs');
+
+          /**
+           * Rolling hash function matching the original implementation
+           * @param {string} s - String to hash
+           * @param {number} l - Length of hash (default 10)
+           * @returns {string} - Hashed string in base 36
+           */
+          function rollingHash(s, l = 10) {
+            if (!s) return '';
+            const BASE = 53;
+            const MOD = Math.pow(10, l) + 7;
+            let hash = 0;
+            let basePower = 1;
+            for (let i = 0; i < s.length; i++) {
+              hash = (hash + (s.charCodeAt(i) - 97 + 1) * basePower) % MOD;
+              basePower = (basePower * BASE) % MOD;
+            }
+            return ((hash + MOD) % MOD).toString(36);
+          }
+
+          async function main() {
+            try {
+              console.log(`Fetching from: ${CHIMERA_URL}`);
+              const response = await fetch(CHIMERA_URL);
+
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+
+              const data = await response.json();
+
+              if (!data.cards || !Array.isArray(data.cards)) {
+                throw new Error('No cards array found in response');
+              }
+
+              console.log(`Found ${data.cards.length} cards`);
+
+              // Transform to XDM NDJSON format
+              const ndjsonLines = data.cards.map(card => {
+                const hashedId = rollingHash(card.id);
+
+                // Extract tag IDs
+                const tags = (card.tags || [])
+                  .map(tag => tag.id)
+                  .filter(Boolean);
+
+                // Concatenate all links into ctaHrefs
+                const ctaHrefs = [
+                  card.ctaLink,
+                  card.overlayLink,
+                  ...(card.footer?.[0]?.altCta?.map(alt => alt.href) || []),
+                ].filter(Boolean);
+
+                const xdmRecord = {
+                  _id: hashedId,
+                  _adobepartners: {
+                    caasCard: {
+                      id: hashedId,
+                      ctahrefs: ctaHrefs,
+                      tags: tags,
+                    },
+                  },
+                };
+
+                return JSON.stringify(xdmRecord);
+              });
+
+              const outputFilename = `chimera-collection-${ENV_NAME}.ndjson`;
+              fs.writeFileSync(outputFilename, ndjsonLines.join('\n'));
+
+              console.log(`Wrote ${ndjsonLines.length} records to ${outputFilename}`);
+              console.log('::set-output name=success::true');
+              console.log(`::set-output name=filename::${outputFilename}`);
+              console.log(`::set-output name=card_count::${ndjsonLines.length}`);
+
+            } catch (error) {
+              console.error(`Error: ${error.message}`);
+              console.log('::set-output name=success::false');
+              process.exit(1);
+            }
+          }
+
+          main();
+          NODESCRIPT
+
+          # Set outputs using newer method (set-output is deprecated)
+          if [ -f "chimera-collection-${{ matrix.env_name }}.ndjson" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "filename=chimera-collection-${{ matrix.env_name }}.ndjson" >> $GITHUB_OUTPUT
+            CARD_COUNT=$(wc -l < "chimera-collection-${{ matrix.env_name }}.ndjson" | tr -d ' ')
+            echo "card_count=$CARD_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload to SFTP (${{ matrix.env_name }})
+        if: steps.should-run.outputs.should_run == 'true' && steps.fetch.outputs.success == 'true'
+        env:
+          SFTP_HOST: ${{ vars.SFTP_HOST }}
+          SFTP_PORT: ${{ vars.SFTP_PORT }}
+          SFTP_USER: ${{ vars.SFTP_USER }}
+          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+          SFTP_PATH: ${{ vars.SFTP_PATH }}
+        run: |
+          if [ -z "$SFTP_HOST" ] || [ -z "$SFTP_USER" ] || [ -z "$SFTP_PRIVATE_KEY" ]; then
+            echo "::error::SFTP credentials not configured. Required: vars.SFTP_HOST, vars.SFTP_USER, secrets.SFTP_PRIVATE_KEY"
+            exit 1
+          fi
+
+          # Default port to 22 if not specified
+          SFTP_PORT="${SFTP_PORT:-22}"
+
+          # Default path to root if not specified
+          SFTP_PATH="${SFTP_PATH:-.}"
+
+          # Setup SSH key
+          mkdir -p ~/.ssh
+          echo "$SFTP_PRIVATE_KEY" > ~/.ssh/sftp_key
+          chmod 600 ~/.ssh/sftp_key
+
+          # Add host to known_hosts (disable strict host checking for CI)
+          ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          FILENAME="${{ steps.fetch.outputs.filename }}"
+          REMOTE_PATH="$SFTP_PATH/$FILENAME"
+
+          echo "Uploading $FILENAME to $SFTP_HOST:$REMOTE_PATH..."
+
+          # Upload using sftp
+          sftp -P "$SFTP_PORT" -i ~/.ssh/sftp_key -oBatchMode=yes "$SFTP_USER@$SFTP_HOST" <<EOF
+          cd $SFTP_PATH
+          put $FILENAME
+          bye
+          EOF
+
+          if [ $? -eq 0 ]; then
+            echo "Successfully uploaded $FILENAME to SFTP"
+          else
+            echo "::error::Failed to upload $FILENAME to SFTP"
+            exit 1
+          fi
+
+          # Cleanup
+          rm -f ~/.ssh/sftp_key
+
+      - name: Summary
+        if: always() && steps.should-run.outputs.should_run == 'true'
+        run: |
+          echo "## Chimera Collection Fetch - ${{ matrix.env_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.fetch.outputs.success }}" == "true" ]; then
+            echo "| Status | Details |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Environment | ${{ matrix.env_name }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Cards Processed | ${{ steps.fetch.outputs.card_count }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Output File | ${{ steps.fetch.outputs.filename }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| SFTP Upload | Completed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo ":x: Failed to fetch collection for ${{ matrix.env_name }}" >> $GITHUB_STEP_SUMMARY
+          fi
