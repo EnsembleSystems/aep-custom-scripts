@@ -92,7 +92,7 @@ jobs:
           async function main() {
             try {
               console.log(`Fetching from: ${CHIMERA_URL}`);
-              const response = await fetch(CHIMERA_URL);
+              const response = await fetch(CHIMERA_URL)?debug=true;
 
               if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
