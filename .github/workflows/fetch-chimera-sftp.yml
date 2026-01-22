@@ -226,15 +226,18 @@ jobs:
               const urlRecordCount = ndjsonByUrl.split('\n').filter(Boolean).length;
               console.log(`Wrote ${urlRecordCount} records to ${filenameByUrl}`);
 
-              // Report duplicates
+              // Report duplicates to console and write to file for workflow output
               if (duplicates.length > 0) {
                 console.log(`\nFound ${duplicates.length} duplicate URL(s):`);
                 duplicates.forEach(({ url, cardIds }) => {
                   console.log(`  - ${url}`);
                   console.log(`    Card IDs: ${cardIds.join(', ')}`);
                 });
+                // Write duplicates to file for workflow summary
+                fs.writeFileSync('duplicates.json', JSON.stringify(duplicates));
               } else {
                 console.log('\nNo duplicate URLs found');
+                fs.writeFileSync('duplicates.json', '[]');
               }
 
             } catch (error) {
@@ -258,6 +261,13 @@ jobs:
             URL_COUNT=$(wc -l < "$FILENAME_BY_URL" | tr -d ' ')
             echo "card_count=$CARD_COUNT" >> $GITHUB_OUTPUT
             echo "url_count=$URL_COUNT" >> $GITHUB_OUTPUT
+            # Read duplicate count from JSON file
+            if [ -f "duplicates.json" ]; then
+              DUPLICATE_COUNT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('duplicates.json')).length)")
+              echo "duplicate_count=$DUPLICATE_COUNT" >> $GITHUB_OUTPUT
+            else
+              echo "duplicate_count=0" >> $GITHUB_OUTPUT
+            fi
           else
             echo "success=false" >> $GITHUB_OUTPUT
           fi
@@ -326,6 +336,26 @@ jobs:
             echo "| URLs (by URL) | ${{ steps.fetch.outputs.url_count }} |" >> $GITHUB_STEP_SUMMARY
             echo "| Output Files | ${{ steps.fetch.outputs.filename_by_id }}, ${{ steps.fetch.outputs.filename_by_url }} |" >> $GITHUB_STEP_SUMMARY
             echo "| SFTP Upload | Completed |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Report duplicate URLs
+            DUPLICATE_COUNT="${{ steps.fetch.outputs.duplicate_count }}"
+            if [ "$DUPLICATE_COUNT" -gt 0 ] 2>/dev/null; then
+              echo "### ⚠️ Duplicate URLs Found: $DUPLICATE_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The following URLs appear in multiple cards (first card wins for NDJSON output):" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              # Parse duplicates.json and format for summary
+              node -e "
+                const duplicates = JSON.parse(require('fs').readFileSync('duplicates.json'));
+                duplicates.forEach(({ url, cardIds }) => {
+                  console.log('- **' + url + '**');
+                  console.log('  - Card IDs: \`' + cardIds.join('\`, \`') + '\`');
+                });
+              " >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ✓ No Duplicate URLs" >> $GITHUB_STEP_SUMMARY
+            fi
           else
             echo ":x: Failed to fetch collection for ${{ matrix.env_name }}" >> $GITHUB_STEP_SUMMARY
           fi
