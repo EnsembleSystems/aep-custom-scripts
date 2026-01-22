@@ -127,9 +127,10 @@ jobs:
           /**
            * Convert to XDM NDJSON format (ID-based)
            * @param {Array} cards - Transformed cards
+           * @param {string} snapshotTs - ISO-8601 timestamp of the current run
            * @returns {string} - NDJSON string
            */
-          function toXdmNdjsonById(cards) {
+          function toXdmNdjsonById(cards, snapshotTs) {
             return cards.map(card => {
               const xdmRecord = {
                 _id: card.id,
@@ -138,6 +139,7 @@ jobs:
                     id: card.id,
                     ctahrefs: card.ctaHrefs,
                     tags: card.tags,
+                    snapshot_ts: snapshotTs,
                   },
                 },
               };
@@ -149,9 +151,10 @@ jobs:
            * Convert to XDM NDJSON format (URL-based)
            * Creates a record for each URL, using the URL as _id
            * @param {Array} cards - Transformed cards
+           * @param {string} snapshotTs - ISO-8601 timestamp of the current run
            * @returns {{ ndjson: string, duplicates: Array }}
            */
-          function toXdmNdjsonByUrl(cards) {
+          function toXdmNdjsonByUrl(cards, snapshotTs) {
             // Track URLs to detect duplicates
             const urlToCards = cards.reduce((acc, card) => {
               (card.ctaHrefs || []).forEach(url => {
@@ -182,6 +185,7 @@ jobs:
                       caasCard: {
                         id: card.id,
                         tags: card.tags,
+                        snapshot_ts: snapshotTs,
                       },
                     },
                   };
@@ -195,6 +199,9 @@ jobs:
 
           async function main() {
             try {
+              // Generate snapshot timestamp once for the entire run (ISO-8601 format)
+              const snapshotTs = new Date().toISOString();
+              console.log(`Snapshot timestamp: ${snapshotTs}`);
               console.log(`Fetching from: ${CHIMERA_URL}`);
               const response = await fetch(CHIMERA_URL);
 
@@ -214,13 +221,13 @@ jobs:
               const transformedCards = transformCards(data.cards);
 
               // Generate ID-based NDJSON
-              const ndjsonById = toXdmNdjsonById(transformedCards);
+              const ndjsonById = toXdmNdjsonById(transformedCards, snapshotTs);
               const filenameById = `chimera-collection-xdm-by-id-${ENV_NAME}.ndjson`;
               fs.writeFileSync(filenameById, ndjsonById);
               console.log(`Wrote ${transformedCards.length} records to ${filenameById}`);
 
               // Generate URL-based NDJSON
-              const { ndjson: ndjsonByUrl, duplicates } = toXdmNdjsonByUrl(transformedCards);
+              const { ndjson: ndjsonByUrl, duplicates } = toXdmNdjsonByUrl(transformedCards, snapshotTs);
               const filenameByUrl = `chimera-collection-xdm-by-url-${ENV_NAME}.ndjson`;
               fs.writeFileSync(filenameByUrl, ndjsonByUrl);
               const urlRecordCount = ndjsonByUrl.split('\n').filter(Boolean).length;
