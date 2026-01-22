@@ -89,10 +89,106 @@ jobs:
             return ((hash + MOD) % MOD).toString(36);
           }
 
+          /**
+           * Transform cards to cleaned format with shortened IDs
+           * @param {Array} cards - Raw cards from API
+           * @returns {Array} - Transformed cards
+           */
+          function transformCards(cards) {
+            return cards.map(card => {
+              const hashedId = rollingHash(card.id);
+
+              // Extract tag IDs
+              const tags = (card.tags || [])
+                .map(tag => tag.id)
+                .filter(Boolean);
+
+              // Concatenate all links into ctaHrefs (unique values only)
+              const ctaHrefs = [
+                ...new Set([
+                  card.ctaLink,
+                  card.overlayLink,
+                  ...(card.footer?.[0]?.altCta?.map(alt => alt.href) || []),
+                ].filter(Boolean))
+              ];
+
+              return { id: hashedId, tags, ctaHrefs };
+            });
+          }
+
+          /**
+           * Convert to XDM NDJSON format (ID-based)
+           * @param {Array} cards - Transformed cards
+           * @returns {string} - NDJSON string
+           */
+          function toXdmNdjsonById(cards) {
+            return cards.map(card => {
+              const xdmRecord = {
+                _id: card.id,
+                _adobepartners: {
+                  caasCard: {
+                    id: card.id,
+                    ctahrefs: card.ctaHrefs,
+                    tags: card.tags,
+                  },
+                },
+              };
+              return JSON.stringify(xdmRecord);
+            }).join('\n');
+          }
+
+          /**
+           * Convert to XDM NDJSON format (URL-based)
+           * Creates a record for each URL, using the URL as _id
+           * @param {Array} cards - Transformed cards
+           * @returns {{ ndjson: string, duplicates: Array }}
+           */
+          function toXdmNdjsonByUrl(cards) {
+            // Track URLs to detect duplicates
+            const urlToCards = cards.reduce((acc, card) => {
+              (card.ctaHrefs || []).forEach(url => {
+                if (url) {
+                  if (!acc[url]) acc[url] = [];
+                  acc[url].push(card);
+                }
+              });
+              return acc;
+            }, {});
+
+            // Find duplicates
+            const duplicates = Object.entries(urlToCards)
+              .filter(([, cards]) => cards.length > 1)
+              .map(([url, cards]) => ({ url, cardIds: cards.map(c => c.id) }));
+
+            // Generate NDJSON - one record per unique URL (first card wins)
+            const seenUrls = new Set();
+            const records = [];
+
+            cards.forEach(card => {
+              (card.ctaHrefs || []).forEach(url => {
+                if (url && !seenUrls.has(url)) {
+                  seenUrls.add(url);
+                  const xdmRecord = {
+                    _id: url,
+                    _adobepartners: {
+                      caasCard: {
+                        id: card.id,
+                        tags: card.tags,
+                      },
+                    },
+                  };
+                  records.push(JSON.stringify(xdmRecord));
+                }
+              });
+            });
+
+            return { ndjson: records.join('\n'), duplicates };
+          }
+
           async function main() {
             try {
               console.log(`Fetching from: ${CHIMERA_URL}`);
-              const response = await fetch(CHIMERA_URL)
+              const response = await fetch(CHIMERA_URL);
 
               if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -106,40 +202,32 @@ jobs:
 
               console.log(`Found ${data.cards.length} cards`);
 
-              // Transform to XDM NDJSON format
-              const ndjsonLines = data.cards.map(card => {
-                const hashedId = rollingHash(card.id);
+              // Transform cards
+              const transformedCards = transformCards(data.cards);
 
-                // Extract tag IDs
-                const tags = (card.tags || [])
-                  .map(tag => tag.id)
-                  .filter(Boolean);
+              // Generate ID-based NDJSON
+              const ndjsonById = toXdmNdjsonById(transformedCards);
+              const filenameById = `chimera-collection-xdm-by-id-${ENV_NAME}.ndjson`;
+              fs.writeFileSync(filenameById, ndjsonById);
+              console.log(`Wrote ${transformedCards.length} records to ${filenameById}`);
 
-                // Concatenate all links into ctaHrefs
-                const ctaHrefs = [
-                  card.ctaLink,
-                  card.overlayLink,
-                  ...(card.footer?.[0]?.altCta?.map(alt => alt.href) || []),
-                ].filter(Boolean);
+              // Generate URL-based NDJSON
+              const { ndjson: ndjsonByUrl, duplicates } = toXdmNdjsonByUrl(transformedCards);
+              const filenameByUrl = `chimera-collection-xdm-by-url-${ENV_NAME}.ndjson`;
+              fs.writeFileSync(filenameByUrl, ndjsonByUrl);
+              const urlRecordCount = ndjsonByUrl.split('\n').filter(Boolean).length;
+              console.log(`Wrote ${urlRecordCount} records to ${filenameByUrl}`);
 
-                const xdmRecord = {
-                  _id: hashedId,
-                  _adobepartners: {
-                    caasCard: {
-                      id: hashedId,
-                      ctahrefs: ctaHrefs,
-                      tags: tags,
-                    },
-                  },
-                };
-
-                return JSON.stringify(xdmRecord);
-              });
-
-              const outputFilename = `chimera-collection-${ENV_NAME}.ndjson`;
-              fs.writeFileSync(outputFilename, ndjsonLines.join('\n'));
-
-              console.log(`Wrote ${ndjsonLines.length} records to ${outputFilename}`);
+              // Report duplicates
+              if (duplicates.length > 0) {
+                console.log(`\nFound ${duplicates.length} duplicate URL(s):`);
+                duplicates.forEach(({ url, cardIds }) => {
+                  console.log(`  - ${url}`);
+                  console.log(`    Card IDs: ${cardIds.join(', ')}`);
+                });
+              } else {
+                console.log('\nNo duplicate URLs found');
+              }
 
             } catch (error) {
               console.error(`Error: ${error.message}`);
@@ -151,11 +239,17 @@ jobs:
           NODESCRIPT
 
           # Set outputs using newer method (set-output is deprecated)
-          if [ -f "chimera-collection-${{ matrix.env_name }}.ndjson" ]; then
+          FILENAME_BY_ID="chimera-collection-xdm-by-id-${{ matrix.env_name }}.ndjson"
+          FILENAME_BY_URL="chimera-collection-xdm-by-url-${{ matrix.env_name }}.ndjson"
+
+          if [ -f "$FILENAME_BY_ID" ] && [ -f "$FILENAME_BY_URL" ]; then
             echo "success=true" >> $GITHUB_OUTPUT
-            echo "filename=chimera-collection-${{ matrix.env_name }}.ndjson" >> $GITHUB_OUTPUT
-            CARD_COUNT=$(grep -c '' "chimera-collection-${{ matrix.env_name }}.ndjson")
+            echo "filename_by_id=$FILENAME_BY_ID" >> $GITHUB_OUTPUT
+            echo "filename_by_url=$FILENAME_BY_URL" >> $GITHUB_OUTPUT
+            CARD_COUNT=$(wc -l < "$FILENAME_BY_ID" | tr -d ' ')
+            URL_COUNT=$(wc -l < "$FILENAME_BY_URL" | tr -d ' ')
             echo "card_count=$CARD_COUNT" >> $GITHUB_OUTPUT
+            echo "url_count=$URL_COUNT" >> $GITHUB_OUTPUT
           else
             echo "success=false" >> $GITHUB_OUTPUT
           fi
@@ -188,22 +282,23 @@ jobs:
           # Add host to known_hosts (disable strict host checking for CI)
           ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          FILENAME="${{ steps.fetch.outputs.filename }}"
-          REMOTE_PATH="$SFTP_PATH/$FILENAME"
+          FILENAME_BY_ID="${{ steps.fetch.outputs.filename_by_id }}"
+          FILENAME_BY_URL="${{ steps.fetch.outputs.filename_by_url }}"
 
-          echo "Uploading $FILENAME to $SFTP_HOST:$REMOTE_PATH..."
+          echo "Uploading files to $SFTP_HOST:$SFTP_PATH..."
 
-          # Upload using sftp
+          # Upload both files using sftp
           sftp -P "$SFTP_PORT" -i ~/.ssh/sftp_key -oBatchMode=yes "$SFTP_USER@$SFTP_HOST" <<EOF
           cd $SFTP_PATH
-          put $FILENAME
+          put $FILENAME_BY_ID
+          put $FILENAME_BY_URL
           bye
           EOF
 
           if [ $? -eq 0 ]; then
-            echo "Successfully uploaded $FILENAME to SFTP"
+            echo "Successfully uploaded $FILENAME_BY_ID and $FILENAME_BY_URL to SFTP"
           else
-            echo "::error::Failed to upload $FILENAME to SFTP"
+            echo "::error::Failed to upload files to SFTP"
             exit 1
           fi
 
@@ -219,8 +314,9 @@ jobs:
             echo "| Status | Details |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|---------|" >> $GITHUB_STEP_SUMMARY
             echo "| Environment | ${{ matrix.env_name }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Cards Processed | ${{ steps.fetch.outputs.card_count }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Output File | ${{ steps.fetch.outputs.filename }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Cards (by ID) | ${{ steps.fetch.outputs.card_count }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| URLs (by URL) | ${{ steps.fetch.outputs.url_count }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Output Files | ${{ steps.fetch.outputs.filename_by_id }}, ${{ steps.fetch.outputs.filename_by_url }} |" >> $GITHUB_STEP_SUMMARY
             echo "| SFTP Upload | Completed |" >> $GITHUB_STEP_SUMMARY
           else
             echo ":x: Failed to fetch collection for ${{ matrix.env_name }}" >> $GITHUB_STEP_SUMMARY
