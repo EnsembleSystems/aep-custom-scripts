@@ -104,11 +104,19 @@ jobs:
                 .filter(Boolean);
 
               // Concatenate all links into ctaHrefs (unique values only)
+              // Extract hrefs from footer sections (left, center, right, altCta)
+              const footerHrefs = (card.footer || []).flatMap(footerItem => [
+                ...(footerItem.left || []).map(item => item.href),
+                ...(footerItem.center || []).map(item => item.href),
+                ...(footerItem.right || []).map(item => item.href),
+                ...(footerItem.altCta || []).map(item => item.href),
+              ]);
+
               const ctaHrefs = [
                 ...new Set([
                   card.ctaLink,
                   card.overlayLink,
-                  ...(card.footer?.[0]?.altCta?.map(alt => alt.href) || []),
+                  ...footerHrefs,
                 ].filter(Boolean))
               ];
 
