@@ -204,6 +204,58 @@ aep-custom-scripts/
 └── package.json           # Project metadata
 ```
 
+## GitHub Workflows
+
+### Chimera Collection to SFTP
+
+**Workflow:** [.github/workflows/fetch-chimera-sftp.yml](.github/workflows/fetch-chimera-sftp.yml)
+
+Automated workflow that fetches card data from the Chimera API and uploads to SFTP for AEP ingestion.
+
+**Schedule:** Runs every 15 minutes via cron, or manually via workflow_dispatch.
+
+**Environments:** Runs in parallel for dev, stage, and prod (configurable via manual trigger).
+
+**Process:**
+
+1. Fetches card collection from Chimera API endpoint
+2. Transforms cards using `rollingHash()` for shortened IDs
+3. Extracts tag IDs and CTA hrefs (from ctaLink, overlayLink, and footer sections)
+4. Generates two NDJSON output files per environment:
+   - `chimera-collection-xdm-by-id-{env}.ndjson` - One record per card (keyed by hashed card ID)
+   - `chimera-collection-xdm-by-url-{env}.ndjson` - One record per unique URL (keyed by URL)
+5. Uploads both files to SFTP server
+6. Reports duplicate URLs in workflow summary (URLs appearing in multiple cards)
+
+**XDM Record Format:**
+
+```json
+{
+  "_id": "hashedId or url",
+  "_adobepartners": {
+    "caasCard": {
+      "id": "hashedId",
+      "ctahrefs": ["url1", "url2"],
+      "tags": ["tag1", "tag2"],
+      "snapshot_ts": "2026-01-23T12:00:00.000Z"
+    }
+  }
+}
+```
+
+**Required Repository Configuration:**
+
+| Type     | Name                | Description                             |
+| -------- | ------------------- | --------------------------------------- |
+| Variable | `CHIMERA_URL_DEV`   | Chimera API URL for dev environment     |
+| Variable | `CHIMERA_URL_STAGE` | Chimera API URL for stage environment   |
+| Variable | `CHIMERA_URL_PROD`  | Chimera API URL for prod environment    |
+| Variable | `SFTP_HOST`         | SFTP server hostname                    |
+| Variable | `SFTP_PORT`         | SFTP server port (default: 22)          |
+| Variable | `SFTP_USER`         | SFTP username                           |
+| Variable | `SFTP_PATH`         | Remote directory path (default: .)      |
+| Secret   | `SFTP_PRIVATE_KEY`  | SSH private key for SFTP authentication |
+
 ## Script Descriptions
 
 ### 1. Event Data Fetcher (`fetchEventData`)
