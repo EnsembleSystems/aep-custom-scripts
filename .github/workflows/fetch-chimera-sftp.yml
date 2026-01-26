@@ -55,6 +55,7 @@ jobs:
         env:
           CHIMERA_URL: ${{ vars[matrix.chimera_url_var] }}
           ENV_NAME: ${{ matrix.env_name }}
+          ORIGIN_SELECTION: ${{ vars.ORIGIN_SELECTION }}
         run: |
           if [ -z "$CHIMERA_URL" ]; then
             echo "::warning::Chimera URL variable not configured for ${{ matrix.env_name }} environment (vars.${{ matrix.chimera_url_var }})"
@@ -68,7 +69,23 @@ jobs:
           node --experimental-fetch << 'NODESCRIPT'
           const CHIMERA_URL = process.env.CHIMERA_URL;
           const ENV_NAME = process.env.ENV_NAME;
+          const ORIGIN_SELECTION = process.env.ORIGIN_SELECTION || '';
           const fs = require('fs');
+
+          /**
+           * Build the full Chimera URL with optional originSelection query param
+           * Preserves any existing query parameters in the base URL (e.g., debug=true)
+           * @param {string} baseUrl - Base Chimera URL (may include query params)
+           * @param {string} originSelection - Comma-delimited origin selection (empty to omit)
+           * @returns {string} - Full URL with all query params preserved
+           */
+          function buildChimeraUrl(baseUrl, originSelection) {
+            const url = new URL(baseUrl);
+            if (originSelection) {
+              url.searchParams.set('originSelection', originSelection);
+            }
+            return url.toString();
+          }
 
           /**
            * Rolling hash function matching the original implementation
@@ -202,8 +219,9 @@ jobs:
               // Generate snapshot timestamp once for the entire run (ISO-8601 format)
               const snapshotTs = new Date().toISOString();
               console.log(`Snapshot timestamp: ${snapshotTs}`);
-              console.log(`Fetching from: ${CHIMERA_URL}`);
-              const response = await fetch(CHIMERA_URL);
+              const fetchUrl = buildChimeraUrl(CHIMERA_URL, ORIGIN_SELECTION);
+              console.log(`Fetching from: ${fetchUrl}`);
+              const response = await fetch(fetchUrl);
 
               if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -332,6 +350,8 @@ jobs:
 
       - name: Summary
         if: always() && steps.should-run.outputs.should_run == 'true'
+        env:
+          ORIGIN_SELECTION: ${{ vars.ORIGIN_SELECTION }}
         run: |
           echo "## Chimera Collection Fetch - ${{ matrix.env_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -339,6 +359,11 @@ jobs:
             echo "| Status | Details |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|---------|" >> $GITHUB_STEP_SUMMARY
             echo "| Environment | ${{ matrix.env_name }} |" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$ORIGIN_SELECTION" ]; then
+              echo "| Origin Selection | \`$ORIGIN_SELECTION\` |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Origin Selection | _(none - fetching without origin selection)_ |" >> $GITHUB_STEP_SUMMARY
+            fi
             echo "| Cards (by ID) | ${{ steps.fetch.outputs.card_count }} |" >> $GITHUB_STEP_SUMMARY
             echo "| URLs (by URL) | ${{ steps.fetch.outputs.url_count }} |" >> $GITHUB_STEP_SUMMARY
             echo "| Output Files | ${{ steps.fetch.outputs.filename_by_id }}, ${{ steps.fetch.outputs.filename_by_url }} |" >> $GITHUB_STEP_SUMMARY

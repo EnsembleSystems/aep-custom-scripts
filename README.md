@@ -245,16 +245,17 @@ Automated workflow that fetches card data from the Chimera API and uploads to SF
 
 **Required Repository Configuration:**
 
-| Type     | Name                | Description                             |
-| -------- | ------------------- | --------------------------------------- |
-| Variable | `CHIMERA_URL_DEV`   | Chimera API URL for dev environment     |
-| Variable | `CHIMERA_URL_STAGE` | Chimera API URL for stage environment   |
-| Variable | `CHIMERA_URL_PROD`  | Chimera API URL for prod environment    |
-| Variable | `SFTP_HOST`         | SFTP server hostname                    |
-| Variable | `SFTP_PORT`         | SFTP server port (default: 22)          |
-| Variable | `SFTP_USER`         | SFTP username                           |
-| Variable | `SFTP_PATH`         | Remote directory path (default: .)      |
-| Secret   | `SFTP_PRIVATE_KEY`  | SSH private key for SFTP authentication |
+| Type     | Name                | Description                                                                                              |
+| -------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Variable | `CHIMERA_URL_DEV`   | Chimera API URL for dev environment                                                                      |
+| Variable | `CHIMERA_URL_STAGE` | Chimera API URL for stage environment                                                                    |
+| Variable | `CHIMERA_URL_PROD`  | Chimera API URL for prod environment                                                                     |
+| Variable | `ORIGIN_SELECTION`  | Comma-delimited origin filter (e.g., `bacom,experienceleague,news,da-dx-partners`). Leave empty to omit. |
+| Variable | `SFTP_HOST`         | SFTP server hostname                                                                                     |
+| Variable | `SFTP_PORT`         | SFTP server port (default: 22)                                                                           |
+| Variable | `SFTP_USER`         | SFTP username                                                                                            |
+| Variable | `SFTP_PATH`         | Remote directory path (default: .)                                                                       |
+| Secret   | `SFTP_PRIVATE_KEY`  | SSH private key for SFTP authentication                                                                  |
 
 ## Script Descriptions
 
