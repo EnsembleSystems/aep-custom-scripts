@@ -209,6 +209,8 @@ aep-custom-scripts/
 
 ### Chimera Collection to SFTP
 
+**Diagram**: ![](./images/UPP-AEP%20-%20Frame%201.jpg)
+
 **Workflow:** [.github/workflows/fetch-chimera-sftp.yml](.github/workflows/fetch-chimera-sftp.yml)
 
 Automated workflow that fetches card data from the Chimera API and uploads to SFTP for AEP ingestion.
