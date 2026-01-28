@@ -26,9 +26,10 @@ import {
   createElementMatcher,
   extractStructuredAttribute,
 } from '../utils/dom';
+import { getStorageItem } from '../utils/storage';
 import logEventInfo, { shouldProcessEventType } from '../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
-import type { PartnerCardCtx, CheckoutData } from '../types';
+import type { PartnerCardCtx, CheckoutData, CartItem } from '../types';
 import { createLogger } from '../utils/logger';
 import { DEFAULT_COOKIE_KEYS } from '../utils/constants';
 
@@ -64,6 +65,29 @@ const CHECKOUT_SELECTORS = {
   CART_ITEM: 'li.product-item',
   PRODUCT_NAME: '.product-item-name',
 } as const;
+
+// Magento cache storage key
+const MAGE_CACHE_STORAGE_KEY = 'mage-cache-storage';
+
+// Type for Magento cache storage cart data
+interface MageCacheCartItem {
+  product_type: string;
+  qty: number;
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  product_url: string;
+  product_price_value: number;
+  [key: string]: unknown;
+}
+
+interface MageCacheStorage {
+  cart?: {
+    items?: MageCacheCartItem[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
 
 /**
  * Type for the content object passed to Launch's before event send callback
@@ -223,28 +247,85 @@ function extractPaymentType(logger: ReturnType<typeof createLogger>): string {
 }
 
 /**
- * Extracts cart items from the minicart in Order Summary
+ * Extracts cart items from Magento's mage-cache-storage in localStorage
  * @param logger - Logger instance
- * @returns Comma-separated string of product names
+ * @returns Array of CartItem objects, or null if not found
  */
-function extractCartItems(logger: ReturnType<typeof createLogger>): string {
-  const itemNames: string[] = [];
+function extractCartItemsFromStorage(logger: ReturnType<typeof createLogger>): CartItem[] | null {
+  const cacheData = getStorageItem<MageCacheStorage>(MAGE_CACHE_STORAGE_KEY);
+
+  if (!cacheData?.cart?.items?.length) {
+    return null;
+  }
+
+  const cartItems: CartItem[] = cacheData.cart.items.map((item) => ({
+    type: item.product_type || '',
+    quantity: item.qty || 0,
+    productID: item.product_id || '',
+    productName: item.product_name || '',
+    SKU: item.product_sku || '',
+    url: item.product_url || '',
+    price: item.product_price_value || 0,
+  }));
+
+  logger.log('Extracted cart items from localStorage', cartItems);
+  return cartItems;
+}
+
+/**
+ * Extracts cart items from DOM (fallback when localStorage is unavailable)
+ * Note: Only product names are available from DOM, other fields will be empty/zero
+ * @param logger - Logger instance
+ * @returns Array of CartItem objects with only productName populated
+ */
+function extractCartItemsFromDOM(logger: ReturnType<typeof createLogger>): CartItem[] {
   const itemElements = document.querySelectorAll(
     `${CHECKOUT_SELECTORS.CART_ITEMS_CONTAINER} ${CHECKOUT_SELECTORS.CART_ITEM}`
   );
 
+  if (!itemElements.length) {
+    logger.log('No cart items found in DOM');
+    return [];
+  }
+
+  const cartItems: CartItem[] = [];
+
   itemElements.forEach((item) => {
     const nameElement = item.querySelector(CHECKOUT_SELECTORS.PRODUCT_NAME);
-    const name = getTextContent(nameElement);
+    const productName = getTextContent(nameElement);
 
-    if (name) {
-      itemNames.push(name);
+    if (productName) {
+      cartItems.push({
+        type: '',
+        quantity: 0,
+        productID: '',
+        productName,
+        SKU: '',
+        url: '',
+        price: 0,
+      });
     }
   });
 
-  const cartItems = itemNames.join(', ');
-  logger.log('Extracted cart items', cartItems);
+  logger.log('Extracted cart items from DOM (fallback)', cartItems);
   return cartItems;
+}
+
+/**
+ * Extracts cart items, trying localStorage first then falling back to DOM
+ * @param logger - Logger instance
+ * @returns Array of CartItem objects matching XDM schema
+ */
+function extractCartItems(logger: ReturnType<typeof createLogger>): CartItem[] {
+  // Try localStorage first (has full data)
+  const storageItems = extractCartItemsFromStorage(logger);
+  if (storageItems) {
+    return storageItems;
+  }
+
+  // Fallback to DOM extraction (limited data - only product names)
+  logger.log('localStorage extraction failed, falling back to DOM');
+  return extractCartItemsFromDOM(logger);
 }
 
 /**
@@ -264,17 +345,17 @@ function extractCheckoutData(
   logger.log('Place Order button clicked, extracting checkout data');
 
   const paymentType = extractPaymentType(logger);
-  const cartItems = extractCartItems(logger);
+  const itemsInCart = extractCartItems(logger);
 
   // Only return checkout data if we have at least payment type or cart items
-  if (!paymentType && !cartItems) {
+  if (!paymentType && !itemsInCart.length) {
     logger.warn('Could not extract checkout data');
     return null;
   }
 
   const checkoutData: CheckoutData = {
     paymentType,
-    cartItems,
+    itemsInCart,
   };
 
   logger.log('Extracted checkout data', checkoutData);

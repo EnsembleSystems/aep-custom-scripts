@@ -29,12 +29,26 @@ export interface PartnerCardCtx {
 }
 
 /**
+ * Cart item data extracted from Magento's mage-cache-storage
+ * Matches XDM schema: _adobepartners.Checkout.itemsInCart[]
+ */
+export interface CartItem {
+  type: string;
+  quantity: number;
+  productID: string;
+  productName: string;
+  SKU: string;
+  url: string;
+  price: number;
+}
+
+/**
  * Checkout data extracted when Place Order is clicked
  * Matches XDM schema: _adobepartners.Checkout
  */
 export interface CheckoutData {
-  cartItems: string;
   paymentType: string;
+  itemsInCart: CartItem[];
 }
 
 // Extend Window interface to include Adobe Partners namespace
