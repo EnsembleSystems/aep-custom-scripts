@@ -28,7 +28,7 @@ import {
 } from '../utils/dom';
 import logEventInfo, { shouldProcessEventType } from '../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
-import type { PartnerCardCtx } from '../types';
+import type { PartnerCardCtx, CheckoutData } from '../types';
 import { createLogger } from '../utils/logger';
 import { DEFAULT_COOKIE_KEYS } from '../utils/constants';
 
@@ -57,6 +57,14 @@ const DAA_LH_INDICES = {
   CONTENT_ID: 2,
 } as const;
 
+// Checkout extraction selectors
+const CHECKOUT_SELECTORS = {
+  PAYMENT_METHOD_RADIO: 'input[name="payment[method]"]:checked',
+  CART_ITEMS_CONTAINER: 'ol.minicart-items',
+  CART_ITEM: 'li.product-item',
+  PRODUCT_NAME: '.product-item-name',
+} as const;
+
 /**
  * Type for the content object passed to Launch's before event send callback
  */
@@ -67,6 +75,7 @@ interface LaunchEventContent {
       partnerData?: unknown;
       cardCollection?: unknown;
       linkClickLabel?: string;
+      Checkout?: CheckoutData;
     };
     [key: string]: unknown;
   };
@@ -167,6 +176,109 @@ export function extractLinkDaaLl(event: PointerEvent | MouseEvent | undefined): 
   const daaLlValue = getAttribute(linkElement, ATTRIBUTES.DAA_LL);
   console.log('[extractLinkDaaLl] daa-ll value:', daaLlValue);
   return daaLlValue;
+}
+
+/**
+ * Checks if the clicked element is the Place Order button
+ * @param event - The click event
+ * @returns true if Place Order button was clicked
+ */
+function isPlaceOrderClick(event: PointerEvent | MouseEvent | undefined): boolean {
+  if (!event) return false;
+
+  const isPlaceOrderButton = createElementMatcher('button', 'action');
+  const button = findInComposedPath(event, isPlaceOrderButton);
+
+  if (!button) return false;
+
+  // Verify it's the checkout button with Place Order text
+  const hasCheckoutClass = button.classList.contains('checkout');
+  const hasPlaceOrderText = button.textContent?.toLowerCase().includes('place order');
+
+  return hasCheckoutClass && !!hasPlaceOrderText;
+}
+
+/**
+ * Extracts the selected payment method title
+ * @param logger - Logger instance
+ * @returns Payment method title string, or empty string if not found
+ */
+function extractPaymentType(logger: ReturnType<typeof createLogger>): string {
+  const checkedRadio = document.querySelector(
+    CHECKOUT_SELECTORS.PAYMENT_METHOD_RADIO
+  ) as HTMLInputElement | null;
+
+  if (!checkedRadio) {
+    logger.log('No payment method selected');
+    return '';
+  }
+
+  // Find the label for this radio button
+  const label = document.querySelector(`label[for="${checkedRadio.id}"]`);
+  const rawPaymentType = getTextContent(label) || checkedRadio.value;
+  const paymentType = rawPaymentType.startsWith('Invoice') ? 'Invoice' : 'Credit Card';
+
+  logger.log('Extracted payment type', paymentType);
+  return paymentType;
+}
+
+/**
+ * Extracts cart items from the minicart in Order Summary
+ * @param logger - Logger instance
+ * @returns Comma-separated string of product names
+ */
+function extractCartItems(logger: ReturnType<typeof createLogger>): string {
+  const itemNames: string[] = [];
+  const itemElements = document.querySelectorAll(
+    `${CHECKOUT_SELECTORS.CART_ITEMS_CONTAINER} ${CHECKOUT_SELECTORS.CART_ITEM}`
+  );
+
+  itemElements.forEach((item) => {
+    const nameElement = item.querySelector(CHECKOUT_SELECTORS.PRODUCT_NAME);
+    const name = getTextContent(nameElement);
+
+    if (name) {
+      itemNames.push(name);
+    }
+  });
+
+  const cartItems = itemNames.join(', ');
+  logger.log('Extracted cart items', cartItems);
+  return cartItems;
+}
+
+/**
+ * Extracts checkout data when Place Order button is clicked
+ * @param event - The click event
+ * @param logger - Logger instance
+ * @returns Checkout data or null if not a Place Order click
+ */
+function extractCheckoutData(
+  event: PointerEvent | MouseEvent | undefined,
+  logger: ReturnType<typeof createLogger>
+): CheckoutData | null {
+  if (!isPlaceOrderClick(event)) {
+    return null;
+  }
+
+  logger.log('Place Order button clicked, extracting checkout data');
+
+  const paymentType = extractPaymentType(logger);
+  const cartItems = extractCartItems(logger);
+
+  // Only return checkout data if we have at least payment type or cart items
+  if (!paymentType && !cartItems) {
+    logger.warn('Could not extract checkout data');
+    return null;
+  }
+
+  const checkoutData: CheckoutData = {
+    paymentType,
+    cartItems,
+  };
+
+  logger.log('Extracted checkout data', checkoutData);
+  return checkoutData;
 }
 
 /**
@@ -335,6 +447,9 @@ export default function customDataCollectionOnBeforeEventSendScript(
         logger.log('Extracted link daa-ll', linkClickLabel);
       }
 
+      // Extract checkout data if Place Order button was clicked
+      const checkout = extractCheckoutData(event, logger);
+
       // Set page name in standard XDM location
       if (pageName) {
         setNestedValue(content, 'xdm.web.webPageDetails.name', pageName, true);
@@ -347,7 +462,8 @@ export default function customDataCollectionOnBeforeEventSendScript(
         mergeNonNull(
           { partnerData: partnerData as Record<string, never> },
           conditionalProperties(cardCollection !== null, { cardCollection }),
-          conditionalProperties(linkClickLabel !== '', { linkClickLabel })
+          conditionalProperties(linkClickLabel !== '', { linkClickLabel }),
+          conditionalProperties(checkout !== null, { Checkout: checkout })
         ),
         true
       );

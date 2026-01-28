@@ -28,6 +28,15 @@ export interface PartnerCardCtx {
   sectionID: string;
 }
 
+/**
+ * Checkout data extracted when Place Order is clicked
+ * Matches XDM schema: _adobepartners.Checkout
+ */
+export interface CheckoutData {
+  cartItems: string;
+  paymentType: string;
+}
+
 // Extend Window interface to include Adobe Partners namespace
 declare global {
   interface Window {
