@@ -3,7 +3,7 @@
  *
  * This script:
  * 1. Uses esbuild to bundle scripts + utilities into single files
- * 2. Adds TEST_MODE constant and direct return statement
+ * 2. Adds TEST_MODE constant (runtime localStorage check) and direct return statement
  * 3. Outputs readable code (AEP handles minification)
  *
  * Key features:
@@ -11,6 +11,7 @@
  * - Clean output: Readable code for easier debugging
  * - Fast: 10-100x faster than webpack-based bundlers
  * - Simple: Direct return pattern for proper Promise handling
+ * - Runtime debug mode: Set localStorage key '__aep_scripts_debug' to 'true' to enable
  */
 
 import * as esbuild from 'esbuild';
@@ -131,13 +132,17 @@ function removeExportStatements(code) {
 
 /**
  * Wraps bundled code with TEST_MODE constant and return statement
+ *
+ * TEST_MODE is determined at runtime by checking localStorage for the
+ * '__aep_scripts_debug' key. This allows developers to toggle debug mode
+ * without rebuilding - just set the key to 'true' in browser DevTools.
+ *
  * @param {string} bundledCode - The bundled JavaScript code
  * @param {string} functionCall - The function call string
- * @param {boolean} testMode - Whether to enable test mode
  * @returns {string} The wrapped code
  */
-function wrapCodeForAEP(bundledCode, functionCall, testMode) {
-  return `const TEST_MODE = ${testMode};
+function wrapCodeForAEP(bundledCode, functionCall) {
+  return `const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true';
 
 ${bundledCode}
 
@@ -184,11 +189,8 @@ async function buildScript(scriptPath) {
     const mainFunctionName = extractMainFunctionName(bundledCode, scriptName);
     const functionCall = determineFunctionCall(bundledCode, mainFunctionName);
 
-    // Get TEST_MODE from environment variable (defaults to false for production)
-    const testMode = process.env.TEST_MODE === 'true' || process.env.TEST_MODE === '1';
-
-    // Wrap code for AEP deployment
-    const wrappedCode = wrapCodeForAEP(bundledCode, functionCall, testMode);
+    // Wrap code for AEP deployment (TEST_MODE is now determined at runtime via localStorage)
+    const wrappedCode = wrapCodeForAEP(bundledCode, functionCall);
 
     // Write the final code (no minification - AEP does this for us)
     writeFileSync(outputPath, wrappedCode, 'utf8');

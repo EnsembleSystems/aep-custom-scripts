@@ -25,7 +25,7 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 - 🎯 **ES2017 Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
 - 🔓 **Direct Promise Returns**: No IIFE wrapper - AEP Launch natively supports ES6+ Promises
 - 📖 **Readable Output**: No minification, clean indentation - AEP handles minification automatically
-- 🧪 **Dual-mode**: Easy browser console testing with TEST_MODE flag
+- 🧪 **Runtime Debug Mode**: Toggle debug output via localStorage - no rebuild needed
 - 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
 - 🚀 **Zero Configuration**: Direct script-to-bundle workflow
 
@@ -37,23 +37,24 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 npm install
 ```
 
-### Environment Variables
+### Debug Mode
 
-This project uses environment variables to control build behavior. Create a `.env` file in the project root (you can copy `.env.example` as a template):
+Debug mode is controlled at **runtime** via localStorage - no rebuild or environment variables needed:
 
-```bash
-cp .env.example .env
+```javascript
+// Enable debug mode in browser DevTools console:
+localStorage.setItem('__aep_scripts_debug', 'true');
+
+// Disable debug mode:
+localStorage.removeItem('__aep_scripts_debug');
 ```
 
-**Available Variables**:
+**Benefits**:
 
-- **`TEST_MODE`** (optional): Controls whether builds include test mode features
-  - Set to `'true'` or `'1'` to enable test mode (adds console output and test wrappers)
-  - Set to `'false'` or leave unset for production builds
-  - Default: `false` (production mode)
-  - Example: `TEST_MODE=true npm run build`
-
-**Note**: The `.env` file is gitignored and will not be committed. Use `.env.example` as a template for your local configuration.
+- Test production-deployed code directly
+- No rebuild or redeployment needed
+- Toggle debug output on any environment
+- Only developers who know the key can enable it
 
 ### Creating a New Script (Streamlined!)
 
@@ -68,7 +69,7 @@ cp src/scripts/templateAsync.ts src/scripts/myScript.ts
 # 2. Edit your script (add your logic)
 
 # 3. Build
-TEST_MODE=false npm run build
+npm run build
 
 # 4. Deploy build/myScript.js to AEP
 ```
@@ -82,7 +83,7 @@ cp src/scripts/templateSync.ts src/scripts/myScript.ts
 # 2. Edit your script (add your logic)
 
 # 3. Build
-TEST_MODE=false npm run build
+npm run build
 
 # 4. Deploy build/myScript.js to AEP
 ```
@@ -101,7 +102,7 @@ This automatically (**using esbuild**):
 2. Bundles each script with all utilities inlined
 3. Transpiles to ES2017 JavaScript (Promises, no `async/await`)
 4. Adds direct return pattern (no IIFE wrapper):
-   - Pattern: `const TEST_MODE = false; ... return scriptName(TEST_MODE);`
+   - Pattern: `const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true'; ... return scriptName(TEST_MODE);`
    - Scripts with async operations return Promises via `.then()` chains
    - AEP Launch natively awaits returned Promises (ES6+ support)
    - Clean indentation - code starts at column 0
@@ -471,23 +472,32 @@ if (!shouldProcess) {
 
 ## Browser Console Testing
 
-For testing scripts in the browser console before deploying to AEP:
+Debug mode is controlled at runtime via localStorage - no rebuild needed:
 
-### Quick Test Mode
+### Enable Debug Mode
 
-1. Build with test mode enabled:
+1. **Enable debug mode** in browser DevTools console:
 
-   ```bash
-   TEST_MODE=true npm run build
+   ```javascript
+   localStorage.setItem('__aep_scripts_debug', 'true');
    ```
 
-2. Open the bundled file from `build/<script>.js`
+2. Reload the page or trigger the script
 
-3. Copy entire file contents
+3. Check console for `[Script Name Test]` output with formatted results
 
-4. Paste into browser console and press Enter (the IIFE executes automatically)
+4. **Disable debug mode** when done:
 
-5. Check console for `[Script Name Test]` output with formatted results
+   ```javascript
+   localStorage.removeItem('__aep_scripts_debug');
+   ```
+
+**Benefits**:
+
+- Test production-deployed code directly
+- No rebuild or redeployment needed
+- Toggle debug output on any environment
+- Only developers who know the key can enable it
 
 **Example Output**:
 
@@ -515,8 +525,8 @@ When you make changes to the TypeScript source:
 
 ```bash
 # 1. Make your changes in src/
-# 2. Build the bundled scripts (IMPORTANT: Set TEST_MODE=false for production!)
-TEST_MODE=false npm run build
+# 2. Build the bundled scripts
+npm run build
 
 # 3. Commit both source and built files
 git add src/ build/*.js
@@ -527,7 +537,7 @@ git push
 **Important**:
 
 - Built files (`build/*.js`) are committed to the repository so teammates always have access to the latest scripts
-- Always use `TEST_MODE=false` for production builds to ensure debug mode is disabled
+- Debug mode is controlled at runtime via localStorage (`__aep_scripts_debug`) - no build flags needed
 - Output files are readable (not minified) - AEP applies minification when you save them
 
 ### For Teammates: Getting Latest Scripts
@@ -550,7 +560,7 @@ git pull
 
 ```bash
 npm install
-TEST_MODE=false npm run build
+npm run build
 # Files generated in build/*.js
 ```
 
@@ -573,7 +583,7 @@ For major versions or production deployments:
 
 ```bash
 # 1. Build and test
-TEST_MODE=false npm run build
+npm run build
 
 # 2. Commit changes
 git add .
@@ -618,7 +628,7 @@ Teammates can then download from the [Releases](../../releases) page for stable,
 
 3. **Build**:
    ```bash
-   TEST_MODE=false npm run build
+   npm run build
    ```
 
 That's it! The esbuild system:
@@ -722,9 +732,10 @@ The build process with **esbuild** produces AEP-compatible code:
 - ✅ **ES2017 output**: Promises with `.then()` chains (no `async/await` keywords)
 - ✅ **Readable code**: Full variable names and formatting for easier debugging
 - ✅ **Direct Promise returns**: No IIFE wrapper needed
-  - Pattern: `const TEST_MODE = false; ... return scriptName(TEST_MODE);`
+  - Pattern: `const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true'; ... return scriptName(TEST_MODE);`
   - Scripts with async operations return Promises via `.then()` chains
   - AEP Launch natively awaits returned Promises
+- ✅ **Runtime debug mode**: Toggle via localStorage - no rebuild needed
 - ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
 - ✅ **Tree-shaking**: Dead code elimination
 
