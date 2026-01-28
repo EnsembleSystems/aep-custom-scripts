@@ -1,4 +1,4 @@
-const TEST_MODE = false;
+const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true';
 
 // src/utils/logger.ts
 var Logger = class {
