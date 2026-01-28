@@ -538,12 +538,17 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       if (!shouldProcessEventType((_a = content.xdm) == null ? void 0 : _a.eventType, ["web.webpagedetails.pageViews"], logger)) {
         return content;
       }
+      const pageName = document.title;
+      logger.log("Extracted page name", pageName);
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log("Extracted partner data from cookie", partnerData);
       const cardCollection = extractCardCollectionFromEvent(event, logger);
       const linkClickLabel = extractLinkDaaLl(event);
       if (linkClickLabel) {
         logger.log("Extracted link daa-ll", linkClickLabel);
+      }
+      if (pageName) {
+        setNestedValue(content, "xdm.web.webPageDetails.name", pageName, true);
       }
       setNestedValue(
         content,
