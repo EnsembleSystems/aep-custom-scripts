@@ -318,6 +318,10 @@ export default function customDataCollectionOnBeforeEventSendScript(
         return content;
       }
 
+      // Extract page name (page title)
+      const pageName = document.title;
+      logger.log('Extracted page name', pageName);
+
       // Extract partner data from cookies
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log('Extracted partner data from cookie', partnerData);
@@ -329,6 +333,11 @@ export default function customDataCollectionOnBeforeEventSendScript(
       const linkClickLabel = extractLinkDaaLl(event);
       if (linkClickLabel) {
         logger.log('Extracted link daa-ll', linkClickLabel);
+      }
+
+      // Set page name in standard XDM location
+      if (pageName) {
+        setNestedValue(content, 'xdm.web.webPageDetails.name', pageName, true);
       }
 
       // Set partner data in _adobepartners using nested object utilities
