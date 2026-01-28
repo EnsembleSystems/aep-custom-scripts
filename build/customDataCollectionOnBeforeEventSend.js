@@ -416,6 +416,7 @@ var CHECKOUT_SELECTORS = {
   CART_ITEM: "li.product-item",
   PRODUCT_NAME: ".product-item-name"
 };
+var MAGE_CACHE_STORAGE_KEY2 = "mage-cache-storage";
 var isPartnerCard = createElementMatcher(CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME);
 var isCardWrapper = createElementMatcher(void 0, WRAPPER_CLASS);
 function extractWrapperContext(wrapper, logger) {
@@ -491,21 +492,58 @@ function extractPaymentType(logger) {
   logger.log("Extracted payment type", paymentType);
   return paymentType;
 }
-function extractCartItems(logger) {
-  const itemNames = [];
+function extractCartItemsFromStorage(logger) {
+  var _a, _b;
+  const cacheData = getStorageItem(MAGE_CACHE_STORAGE_KEY2);
+  if (!((_b = (_a = cacheData == null ? void 0 : cacheData.cart) == null ? void 0 : _a.items) == null ? void 0 : _b.length)) {
+    return null;
+  }
+  const cartItems = cacheData.cart.items.map((item) => ({
+    type: item.product_type || "",
+    quantity: item.qty || 0,
+    productID: item.product_id || "",
+    productName: item.product_name || "",
+    SKU: item.product_sku || "",
+    url: item.product_url || "",
+    price: item.product_price_value || 0
+  }));
+  logger.log("Extracted cart items from localStorage", cartItems);
+  return cartItems;
+}
+function extractCartItemsFromDOM(logger) {
   const itemElements = document.querySelectorAll(
     `${CHECKOUT_SELECTORS.CART_ITEMS_CONTAINER} ${CHECKOUT_SELECTORS.CART_ITEM}`
   );
+  if (!itemElements.length) {
+    logger.log("No cart items found in DOM");
+    return [];
+  }
+  const cartItems = [];
   itemElements.forEach((item) => {
     const nameElement = item.querySelector(CHECKOUT_SELECTORS.PRODUCT_NAME);
-    const name = getTextContent(nameElement);
-    if (name) {
-      itemNames.push(name);
+    const productName = getTextContent(nameElement);
+    if (productName) {
+      cartItems.push({
+        type: "",
+        quantity: 0,
+        productID: "",
+        productName,
+        SKU: "",
+        url: "",
+        price: 0
+      });
     }
   });
-  const cartItems = itemNames.join(", ");
-  logger.log("Extracted cart items", cartItems);
+  logger.log("Extracted cart items from DOM (fallback)", cartItems);
   return cartItems;
+}
+function extractCartItems(logger) {
+  const storageItems = extractCartItemsFromStorage(logger);
+  if (storageItems) {
+    return storageItems;
+  }
+  logger.log("localStorage extraction failed, falling back to DOM");
+  return extractCartItemsFromDOM(logger);
 }
 function extractCheckoutData(event, logger) {
   if (!isPlaceOrderClick(event)) {
@@ -513,14 +551,14 @@ function extractCheckoutData(event, logger) {
   }
   logger.log("Place Order button clicked, extracting checkout data");
   const paymentType = extractPaymentType(logger);
-  const cartItems = extractCartItems(logger);
-  if (!paymentType && !cartItems) {
+  const itemsInCart = extractCartItems(logger);
+  if (!paymentType && !itemsInCart.length) {
     logger.warn("Could not extract checkout data");
     return null;
   }
   const checkoutData = {
     paymentType,
-    cartItems
+    itemsInCart
   };
   logger.log("Extracted checkout data", checkoutData);
   return checkoutData;
