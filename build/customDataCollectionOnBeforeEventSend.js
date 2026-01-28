@@ -410,6 +410,12 @@ var DAA_LH_INDICES = {
   POSITION: 0,
   CONTENT_ID: 2
 };
+var CHECKOUT_SELECTORS = {
+  PAYMENT_METHOD_RADIO: 'input[name="payment[method]"]:checked',
+  CART_ITEMS_CONTAINER: "ol.minicart-items",
+  CART_ITEM: "li.product-item",
+  PRODUCT_NAME: ".product-item-name"
+};
 var isPartnerCard = createElementMatcher(CARD_TYPES.TAG_NAME, CARD_TYPES.CLASS_NAME);
 var isCardWrapper = createElementMatcher(void 0, WRAPPER_CLASS);
 function extractWrapperContext(wrapper, logger) {
@@ -460,6 +466,64 @@ function extractLinkDaaLl(event) {
   const daaLlValue = getAttribute(linkElement, ATTRIBUTES.DAA_LL);
   console.log("[extractLinkDaaLl] daa-ll value:", daaLlValue);
   return daaLlValue;
+}
+function isPlaceOrderClick(event) {
+  var _a;
+  if (!event) return false;
+  const isPlaceOrderButton = createElementMatcher("button", "action");
+  const button = findInComposedPath(event, isPlaceOrderButton);
+  if (!button) return false;
+  const hasCheckoutClass = button.classList.contains("checkout");
+  const hasPlaceOrderText = (_a = button.textContent) == null ? void 0 : _a.toLowerCase().includes("place order");
+  return hasCheckoutClass && !!hasPlaceOrderText;
+}
+function extractPaymentType(logger) {
+  const checkedRadio = document.querySelector(
+    CHECKOUT_SELECTORS.PAYMENT_METHOD_RADIO
+  );
+  if (!checkedRadio) {
+    logger.log("No payment method selected");
+    return "";
+  }
+  const label = document.querySelector(`label[for="${checkedRadio.id}"]`);
+  const rawPaymentType = getTextContent(label) || checkedRadio.value;
+  const paymentType = rawPaymentType.startsWith("Invoice") ? "Invoice" : "Credit Card";
+  logger.log("Extracted payment type", paymentType);
+  return paymentType;
+}
+function extractCartItems(logger) {
+  const itemNames = [];
+  const itemElements = document.querySelectorAll(
+    `${CHECKOUT_SELECTORS.CART_ITEMS_CONTAINER} ${CHECKOUT_SELECTORS.CART_ITEM}`
+  );
+  itemElements.forEach((item) => {
+    const nameElement = item.querySelector(CHECKOUT_SELECTORS.PRODUCT_NAME);
+    const name = getTextContent(nameElement);
+    if (name) {
+      itemNames.push(name);
+    }
+  });
+  const cartItems = itemNames.join(", ");
+  logger.log("Extracted cart items", cartItems);
+  return cartItems;
+}
+function extractCheckoutData(event, logger) {
+  if (!isPlaceOrderClick(event)) {
+    return null;
+  }
+  logger.log("Place Order button clicked, extracting checkout data");
+  const paymentType = extractPaymentType(logger);
+  const cartItems = extractCartItems(logger);
+  if (!paymentType && !cartItems) {
+    logger.warn("Could not extract checkout data");
+    return null;
+  }
+  const checkoutData = {
+    paymentType,
+    cartItems
+  };
+  logger.log("Extracted checkout data", checkoutData);
+  return checkoutData;
 }
 function extractCardCtxFromElement(cardElement, sectionID, filterContext, logger) {
   if (!cardElement) {
@@ -547,6 +611,7 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       if (linkClickLabel) {
         logger.log("Extracted link daa-ll", linkClickLabel);
       }
+      const checkout = extractCheckoutData(event, logger);
       if (pageName) {
         setNestedValue(content, "xdm.web.webPageDetails.name", pageName, true);
       }
@@ -556,7 +621,8 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
         mergeNonNull(
           { partnerData },
           conditionalProperties(cardCollection !== null, { cardCollection }),
-          conditionalProperties(linkClickLabel !== "", { linkClickLabel })
+          conditionalProperties(linkClickLabel !== "", { linkClickLabel }),
+          conditionalProperties(checkout !== null, { Checkout: checkout })
         ),
         true
       );
