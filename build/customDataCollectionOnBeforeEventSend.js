@@ -455,17 +455,17 @@ function extractCtaText(cardElement) {
   const firstLink = queryShadow(cardElement, SELECTORS.FIRST_LINK);
   return getAttribute(firstLink, ATTRIBUTES.DAA_LL);
 }
-function extractLinkDaaLl(event) {
-  console.log("[extractLinkDaaLl] Called with event:", event);
+function extractLinkDaaLl(event, logger) {
+  logger.log("extractLinkDaaLl called with event", event);
   if (!event) {
-    console.log("[extractLinkDaaLl] No event provided, returning empty string");
+    logger.log("No event provided, returning empty string");
     return "";
   }
   const isLink = createElementMatcher("a");
   const linkElement = findInComposedPath(event, isLink);
-  console.log("[extractLinkDaaLl] Found link element:", linkElement);
+  logger.log("Found link element", linkElement);
   const daaLlValue = getAttribute(linkElement, ATTRIBUTES.DAA_LL);
-  console.log("[extractLinkDaaLl] daa-ll value:", daaLlValue);
+  logger.log("daa-ll value", daaLlValue);
   return daaLlValue;
 }
 function isPlaceOrderClick(event) {
@@ -645,7 +645,7 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log("Extracted partner data from cookie", partnerData);
       const cardCollection = extractCardCollectionFromEvent(event, logger);
-      const linkClickLabel = extractLinkDaaLl(event);
+      const linkClickLabel = extractLinkDaaLl(event, logger);
       if (linkClickLabel) {
         logger.log("Extracted link daa-ll", linkClickLabel);
       }
