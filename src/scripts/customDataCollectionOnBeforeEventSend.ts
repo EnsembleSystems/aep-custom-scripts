@@ -188,17 +188,20 @@ function extractCtaText(cardElement: Element): string {
  * @param event - The click event
  * @returns daa-ll attribute value from the clicked link, or empty string if not found
  */
-export function extractLinkDaaLl(event: PointerEvent | MouseEvent | undefined): string {
-  console.log('[extractLinkDaaLl] Called with event:', event);
+export function extractLinkDaaLl(
+  event: PointerEvent | MouseEvent | undefined,
+  logger: ReturnType<typeof createLogger>
+): string {
+  logger.log('extractLinkDaaLl called with event', event);
   if (!event) {
-    console.log('[extractLinkDaaLl] No event provided, returning empty string');
+    logger.log('No event provided, returning empty string');
     return '';
   }
   const isLink = createElementMatcher('a');
   const linkElement = findInComposedPath(event, isLink);
-  console.log('[extractLinkDaaLl] Found link element:', linkElement);
+  logger.log('Found link element', linkElement);
   const daaLlValue = getAttribute(linkElement, ATTRIBUTES.DAA_LL);
-  console.log('[extractLinkDaaLl] daa-ll value:', daaLlValue);
+  logger.log('daa-ll value', daaLlValue);
   return daaLlValue;
 }
 
@@ -523,7 +526,7 @@ export default function customDataCollectionOnBeforeEventSendScript(
       const cardCollection = extractCardCollectionFromEvent(event, logger);
 
       // Extract daa-ll from any clicked link
-      const linkClickLabel = extractLinkDaaLl(event);
+      const linkClickLabel = extractLinkDaaLl(event, logger);
       if (linkClickLabel) {
         logger.log('Extracted link daa-ll', linkClickLabel);
       }
