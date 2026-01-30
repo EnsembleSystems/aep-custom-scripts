@@ -263,12 +263,12 @@ function extractCartItemsFromStorage(logger: ReturnType<typeof createLogger>): C
 
   const cartItems: CartItem[] = cacheData.cart.items.map((item) => ({
     type: item.product_type || '',
-    quantity: item.qty || 0,
+    quantity: Number(item.qty) || 0,
     productID: item.product_id || '',
     productName: item.product_name || '',
     SKU: item.product_sku || '',
     url: item.product_url || '',
-    price: item.product_price_value || 0,
+    price: Number(item.product_price_value) || 0,
   }));
 
   logger.log('Extracted cart items from localStorage', cartItems);
