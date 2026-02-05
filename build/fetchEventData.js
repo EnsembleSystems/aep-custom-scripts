@@ -241,8 +241,9 @@ function transformEventData(data, logger) {
   const dates = extractDates((_a = rawData.dates) != null ? _a : []);
   logger.log("Extracted dates (`yyyy-MM-dd` format):", dates);
   const transformedData = mergeWithTransforms(rawData, [
-    { source: "dates", target: "dates", transform: () => dates }
+    { source: "dates", target: "date", transform: () => dates }
   ]);
+  delete transformedData.dates;
   logger.log("Transformed data", transformedData);
   return transformedData;
 }
