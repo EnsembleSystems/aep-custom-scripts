@@ -137,31 +137,106 @@ function transformCard(card) {
 }
 
 /**
- * Convert JS array to Java ArrayList
+ * Convert Java Map card to JS object
  */
-function toArrayList(arr) {
-  var list = new ArrayList();
-  for (var ai = 0; ai < arr.length; ai++) {
-    list.add(arr[ai]);
+function cardToObject(card) {
+  return {
+    id: card.get('id'),
+    tags: card.get('tags'),
+    ctaLink: card.get('ctaLink'),
+    overlayLink: card.get('overlayLink'),
+    footer: card.get('footer'),
+  };
+}
+
+/**
+ * Build XDM record from transformed card
+ */
+function buildXdmRecord(transformed, snapshotTs) {
+  return {
+    _id: transformed.id,
+    _adobepartners: {
+      caasCard: {
+        id: transformed.id,
+        ctahrefs: transformed.ctaHrefs,
+        tags: transformed.tags,
+        snapshot_ts: snapshotTs,
+      },
+    },
+  };
+}
+
+/**
+ * Extract cards from a single response document
+ * Returns array of cards or null if response is invalid
+ */
+function getCardsFromResponse(response, responseIndex, log) {
+  if (!response) {
+    log.warn('Null response at index ' + responseIndex);
+    return null;
   }
-  return list;
+
+  var entity = response.get('entity');
+  if (!entity) {
+    log.warn('No entity found in response ' + responseIndex);
+    return null;
+  }
+
+  var cards = entity.get('cards');
+  if (!cards) {
+    log.warn('No cards array found in response ' + responseIndex);
+    return null;
+  }
+
+  return cards;
+}
+
+/**
+ * Process cards from a single response and add to accumulator
+ * @param {Object} response - Single response document from Union
+ * @param {number} responseIndex - Index for logging
+ * @param {Array} seenIds - Array of already seen card IDs (mutated)
+ * @param {Array} xdmRecords - Array of XDM records to output (mutated)
+ * @param {string} snapshotTs - Timestamp for records
+ * @param {Object} log - Logger
+ * @returns {number} - Number of duplicates skipped
+ */
+function processResponse(response, responseIndex, seenIds, xdmRecords, snapshotTs, log) {
+  var cards = getCardsFromResponse(response, responseIndex, log);
+  if (!cards) return 0;
+
+  var cardCount = cards.size();
+  log.info('Response ' + responseIndex + ': Processing ' + cardCount + ' cards');
+
+  var duplicateCount = 0;
+  for (var ci = 0; ci < cardCount; ci++) {
+    var rawCard = cards.get(ci);
+    if (!rawCard) {
+      log.warn('Null card at index ' + ci);
+      continue;
+    }
+    var cardObj = cardToObject(rawCard);
+    var transformed = transformCard(cardObj);
+
+    // Dedupe by hashed ID
+    if (arrayContains(seenIds, transformed.id)) {
+      duplicateCount++;
+      continue;
+    }
+    seenIds.push(transformed.id);
+
+    xdmRecords.push(buildXdmRecord(transformed, snapshotTs));
+  }
+
+  return duplicateCount;
 }
 
 /**
  * Create an object that implements the methods defined by the "ScriptHook" interface.
  *
- * OUTPUT: One XDM record per card (ID-based)
- * {
- *   "_id": "<hashed-card-id>",
- *   "_adobepartners": {
- *     "caasCard": {
- *       "id": "<hashed-card-id>",
- *       "ctahrefs": ["url1", "url2"],
- *       "tags": ["tag1", "tag2"],
- *       "snapshot_ts": "2026-02-03T..."
- *     }
- *   }
- * }
+ * OUTPUT: Single NDJSON string containing one XDM record per line (deduplicated by card ID)
+ * Each line:
+ * {"_id":"<hashed-card-id>","_adobepartners":{"caasCard":{"id":"<hashed-card-id>","ctahrefs":["url1","url2"],"tags":["tag1","tag2"],"snapshot_ts":"2026-02-03T..."}}}
  */
 var impl = {
   input: input,
@@ -173,82 +248,58 @@ var impl = {
     var self = this;
     self.log.info('Executing Chimera Cards Transform Script (BY ID)');
 
-    // Generate snapshot timestamp once for the entire run
     var snapshotTs = formatISODate(new Date());
     self.log.info('Snapshot timestamp: ' + snapshotTs);
 
+    // Accumulators for all responses from Union
+    var seenIds = [];
+    var xdmRecords = [];
+    var totalDuplicates = 0;
+    var responseIndex = 0;
+
+    // Process each response document from Union (one at a time)
     while (self.input.hasNext()) {
       try {
         var inDoc = self.input.next();
-
-        // SnapLogic HTTP GET wraps response in statusLine/entity/headers structure
-        // Cards are in entity.cards from Chimera API response
-        var entity = inDoc.get('entity');
-        if (!entity) {
-          self.log.warn('No entity found in HTTP response');
-          var noEntityErr = new LinkedHashMap();
-          noEntityErr.put('error', 'No entity found in HTTP response');
-          noEntityErr.put('original', inDoc);
-          self.error.write(noEntityErr);
-          continue;
-        }
-
-        var cards = entity.get('cards');
-        if (!cards) {
-          self.log.warn('No cards array found in entity');
-          var noCardsErr = new LinkedHashMap();
-          noCardsErr.put('error', 'No cards array found in entity');
-          noCardsErr.put('original', inDoc);
-          self.error.write(noCardsErr);
-          continue;
-        }
-
-        self.log.info('Processing ' + cards.size() + ' cards');
-        var processedCount = 0;
-
-        // Process each card
-        for (var ci = 0; ci < cards.size(); ci++) {
-          var card = cards.get(ci);
-
-          // Convert Java Map to JS object for easier access
-          var cardObj = {
-            id: card.get('id'),
-            tags: card.get('tags'),
-            ctaLink: card.get('ctaLink'),
-            overlayLink: card.get('overlayLink'),
-            footer: card.get('footer'),
-          };
-
-          // Transform the card
-          var transformed = transformCard(cardObj);
-
-          // Build XDM record
-          var xdmRecord = new LinkedHashMap();
-          xdmRecord.put('_id', transformed.id);
-
-          var caasCard = new LinkedHashMap();
-          caasCard.put('id', transformed.id);
-          caasCard.put('ctahrefs', toArrayList(transformed.ctaHrefs));
-          caasCard.put('tags', toArrayList(transformed.tags));
-          caasCard.put('snapshot_ts', snapshotTs);
-
-          var adobepartners = new LinkedHashMap();
-          adobepartners.put('caasCard', caasCard);
-
-          xdmRecord.put('_adobepartners', adobepartners);
-
-          self.output.write(inDoc, xdmRecord);
-          processedCount++;
-        }
-
-        self.log.info('Successfully processed ' + processedCount + ' cards');
+        var duplicates = processResponse(
+          inDoc,
+          responseIndex,
+          seenIds,
+          xdmRecords,
+          snapshotTs,
+          self.log
+        );
+        totalDuplicates += duplicates;
+        responseIndex++;
       } catch (err) {
         var catchErr = new LinkedHashMap();
         catchErr.put('error', String(err));
-        self.log.error('Error processing cards: ' + err);
+        self.log.error('Error processing response ' + responseIndex + ': ' + err);
         self.error.write(catchErr);
       }
     }
+
+    // Output aggregated results after processing all responses
+    if (totalDuplicates > 0) {
+      self.log.info('Skipped ' + totalDuplicates + ' duplicate card ID(s) across all responses');
+    }
+
+    // Output each record as a separate document for downstream JSON Formatter
+    self.log.info(
+      'Outputting ' +
+        xdmRecords.length +
+        ' unique card records from ' +
+        responseIndex +
+        ' response(s)'
+    );
+    for (var ri = 0; ri < xdmRecords.length; ri++) {
+      self.output.write(xdmRecords[ri]);
+    }
+
+    if (xdmRecords.length === 0) {
+      self.log.warn('No records to output');
+    }
+
     self.log.info('Script executed');
   },
 
