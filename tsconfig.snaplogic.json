@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES5",
+    "lib": ["ES5"],
+    "rootDir": "./src",
+    "outDir": "./dist-snaplogic",
+    "downlevelIteration": true
+  },
+  "include": ["src/snaplogic/**/*", "src/utils/hash.ts"],
+  "exclude": ["node_modules", "dist", "build", "build-snaplogic"]
+}

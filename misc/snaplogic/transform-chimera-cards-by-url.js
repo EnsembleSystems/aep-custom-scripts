@@ -157,6 +157,17 @@ function cardToObject(card) {
 }
 
 /**
+ * Convert JS array to Java ArrayList for proper JSON serialization
+ */
+function toArrayList(jsArray) {
+  var arrayList = new ArrayList();
+  for (var i = 0; i < jsArray.length; i++) {
+    arrayList.add(jsArray[i]);
+  }
+  return arrayList;
+}
+
+/**
  * Build XDM record for URL-based output
  */
 function buildUrlXdmRecord(url, cardId, tags, snapshotTs) {
@@ -165,7 +176,7 @@ function buildUrlXdmRecord(url, cardId, tags, snapshotTs) {
     _adobepartners: {
       caasCard: {
         id: cardId,
-        tags: tags,
+        tags: toArrayList(tags),
         snapshot_ts: snapshotTs,
       },
     },

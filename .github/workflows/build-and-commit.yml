@@ -8,6 +8,7 @@ on:
     # Don't trigger on changes to build files to avoid infinite loops
     paths-ignore:
       - "build/**"
+      - "build-snaplogic/**"
   workflow_dispatch: # Allow manual triggering
 
 jobs:
@@ -53,7 +54,7 @@ jobs:
           fi
 
       - name: Build project
-        run: npm run build
+        run: npm run build:all
 
       - name: Configure Git
         run: |
@@ -63,7 +64,7 @@ jobs:
       - name: Check for changes
         id: check-changes
         run: |
-          if git diff --quiet build/; then
+          if git diff --quiet build/ build-snaplogic/; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -73,7 +74,7 @@ jobs:
         if: steps.check-changes.outputs.has_changes == 'true'
         run: |
           # Force add build files (overwrites any conflicts)
-          git add -f build/*.js
+          git add -f build/*.js build-snaplogic/*.js
           # Commit with --no-verify to skip hooks (since we're in CI)
           git commit -m "chore: rebuild bundled scripts [skip ci]" --no-verify || exit 0
           # Force push to overwrite any remote changes

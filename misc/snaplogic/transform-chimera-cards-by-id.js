@@ -150,6 +150,17 @@ function cardToObject(card) {
 }
 
 /**
+ * Convert JS array to Java ArrayList for proper JSON serialization
+ */
+function toArrayList(jsArray) {
+  var arrayList = new ArrayList();
+  for (var i = 0; i < jsArray.length; i++) {
+    arrayList.add(jsArray[i]);
+  }
+  return arrayList;
+}
+
+/**
  * Build XDM record from transformed card
  */
 function buildXdmRecord(transformed, snapshotTs) {
@@ -158,8 +169,8 @@ function buildXdmRecord(transformed, snapshotTs) {
     _adobepartners: {
       caasCard: {
         id: transformed.id,
-        ctahrefs: transformed.ctaHrefs,
-        tags: transformed.tags,
+        ctahrefs: toArrayList(transformed.ctaHrefs),
+        tags: toArrayList(transformed.tags),
         snapshot_ts: snapshotTs,
       },
     },

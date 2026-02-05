@@ -164,5 +164,12 @@ module.exports = {
       },
     },
   },
-  ignorePatterns: ['dist/', 'build/', 'node_modules/', '*.min.js', 'dataCollecdtionExt-backup.js'],
+  ignorePatterns: [
+    'dist/',
+    'build/',
+    'build-snaplogic/',
+    'node_modules/',
+    '*.min.js',
+    'dataCollecdtionExt-backup.js',
+  ],
 };
