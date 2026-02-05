@@ -97,6 +97,65 @@ module.exports = {
         'import/prefer-default-export': 'off',
       },
     },
+    {
+      // SnapLogic scripts use ES5 syntax for JDK 7/8 Rhino/Nashorn compatibility
+      // Globals: input, output, error, log (from ScriptHook), plus Java/Nashorn builtins
+      files: ['misc/snaplogic/**/*.js'],
+      parser: 'espree',
+      parserOptions: {
+        ecmaVersion: 5,
+        sourceType: 'script',
+      },
+      env: {
+        browser: false,
+        es6: false,
+      },
+      globals: {
+        // SnapLogic ScriptHook globals
+        input: 'readonly',
+        output: 'readonly',
+        error: 'readonly',
+        log: 'readonly',
+        // Nashorn/Rhino globals
+        load: 'readonly',
+        importPackage: 'readonly',
+        importClass: 'readonly',
+        com: 'readonly',
+        java: 'readonly',
+        ArrayList: 'readonly',
+        LinkedHashMap: 'readonly',
+      },
+      rules: {
+        // Disable ES6+ rules (ES5 required for JDK 7/8)
+        'no-var': 'off',
+        'vars-on-top': 'off',
+        'no-plusplus': 'off',
+        'no-restricted-syntax': 'off',
+        'prefer-template': 'off',
+        'prefer-arrow-callback': 'off',
+        'func-names': 'off',
+        'object-shorthand': 'off',
+        'prefer-destructuring': 'off',
+        'prefer-exponentiation-operator': 'off',
+        'no-restricted-properties': 'off',
+        // Disable other rules not applicable to SnapLogic scripts
+        'no-param-reassign': 'off',
+        'no-console': 'off',
+        'no-use-before-define': 'off',
+        'consistent-return': 'off',
+        'no-continue': 'off',
+        'no-empty': 'off',
+        // Disable TypeScript rules
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
+        '@typescript-eslint/no-this-alias': 'off',
+        // Disable import rules
+        'import/no-unresolved': 'off',
+        'import/extensions': 'off',
+        // Disable prettier (different formatting for ES5)
+        'prettier/prettier': 'off',
+      },
+    },
   ],
   settings: {
     'import/resolver': {

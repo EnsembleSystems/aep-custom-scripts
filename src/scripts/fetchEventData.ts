@@ -44,8 +44,10 @@ function transformEventData(data: unknown, logger: Logger): Record<string, unkno
 
   // Use transform utility to merge the transformed dates back into the data
   const transformedData = mergeWithTransforms(rawData, [
-    { source: 'dates', target: 'dates', transform: () => dates },
+    { source: 'dates', target: 'date', transform: () => dates },
   ]);
+  // Remove original raw dates field from rawData
+  delete transformedData.dates;
   logger.log('Transformed data', transformedData);
 
   return transformedData;
