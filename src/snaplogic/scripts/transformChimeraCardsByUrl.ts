@@ -179,7 +179,7 @@ const impl: ScriptHookImpl = {
   },
 
   cleanup(): void {
-    this.log.info('[y] Cleaning up');
+    this.log.info('Cleaning up');
   },
 };
 
