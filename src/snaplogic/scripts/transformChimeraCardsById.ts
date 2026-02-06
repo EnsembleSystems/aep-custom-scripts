@@ -138,7 +138,7 @@ const impl: ScriptHookImpl = {
   },
 
   cleanup(): void {
-    this.log.info('Cleaning up');
+    this.log.info('[x] Cleaning up');
   },
 };
 
