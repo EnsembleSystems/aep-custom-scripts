@@ -237,7 +237,7 @@ var impl = {
     executeScript(this);
   },
   cleanup: function cleanup() {
-    this.log.info("Cleaning up");
+    this.log.info("[y] Cleaning up");
   }
 };
 var transformChimeraCardsByUrl_default = impl;
