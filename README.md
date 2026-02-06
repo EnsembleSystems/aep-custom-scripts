@@ -4,6 +4,12 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 
 > **⚡ Recent Updates**:
 >
+> **February 2026 - SnapLogic Support**:
+>
+> - **New SnapLogic scripts**: Chimera card transforms (by ID and by URL)
+> - **ES5-compatible build**: esbuild + Babel output for Nashorn/JDK 7-8
+> - **Shared hash utility**: Rolling hash reused across AEP and SnapLogic
+>
 > **January 2026 - v2.0 Architecture Refactor**:
 >
 > - **Separated filtering from data extraction**: Filter callback now only checks `event.isTrusted` (3KB, 71% smaller)
@@ -22,6 +28,7 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 - ✅ **TypeScript-first**: Full type safety and modern JavaScript features
 - 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
 - ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
+- 🧩 **SnapLogic Support**: ES5-compatible bundles for Nashorn/JDK 7-8
 - 🎯 **ES2017 Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
 - 🔓 **Direct Promise Returns**: No IIFE wrapper - AEP Launch natively supports ES6+ Promises
 - 📖 **Readable Output**: No minification, clean indentation - AEP handles minification automatically
@@ -110,6 +117,20 @@ This automatically (**using esbuild**):
 
 **Note**: No minification applied, clean formatting - AEP handles minification automatically!
 
+### Building SnapLogic Scripts
+
+```bash
+npm run build:snaplogic
+```
+
+This build:
+
+1. Auto-discovers scripts in `src/snaplogic/scripts/`
+2. Bundles with esbuild (ES2015 target)
+3. Transpiles to ES5 with Babel for Nashorn compatibility
+4. Adds SnapLogic `ScriptHook` wrapper
+5. Outputs ready-to-deploy files to `build-snaplogic/`
+
 ### Available Scripts
 
 After building, you'll find these bundled scripts in `build/`:
@@ -124,6 +145,13 @@ After building, you'll find these bundled scripts in `build/`:
 - **`customDataCollectionOnFilterClickCallback.js`** - Filter click callback with card tracking
 - **`templateAsync.js`** - Template for async scripts (for reference)
 - **`templateSync.js`** - Template for sync scripts (for reference)
+
+### Available SnapLogic Scripts
+
+After building, you'll find these bundled scripts in `build-snaplogic/`:
+
+- **`transformChimeraCardsById.js`** - XDM records keyed by hashed card ID
+- **`transformChimeraCardsByUrl.js`** - XDM records keyed by URL (deduped)
 
 ## 📥 Download Latest Scripts
 
@@ -141,6 +169,13 @@ Ready-to-deploy bundled scripts (committed to repository):
 - **[customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js)** - Filter click callback with card tracking
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
+
+### SnapLogic Bundles
+
+Ready-to-deploy SnapLogic scripts (committed to repository):
+
+- **[transformChimeraCardsById.js](build-snaplogic/transformChimeraCardsById.js)** - XDM records keyed by hashed card ID
+- **[transformChimeraCardsByUrl.js](build-snaplogic/transformChimeraCardsByUrl.js)** - XDM records keyed by URL (deduped)
 
 ### Production Releases
 
@@ -192,6 +227,7 @@ aep-custom-scripts/
 │   └── index.ts           # Main exports
 ├── scripts/
 │   └── buildWithEsbuild.js  # esbuild-based build script
+│   └── buildSnaplogic.js    # esbuild + Babel build for SnapLogic
 ├── build/                 # Bundled scripts (ready for AEP)
 │   ├── fetchEventData.js
 │   ├── getEventData.js
@@ -201,7 +237,21 @@ aep-custom-scripts/
 │   ├── customOnPageLoad.js
 │   ├── customDataCollectionOnBeforeEventSend.js
 │   └── customDataCollectionOnFilterClickCallback.js
+├── src/snaplogic/          # SnapLogic scripts and utilities
+│   ├── scripts/
+│   │   ├── transformChimeraCardsById.ts
+│   │   └── transformChimeraCardsByUrl.ts
+│   ├── utils/
+│   │   ├── array.ts
+│   │   ├── card.ts
+│   │   └── date.ts
+│   └── types/
+│       └── index.ts
+├── build-snaplogic/         # Bundled SnapLogic scripts
+│   ├── transformChimeraCardsById.js
+│   └── transformChimeraCardsByUrl.js
 ├── tsconfig.json          # TypeScript configuration
+├── tsconfig.snaplogic.json # SnapLogic TypeScript configuration
 └── package.json           # Project metadata
 ```
 
