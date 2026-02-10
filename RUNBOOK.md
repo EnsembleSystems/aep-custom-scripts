@@ -92,6 +92,35 @@ Update rule actions with custom code.
 4. Copy and paste contents of `build/customOnPageLoad.js` into the custom JS code editor
 5. Click **Keep Changes**
 
+### Search Page Entry
+
+1. Select **Rules** from the left sidebar
+2. Search for and select **Search Page Entry**
+3. **Update Condition:**
+   - Click on the condition **Core - Custom Code (searchConditionEntry.js)**
+   - Copy and paste contents of `build/searchConditionEntry.js` into the custom JS code editor
+   - Click **Keep Changes**
+4. **Update Action:**
+   - Click on **Core - Custom Code (searchTrackerEntry.js)**
+   - Copy and paste contents of `build/searchTrackerEntry.js` into the custom JS code editor
+   - Click **Keep Changes**
+
+### Search URL Monitor
+
+1. Select **Rules** from the left sidebar
+2. Search for and select **Search URL Monitor**
+3. Click on **Core - Custom Code (searchUrlMonitor.js)**
+4. Copy and paste contents of `build/searchUrlMonitor.js` into the custom JS code editor
+5. Click **Keep Changes**
+
+### Search URL Change (Dynamic Search)
+
+1. Select **Rules** from the left sidebar
+2. Search for and select **Search URL Change** or **Dynamic Search Detection**
+3. Click on **Core - Custom Code (searchTrackerDynamic.js)**
+4. Copy and paste contents of `build/searchTrackerDynamic.js` into the custom JS code editor
+5. Click **Keep Changes**
+
 ---
 
 ## 4. Build & Publish

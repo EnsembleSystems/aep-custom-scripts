@@ -685,7 +685,7 @@ Hooks into the History API to detect URL changes and dispatches custom events fo
 
 - Hooks `history.pushState()` and `history.replaceState()` methods
 - Listens for `popstate` events (browser back/forward)
-- Dispatches `aepUrlChanged` custom event on any URL change
+- Dispatches `partnersSearchUrlChanged` custom event on any URL change
 - Prevents duplicate hooks with `window.__urlHooked` flag
 - Synchronous execution
 
@@ -696,14 +696,14 @@ Hooks into the History API to detect URL changes and dispatches custom events fo
 1. Add this script to a Page Bottom rule
 2. Create a separate rule that listens for the custom event:
    - Event Type: Custom Event
-   - Custom Event Name: `aepUrlChanged`
+   - Custom Event Name: `partnersSearchUrlChanged`
    - Action: Track the URL change or trigger other scripts
 
 **Dispatched event**:
 
 ```javascript
 // Custom event dispatched on URL change
-new CustomEvent('aepUrlChanged', {
+new CustomEvent('partnersSearchUrlChanged', {
   detail: {
     url: window.location.href,
     timestamp: Date.now(),

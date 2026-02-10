@@ -78,7 +78,7 @@ declare global {
  *
  * @example
  * ```typescript
- * // In AEP Launch Rule triggered by aepUrlChanged event:
+ * // In AEP Launch Rule triggered by partnersSearchUrlChanged event:
  * // Sets up debounced tracking for search URLs
  * ```
  *

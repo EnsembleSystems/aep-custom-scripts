@@ -101,7 +101,7 @@ function executeScript(config, execute) {
 }
 
 // src/scripts/searchUrlMonitor.ts
-var URL_CHANGE_EVENT = "aepUrlChanged";
+var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
 function searchUrlMonitorScript(testMode = false) {
   return executeScript(
     {

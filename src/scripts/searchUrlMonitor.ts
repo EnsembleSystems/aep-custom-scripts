@@ -61,7 +61,7 @@ interface UrlChangeDetail {
 // ============================================================================
 
 /** Name of the custom event dispatched on URL changes */
-const URL_CHANGE_EVENT = 'aepUrlChanged';
+const URL_CHANGE_EVENT = 'partnersSearchUrlChanged';
 
 // ============================================================================
 // MAIN SCRIPT FUNCTION
@@ -74,7 +74,7 @@ const URL_CHANGE_EVENT = 'aepUrlChanged';
  * 1. Checks if hooks are already installed
  * 2. Wraps history.pushState and history.replaceState
  * 3. Listens for popstate events
- * 4. Dispatches custom aepUrlChanged event
+ * 4. Dispatches custom partnersSearchUrlChanged event
  *
  * @param testMode - Enable verbose logging for testing
  * @returns Result object with success status
@@ -89,7 +89,7 @@ const URL_CHANGE_EVENT = 'aepUrlChanged';
  * ```typescript
  * // Enable debug mode and listen for changes:
  * localStorage.setItem('__aep_scripts_debug', 'true');
- * window.addEventListener('aepUrlChanged', (e) => {
+ * window.addEventListener('partnersSearchUrlChanged', (e) => {
  *   console.log('URL changed:', e.detail.url);
  * });
  * ```
