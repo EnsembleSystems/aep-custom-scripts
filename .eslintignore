@@ -1,0 +1,21 @@
+# Build outputs
+dist/
+build/
+build-snaplogic/
+.temp/
+
+# Dependencies
+node_modules/
+
+# Minified files
+*.min.js
+
+# Backup files
+dataCollecdtionExt-backup.js
+
+# Examples (may contain external code)
+examples/
+
+# Misc HTML and external files
+misc/**/*.html
+misc/**/*_files/

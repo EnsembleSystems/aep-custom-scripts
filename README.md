@@ -4,6 +4,20 @@ TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collecti
 
 > **⚡ Recent Updates**:
 >
+> **February 2026 - Entry Search Tracking**:
+>
+> - **New entry search scripts**: `searchConditionEntry` (condition) and `searchTrackerEntry` (action)
+> - **Page load search detection**: Tracks searches when users arrive with search params in URL
+> - **Two tracking modes**: Entry search (page load) and dynamic search (URL changes after page load)
+> - **Shared infrastructure**: Both modes use same payload structure and variable setters
+>
+> **February 2026 - Search Tracking Scripts**:
+>
+> - **Dynamic search tracking**: URL parameter extraction, search variable setters, URL change monitoring
+> - **Runtime-controlled tracking**: Debounced search event triggers, deduplication
+> - **Terminology update**: Changed "keyword" to "term" for consistency
+> - **ESLint configuration**: Enhanced for search tracking scripts with proper ignores
+>
 > **February 2026 - SnapLogic Support**:
 >
 > - **New SnapLogic scripts**: Chimera card transforms (by ID and by URL)
@@ -135,14 +149,30 @@ This build:
 
 After building, you'll find these bundled scripts in `build/`:
 
+**Adobe Events Scripts:**
+
 - **`fetchEventData.js`** - Adobe Events event data fetcher (API call)
 - **`getEventData.js`** - Adobe Events event data getter (from window object)
 - **`extractAttendeeData.js`** - Adobe Events attendee data extractor
+
+**Partner & Analytics Scripts:**
+
 - **`extractPartnerData.js`** - Partner cookie data extractor
 - **`extractPublisherId.js`** - Publisher/Owner ID extractor
 - **`customOnPageLoad.js`** - Custom on page load placeholder script
 - **`customDataCollectionOnBeforeEventSend.js`** - Before event send callback
 - **`customDataCollectionOnFilterClickCallback.js`** - Filter click callback with card tracking
+
+**Search Tracking Scripts:**
+
+- **`searchConditionEntry.js`** - Condition checker for entry search (page load with search params)
+- **`searchTrackerEntry.js`** - Entry search parameter extractor and tracker (page load)
+- **`searchVariableSetter.js`** - Sets AEP Launch variables from `window.__searchPayload`
+- **`searchTrackerDynamic.js`** - Extracts search terms and filters from URL, triggers tracking (dynamic)
+- **`searchUrlMonitor.js`** - Monitors History API for URL changes in SPAs
+
+**Templates:**
+
 - **`templateAsync.js`** - Template for async scripts (for reference)
 - **`templateSync.js`** - Template for sync scripts (for reference)
 
@@ -159,14 +189,27 @@ After building, you'll find these bundled scripts in `build-snaplogic/`:
 
 Ready-to-deploy bundled scripts (committed to repository):
 
+**Adobe Events:**
+
 - **[fetchEventData.js](build/fetchEventData.js)** - Adobe Events event data fetcher (API call)
 - **[getEventData.js](build/getEventData.js)** - Adobe Events event data getter (from window)
 - **[extractAttendeeData.js](build/extractAttendeeData.js)** - Adobe Events attendee data extractor
+
+**Partner & Analytics:**
+
 - **[extractPartnerData.js](build/extractPartnerData.js)** - Partner cookie extractor
 - **[extractPublisherId.js](build/extractPublisherId.js)** - Publisher ID extractor
 - **[customOnPageLoad.js](build/customOnPageLoad.js)** - Custom on page load placeholder
 - **[customDataCollectionOnBeforeEventSend.js](build/customDataCollectionOnBeforeEventSend.js)** - Before event send callback
 - **[customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js)** - Filter click callback with card tracking
+
+**Search Tracking:**
+
+- **[searchConditionEntry.js](build/searchConditionEntry.js)** - Entry search condition checker (page load)
+- **[searchTrackerEntry.js](build/searchTrackerEntry.js)** - Entry search extractor and tracker (page load)
+- **[searchVariableSetter.js](build/searchVariableSetter.js)** - Sets Launch variables from search payload
+- **[searchTrackerDynamic.js](build/searchTrackerDynamic.js)** - Extracts search from URL and triggers tracking (dynamic)
+- **[searchUrlMonitor.js](build/searchUrlMonitor.js)** - Monitors History API for URL changes
 
 **To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
 
@@ -204,6 +247,11 @@ aep-custom-scripts/
 │   │   ├── customOnPageLoad.ts                         # Custom on page load placeholder
 │   │   ├── customDataCollectionOnBeforeEventSend.ts    # Before event send callback
 │   │   ├── customDataCollectionOnFilterClickCallback.ts # Filter click with card tracking
+│   │   ├── searchConditionEntry.ts                         # Entry search condition checker
+│   │   ├── searchTrackerEntry.ts                         # Entry search extractor and tracker
+│   │   ├── searchVariableSetter.ts                            # Sets Launch variables from search payload
+│   │   ├── searchTrackerDynamic.ts                       # Extracts search from URL (dynamic)
+│   │   ├── searchUrlMonitor.ts                         # Monitors History API for URL changes
 │   │   ├── templateAsync.ts                            # Template for async scripts
 │   │   └── templateSync.ts                             # Template for sync scripts
 │   ├── utils/             # Shared utilities (DRY)
@@ -521,6 +569,265 @@ if (!shouldProcess) {
 - **Single responsibility**: Filtering only, no data extraction
 - **No side effects**: No window object manipulation
 - **Easy to test**: Simple boolean return value
+
+### 9. Set Search Variables (`searchVariableSetter`)
+
+Reads search payload from `window.__searchPayload` and sets AEP Launch variables using `_satellite.setVar()`.
+
+**Use on**: Pages with search functionality
+
+**How it works**:
+
+- Reads `window.__searchPayload` object (set by `searchTrackerDynamic` or other scripts)
+- Extracts `term`, `filters`, and `source` properties
+- Sets three Launch variables: `searchTerm`, `searchFilters`, and `searchSource`
+- Provides defaults for missing values
+- Synchronous execution
+
+**Returns**: Result object with success status and variables set
+
+**Example payload**:
+
+```javascript
+window.__searchPayload = {
+  term: 'photoshop',
+  filters: { category: ['tutorials'], level: ['beginner'] },
+  source: 'url',
+};
+```
+
+**Variables set**:
+
+- `searchTerm`: The search term (string)
+- `searchFilters`: Filter key-value pairs (object)
+- `searchSource`: Source of the search (e.g., "url")
+
+**Configuration** (default in source):
+
+```typescript
+// No configuration needed - reads from window.__searchPayload
+```
+
+### 10. Track Search From URL (`searchTrackerDynamic`)
+
+Parses URL search parameters to extract search terms and filters, then triggers an AEP tracking event after a debounce delay.
+
+**Use on**: Pages with URL-based search (e.g., `/search?term=photoshop&category=tutorials`)
+
+**How it works**:
+
+- Debounced execution (300ms delay to handle rapid URL changes)
+- Extracts search term from `term`, `q`, or `keyword` URL parameters (checked in that order)
+- Filters out UTM parameters and other ignored params
+- Deduplicates identical searches (prevents double-firing)
+- Builds filters object from remaining URL params
+- **Handles comma-delimited values**: Splits `?key=val1,val2` into separate array elements
+- Stores payload in `window.__searchPayload`
+- Triggers `_satellite.track('searchCommit')` event
+
+**Returns**: Result object with success status and URL
+
+**Example URL 1**: `/search?term=photoshop&category=tutorials&level=beginner`
+
+**Extracted data**:
+
+```javascript
+{
+  term: "photoshop",
+  filters: {
+    category: ["tutorials"],
+    level: ["beginner"]
+  },
+  source: "url"
+}
+```
+
+**Example URL 2** (comma-delimited values): `/search?term=data&functionality=caas:functionality/data-activation,caas:functionality/analysis-insights`
+
+**Extracted data**:
+
+```javascript
+{
+  term: "data",
+  filters: {
+    functionality: [
+      "caas:functionality/data-activation",
+      "caas:functionality/analysis-insights"
+    ]
+  },
+  source: "url"
+}
+```
+
+**Configuration** (constants in source):
+
+```typescript
+const DEBOUNCE_DELAY = 300; // ms
+const IGNORED_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'filters'];
+const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
+const MIN_TERM_LENGTH = 2; // Minimum characters
+```
+
+**Features**:
+
+- **Debouncing**: Waits 300ms before processing to handle rapid URL changes
+- **Deduplication**: Prevents tracking identical searches multiple times
+- **Flexible term extraction**: Supports multiple parameter names
+- **UTM filtering**: Automatically removes tracking parameters
+
+### 11. URL Change Monitor (`searchUrlMonitor`)
+
+Hooks into the History API to detect URL changes and dispatches custom events for single-page applications.
+
+**Use on**: Single-page applications that use `pushState`/`replaceState` for navigation
+
+**How it works**:
+
+- Hooks `history.pushState()` and `history.replaceState()` methods
+- Listens for `popstate` events (browser back/forward)
+- Dispatches `aepUrlChanged` custom event on any URL change
+- Prevents duplicate hooks with `window.__urlHooked` flag
+- Synchronous execution
+
+**Returns**: Result object with success status and hook status
+
+**Example usage in AEP**:
+
+1. Add this script to a Page Bottom rule
+2. Create a separate rule that listens for the custom event:
+   - Event Type: Custom Event
+   - Custom Event Name: `aepUrlChanged`
+   - Action: Track the URL change or trigger other scripts
+
+**Dispatched event**:
+
+```javascript
+// Custom event dispatched on URL change
+new CustomEvent('aepUrlChanged', {
+  detail: {
+    url: window.location.href,
+    timestamp: Date.now(),
+  },
+});
+```
+
+**Features**:
+
+- **Comprehensive coverage**: Catches pushState, replaceState, and popstate
+- **No double-hooking**: Checks if hooks are already installed
+- **Custom event**: Easy to listen for in Launch rules
+- **Lightweight**: ~4KB bundled
+
+### 12. Check Entry Search (`searchConditionEntry`)
+
+Condition script that checks if the current page load is an entry search (user arrived with search parameters already in the URL).
+
+**Use on**: Pages with search functionality
+
+**How it works**:
+
+- Runs only once per page load (uses `window.__entrySearchChecked` flag)
+- Checks for valid search term in URL params (`term`, `q`, or `keyword`)
+- Validates minimum term length (2 characters)
+- Returns boolean for use in AEP Launch Rule conditions
+- Synchronous execution
+
+**Returns**: `boolean` - `true` if valid entry search detected, `false` otherwise
+
+**Example usage in AEP**:
+
+1. Create a rule named "Track Entry Search"
+2. Add event: Page Bottom (or DOM Ready)
+3. Add condition: Custom Code → Paste [searchConditionEntry.js](build/searchConditionEntry.js)
+4. Add action: Custom Code → Paste [searchTrackerEntry.js](build/searchTrackerEntry.js)
+
+**Example URL that returns `true`**:
+
+```
+/search?term=adobe+report&industries=caas:industry/financial-services
+```
+
+**Example URLs that return `false`**:
+
+```
+/search/                    # No search params
+/search/#                   # No search params
+/search?term=a              # Term too short (< 2 chars)
+```
+
+**Configuration** (constants in source):
+
+```typescript
+const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
+const MIN_TERM_LENGTH = 2; // Minimum characters
+```
+
+**Features**:
+
+- **One-time execution**: Only runs once per page load
+- **Flexible term extraction**: Supports multiple parameter names
+- **Validation**: Ensures minimum term length
+- **Lightweight**: ~4KB bundled
+
+### 13. Track Entry Search (`searchTrackerEntry`)
+
+Action script that processes entry search parameters (when user arrives with search parameters already in the URL) and triggers searchCommit event.
+
+**Use on**: Pages with search functionality
+
+**How it works**:
+
+- Extracts search term from `term`, `q`, or `keyword` URL parameters (checked in that order)
+- Filters out UTM parameters and other ignored params
+- Builds filters object from remaining URL params
+- **Handles comma-delimited values**: Splits `?key=val1,val2` into separate array elements
+- Deduplicates identical searches (prevents double-firing)
+- Stores payload in `window.__searchPayload` with source: "entry"
+- Triggers `_satellite.track('searchCommit')` event
+- No debouncing (runs immediately on page load)
+- Synchronous execution
+
+**Returns**: Result object with success status and search term
+
+**Example URL**:
+
+```
+/search?term=adobe+report&industries=caas:industry/financial-services&content-type=caas:content-type/report
+```
+
+**Extracted data**:
+
+```javascript
+{
+  term: "adobe report",
+  filters: {
+    industries: ["caas:industry/financial-services"],
+    "content-type": ["caas:content-type/report"]
+  },
+  source: "entry"
+}
+```
+
+**Configuration** (constants in source):
+
+```typescript
+const IGNORED_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'filters'];
+const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
+const MIN_TERM_LENGTH = 2; // Minimum characters
+```
+
+**Features**:
+
+- **Immediate execution**: No debouncing (runs on page load)
+- **Deduplication**: Prevents tracking identical searches multiple times
+- **Flexible term extraction**: Supports multiple parameter names
+- **UTM filtering**: Automatically removes tracking parameters
+- **Comma-delimited support**: Splits multi-value parameters correctly
+
+**Difference from `searchTrackerDynamic`**:
+
+- **Entry search**: Runs on page load, source: "entry", no debouncing
+- **Dynamic search**: Runs on URL changes, source: "url", 300ms debouncing
 
 ## Browser Console Testing
 

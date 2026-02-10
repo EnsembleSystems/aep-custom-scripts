@@ -45,7 +45,18 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__filename', '__dirname', '_adobePartners', '_adobepartners'],
+        allow: [
+          '__filename',
+          '__dirname',
+          '_adobePartners',
+          '_adobepartners',
+          '_satellite',
+          '__searchPayload',
+          '__searchUrlTimer',
+          '__lastSearchKey',
+          '__urlHooked',
+          '__entrySearchChecked',
+        ],
       },
     ],
   },
@@ -95,6 +106,22 @@ module.exports = {
       files: ['src/scripts/**/*.ts'],
       rules: {
         'import/prefer-default-export': 'off',
+      },
+    },
+    {
+      files: [
+        'src/scripts/searchVariableSetter.ts',
+        'src/scripts/searchTrackerDynamic.ts',
+        'src/scripts/searchUrlMonitor.ts',
+        'src/scripts/searchConditionEntry.ts',
+        'src/scripts/searchTrackerEntry.ts',
+      ],
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
+        'func-names': 'off',
+        'no-use-before-define': ['error', { functions: false, classes: true }],
+        'prefer-destructuring': 'off',
       },
     },
     {
@@ -164,12 +191,4 @@ module.exports = {
       },
     },
   },
-  ignorePatterns: [
-    'dist/',
-    'build/',
-    'build-snaplogic/',
-    'node_modules/',
-    '*.min.js',
-    'dataCollecdtionExt-backup.js',
-  ],
 };
