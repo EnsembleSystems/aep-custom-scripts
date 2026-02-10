@@ -111,6 +111,37 @@ var VARIABLE_NAMES = {
   FILTERS: "searchFilters",
   SOURCE: "searchSource"
 };
+function readSearchPayload(logger) {
+  try {
+    const payload = window.__searchPayload;
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+    if (typeof payload.term !== "string") {
+      logger.warn("Invalid payload: term is not a string");
+      return null;
+    }
+    if (typeof payload.source !== "string") {
+      logger.warn("Invalid payload: source is not a string");
+      return null;
+    }
+    if (payload.filters && typeof payload.filters === "object") {
+      const { filters } = payload;
+      const isValid = Object.values(filters).every(
+        (value) => Array.isArray(value) && value.every((v) => typeof v === "string")
+      );
+      if (!isValid) {
+        logger.warn("Invalid payload: filters format incorrect");
+        return null;
+      }
+    }
+    logger.log("Payload validated successfully");
+    return payload;
+  } catch (error) {
+    logger.error("Error reading search payload:", error);
+    return null;
+  }
+}
 function searchVariableSetterScript(testMode = false) {
   return executeScript(
     {
@@ -172,37 +203,6 @@ function searchVariableSetterScript(testMode = false) {
       }
     }
   );
-}
-function readSearchPayload(logger) {
-  try {
-    const payload = window.__searchPayload;
-    if (!payload || typeof payload !== "object") {
-      return null;
-    }
-    if (typeof payload.term !== "string") {
-      logger.warn("Invalid payload: term is not a string");
-      return null;
-    }
-    if (typeof payload.source !== "string") {
-      logger.warn("Invalid payload: source is not a string");
-      return null;
-    }
-    if (payload.filters && typeof payload.filters === "object") {
-      const filters = payload.filters;
-      const isValid = Object.values(filters).every(
-        (value) => Array.isArray(value) && value.every((v) => typeof v === "string")
-      );
-      if (!isValid) {
-        logger.warn("Invalid payload: filters format incorrect");
-        return null;
-      }
-    }
-    logger.log("Payload validated successfully");
-    return payload;
-  } catch (error) {
-    logger.error("Error reading search payload:", error);
-    return null;
-  }
 }
 
 

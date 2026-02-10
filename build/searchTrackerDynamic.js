@@ -219,6 +219,36 @@ function generateSearchKey(url) {
 }
 
 // src/scripts/searchTrackerDynamic.ts
+function processSearchUrl(logger, testMode) {
+  logger.log("Processing search URL parameters after debounce");
+  const parsed = parseSearchUrl(void 0, logger);
+  if (!parsed.hasValidTerm || !parsed.term) {
+    logger.log("No valid search term found");
+    return;
+  }
+  const searchKey = generateSearchKey();
+  logger.log("Generated search key:", searchKey);
+  if (searchKey === window.__lastSearchKey) {
+    logger.log("Duplicate search detected, skipping");
+    return;
+  }
+  window.__lastSearchKey = searchKey;
+  logger.log("Updated deduplication key");
+  const payload = createSearchPayload(parsed, SEARCH_SOURCES.DYNAMIC);
+  if (!payload) {
+    logger.error("Failed to create search payload");
+    return;
+  }
+  window.__searchPayload = payload;
+  logger.log("Stored search payload:", payload);
+  if (window._satellite && typeof window._satellite.track === "function") {
+    logger.log('Triggering _satellite.track("searchCommit")');
+    window._satellite.track("searchCommit");
+  } else {
+    const message = testMode ? "_satellite.track() not available (normal in test mode)" : "_satellite.track() not available - ensure AEP Launch is loaded";
+    logger.warn(message);
+  }
+}
 function searchTrackerDynamicScript(testMode = false) {
   return executeScript(
     {
@@ -250,36 +280,6 @@ function searchTrackerDynamicScript(testMode = false) {
       };
     }
   );
-}
-function processSearchUrl(logger, testMode) {
-  logger.log("Processing search URL parameters after debounce");
-  const parsed = parseSearchUrl(void 0, logger);
-  if (!parsed.hasValidTerm || !parsed.term) {
-    logger.log("No valid search term found");
-    return;
-  }
-  const searchKey = generateSearchKey();
-  logger.log("Generated search key:", searchKey);
-  if (searchKey === window.__lastSearchKey) {
-    logger.log("Duplicate search detected, skipping");
-    return;
-  }
-  window.__lastSearchKey = searchKey;
-  logger.log("Updated deduplication key");
-  const payload = createSearchPayload(parsed, SEARCH_SOURCES.DYNAMIC);
-  if (!payload) {
-    logger.error("Failed to create search payload");
-    return;
-  }
-  window.__searchPayload = payload;
-  logger.log("Stored search payload:", payload);
-  if (window._satellite && typeof window._satellite.track === "function") {
-    logger.log('Triggering _satellite.track("searchCommit")');
-    window._satellite.track("searchCommit");
-  } else {
-    const message = testMode ? "_satellite.track() not available (normal in test mode)" : "_satellite.track() not available - ensure AEP Launch is loaded";
-    logger.warn(message);
-  }
 }
 
 
