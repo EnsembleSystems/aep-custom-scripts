@@ -109,22 +109,6 @@ module.exports = {
       },
     },
     {
-      files: [
-        'src/scripts/searchVariableSetter.ts',
-        'src/scripts/searchTrackerDynamic.ts',
-        'src/scripts/searchUrlMonitor.ts',
-        'src/scripts/searchConditionEntry.ts',
-        'src/scripts/searchTrackerEntry.ts',
-      ],
-      rules: {
-        'no-restricted-globals': 'off',
-        'no-restricted-syntax': 'off',
-        'func-names': 'off',
-        'no-use-before-define': ['error', { functions: false, classes: true }],
-        'prefer-destructuring': 'off',
-      },
-    },
-    {
       // SnapLogic scripts use ES5 syntax for JDK 7/8 Rhino/Nashorn compatibility
       // Globals: input, output, error, log (from ScriptHook), plus Java/Nashorn builtins
       files: ['misc/snaplogic/**/*.js'],

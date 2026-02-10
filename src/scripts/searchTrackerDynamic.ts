@@ -60,6 +60,67 @@ declare global {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Processes the current URL to extract search parameters and trigger tracking
+ * Called after debounce delay
+ *
+ * @param logger - Logger instance for debugging
+ * @param testMode - Whether in test mode
+ */
+function processSearchUrl(logger: typeof console, testMode: boolean): void {
+  logger.log('Processing search URL parameters after debounce');
+
+  // Parse URL securely
+  const parsed = parseSearchUrl(undefined, logger as unknown as Logger);
+
+  // Validate parsed data
+  if (!parsed.hasValidTerm || !parsed.term) {
+    logger.log('No valid search term found');
+    return;
+  }
+
+  // Generate deduplication key
+  const searchKey = generateSearchKey();
+  logger.log('Generated search key:', searchKey);
+
+  // Check for duplicate
+  if (searchKey === window.__lastSearchKey) {
+    logger.log('Duplicate search detected, skipping');
+    return;
+  }
+
+  // Update deduplication key
+  window.__lastSearchKey = searchKey;
+  logger.log('Updated deduplication key');
+
+  // Create search payload
+  const payload = createSearchPayload(parsed, SEARCH_SOURCES.DYNAMIC);
+
+  if (!payload) {
+    logger.error('Failed to create search payload');
+    return;
+  }
+
+  // Store payload for variable setter
+  window.__searchPayload = payload;
+  logger.log('Stored search payload:', payload);
+
+  // Trigger AEP tracking event
+  if (window._satellite && typeof window._satellite.track === 'function') {
+    logger.log('Triggering _satellite.track("searchCommit")');
+    window._satellite.track('searchCommit');
+  } else {
+    const message = testMode
+      ? '_satellite.track() not available (normal in test mode)'
+      : '_satellite.track() not available - ensure AEP Launch is loaded';
+    logger.warn(message);
+  }
+}
+
+// ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================
 
@@ -126,65 +187,4 @@ export function searchTrackerDynamicScript(testMode: boolean = false): SearchTra
       };
     }
   );
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Processes the current URL to extract search parameters and trigger tracking
- * Called after debounce delay
- *
- * @param logger - Logger instance for debugging
- * @param testMode - Whether in test mode
- */
-function processSearchUrl(logger: typeof console, testMode: boolean): void {
-  logger.log('Processing search URL parameters after debounce');
-
-  // Parse URL securely
-  const parsed = parseSearchUrl(undefined, logger as unknown as Logger);
-
-  // Validate parsed data
-  if (!parsed.hasValidTerm || !parsed.term) {
-    logger.log('No valid search term found');
-    return;
-  }
-
-  // Generate deduplication key
-  const searchKey = generateSearchKey();
-  logger.log('Generated search key:', searchKey);
-
-  // Check for duplicate
-  if (searchKey === window.__lastSearchKey) {
-    logger.log('Duplicate search detected, skipping');
-    return;
-  }
-
-  // Update deduplication key
-  window.__lastSearchKey = searchKey;
-  logger.log('Updated deduplication key');
-
-  // Create search payload
-  const payload = createSearchPayload(parsed, SEARCH_SOURCES.DYNAMIC);
-
-  if (!payload) {
-    logger.error('Failed to create search payload');
-    return;
-  }
-
-  // Store payload for variable setter
-  window.__searchPayload = payload;
-  logger.log('Stored search payload:', payload);
-
-  // Trigger AEP tracking event
-  if (window._satellite && typeof window._satellite.track === 'function') {
-    logger.log('Triggering _satellite.track("searchCommit")');
-    window._satellite.track('searchCommit');
-  } else {
-    const message = testMode
-      ? '_satellite.track() not available (normal in test mode)'
-      : '_satellite.track() not available - ensure AEP Launch is loaded';
-    logger.warn(message);
-  }
 }

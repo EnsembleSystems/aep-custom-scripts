@@ -71,6 +71,57 @@ const VARIABLE_NAMES = {
 } as const;
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Safely reads and validates search payload from window
+ *
+ * @param logger - Logger instance for debugging
+ * @returns Validated payload or null
+ */
+function readSearchPayload(logger: typeof console): SearchPayload | null {
+  try {
+    const payload = window.__searchPayload;
+
+    // Check if payload exists
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    // Validate structure
+    if (typeof payload.term !== 'string') {
+      logger.warn('Invalid payload: term is not a string');
+      return null;
+    }
+
+    if (typeof payload.source !== 'string') {
+      logger.warn('Invalid payload: source is not a string');
+      return null;
+    }
+
+    // Validate filters (must be an object with string array values)
+    if (payload.filters && typeof payload.filters === 'object') {
+      const { filters } = payload;
+      const isValid = Object.values(filters).every(
+        (value) => Array.isArray(value) && value.every((v) => typeof v === 'string')
+      );
+
+      if (!isValid) {
+        logger.warn('Invalid payload: filters format incorrect');
+        return null;
+      }
+    }
+
+    logger.log('Payload validated successfully');
+    return payload;
+  } catch (error) {
+    logger.error('Error reading search payload:', error);
+    return null;
+  }
+}
+
+// ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================
 
@@ -176,55 +227,4 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
       }
     }
   );
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Safely reads and validates search payload from window
- *
- * @param logger - Logger instance for debugging
- * @returns Validated payload or null
- */
-function readSearchPayload(logger: typeof console): SearchPayload | null {
-  try {
-    const payload = window.__searchPayload;
-
-    // Check if payload exists
-    if (!payload || typeof payload !== 'object') {
-      return null;
-    }
-
-    // Validate structure
-    if (typeof payload.term !== 'string') {
-      logger.warn('Invalid payload: term is not a string');
-      return null;
-    }
-
-    if (typeof payload.source !== 'string') {
-      logger.warn('Invalid payload: source is not a string');
-      return null;
-    }
-
-    // Validate filters (must be an object with string array values)
-    if (payload.filters && typeof payload.filters === 'object') {
-      const filters = payload.filters;
-      const isValid = Object.values(filters).every(
-        (value) => Array.isArray(value) && value.every((v) => typeof v === 'string')
-      );
-
-      if (!isValid) {
-        logger.warn('Invalid payload: filters format incorrect');
-        return null;
-      }
-    }
-
-    logger.log('Payload validated successfully');
-    return payload;
-  } catch (error) {
-    logger.error('Error reading search payload:', error);
-    return null;
-  }
 }

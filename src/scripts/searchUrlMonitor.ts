@@ -1,7 +1,7 @@
 /**
  * Search URL Monitor Script for AEP (v2 - Refactored)
  *
- * Hooks into the History API to track URL changes.
+ * Hooks into the window.history API to track URL changes.
  * Refactored for improved security, performance, and maintainability.
  *
  * Improvements:
@@ -64,15 +64,103 @@ interface UrlChangeDetail {
 const URL_CHANGE_EVENT = 'partnersSearchUrlChanged';
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Dispatches URL change event safely
+ *
+ * @param url - The new URL
+ */
+function dispatchUrlChangeEvent(url: string): void {
+  try {
+    const detail: UrlChangeDetail = {
+      url,
+      timestamp: Date.now(),
+    };
+
+    const event = new CustomEvent(URL_CHANGE_EVENT, {
+      detail,
+      bubbles: true,
+      cancelable: false,
+    });
+
+    window.dispatchEvent(event);
+  } catch (error) {
+    // Silently fail - don't break page functionality
+    console.error('Failed to dispatch URL change event:', error);
+  }
+}
+
+/**
+ * Installs window.history API hooks
+ *
+ * @param logger - Logger instance for debugging
+ */
+function installHistoryHooks(logger: typeof console): void {
+  // Store original methods
+  const originalPushState = window.history.pushState;
+  const originalReplaceState = window.history.replaceState;
+
+  // Hook pushState
+  window.history.pushState = function pushStateHook(
+    ...args: Parameters<typeof window.history.pushState>
+  ): void {
+    try {
+      // Call original method
+      originalPushState.apply(window.history, args);
+
+      // Dispatch change event
+      logger.log('pushState detected, dispatching URL change event');
+      dispatchUrlChangeEvent(window.location.href);
+    } catch (error) {
+      // Restore original behavior on error
+      logger.error('Error in pushState hook:', error);
+      originalPushState.apply(window.history, args);
+    }
+  };
+
+  // Hook replaceState
+  window.history.replaceState = function replaceStateHook(
+    ...args: Parameters<typeof window.history.replaceState>
+  ): void {
+    try {
+      // Call original method
+      originalReplaceState.apply(window.history, args);
+
+      // Dispatch change event
+      logger.log('replaceState detected, dispatching URL change event');
+      dispatchUrlChangeEvent(window.location.href);
+    } catch (error) {
+      // Restore original behavior on error
+      logger.error('Error in replaceState hook:', error);
+      originalReplaceState.apply(window.history, args);
+    }
+  };
+
+  // Listen for popstate (back/forward buttons)
+  window.addEventListener(
+    'popstate',
+    () => {
+      logger.log('popstate detected, dispatching URL change event');
+      dispatchUrlChangeEvent(window.location.href);
+    },
+    { passive: true } // Performance optimization
+  );
+
+  logger.log('window.history API hooks installed successfully');
+}
+
+// ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================
 
 /**
- * Installs History API hooks to monitor URL changes
+ * Installs window.history API hooks to monitor URL changes
  *
  * This function:
  * 1. Checks if hooks are already installed
- * 2. Wraps history.pushState and history.replaceState
+ * 2. Wraps window.history.pushState and window.history.replaceState
  * 3. Listens for popstate events
  * 4. Dispatches custom partnersSearchUrlChanged event
  *
@@ -143,90 +231,4 @@ export function searchUrlMonitorScript(testMode: boolean = false): SearchUrlMoni
       }
     }
   );
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Dispatches URL change event safely
- *
- * @param url - The new URL
- */
-function dispatchUrlChangeEvent(url: string): void {
-  try {
-    const detail: UrlChangeDetail = {
-      url,
-      timestamp: Date.now(),
-    };
-
-    const event = new CustomEvent(URL_CHANGE_EVENT, {
-      detail,
-      bubbles: true,
-      cancelable: false,
-    });
-
-    window.dispatchEvent(event);
-  } catch (error) {
-    // Silently fail - don't break page functionality
-    console.error('Failed to dispatch URL change event:', error);
-  }
-}
-
-/**
- * Installs History API hooks
- *
- * @param logger - Logger instance for debugging
- */
-function installHistoryHooks(logger: typeof console): void {
-  // Store original methods
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-
-  // Hook pushState
-  history.pushState = function pushStateHook(...args: Parameters<typeof history.pushState>): void {
-    try {
-      // Call original method
-      originalPushState.apply(history, args);
-
-      // Dispatch change event
-      logger.log('pushState detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
-    } catch (error) {
-      // Restore original behavior on error
-      logger.error('Error in pushState hook:', error);
-      originalPushState.apply(history, args);
-    }
-  };
-
-  // Hook replaceState
-  history.replaceState = function replaceStateHook(
-    ...args: Parameters<typeof history.replaceState>
-  ): void {
-    try {
-      // Call original method
-      originalReplaceState.apply(history, args);
-
-      // Dispatch change event
-      logger.log('replaceState detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
-    } catch (error) {
-      // Restore original behavior on error
-      logger.error('Error in replaceState hook:', error);
-      originalReplaceState.apply(history, args);
-    }
-  };
-
-  // Listen for popstate (back/forward buttons)
-  window.addEventListener(
-    'popstate',
-    () => {
-      logger.log('popstate detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
-    },
-    { passive: true } // Performance optimization
-  );
-
-  logger.log('History API hooks installed successfully');
 }
