@@ -160,7 +160,7 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
     {
       scriptName: 'Search Variable Setter',
       testMode,
-      testHeaderTitle: 'SEARCH VARIABLE SETTER V2 - TEST MODE',
+      testHeaderTitle: 'SEARCH VARIABLE SETTER - TEST MODE',
       onError: (error, logger) => {
         logger.error('Error setting search variables:', error);
         return {

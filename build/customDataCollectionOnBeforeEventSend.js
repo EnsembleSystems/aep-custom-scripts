@@ -229,6 +229,7 @@ function hasProperty(value, property) {
 
 // src/utils/constants.ts
 var DEFAULT_COOKIE_KEYS = ["partner_data", "partner_info"];
+var ATTENDEE_STORAGE_KEY = "attendeaseMember";
 
 // src/utils/storage.ts
 function getStorageItem(key) {
@@ -388,6 +389,15 @@ function shouldProcessEventType(eventType, skipTypes, logger) {
     return false;
   }
   return true;
+}
+
+// src/utils/url.ts
+function isHostnameMatch(pattern) {
+  const { hostname } = window.location;
+  if (pattern.startsWith("*.")) {
+    return hostname.endsWith(pattern.slice(1));
+  }
+  return hostname === pattern;
 }
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
@@ -622,6 +632,25 @@ function extractCardCollectionFromEvent(event, logger) {
   }
   return cardCollection;
 }
+function extractEventDataFromGlobal(logger) {
+  var _a, _b;
+  const eventData = (_b = (_a = window._adobePartners) == null ? void 0 : _a.eventData) == null ? void 0 : _b.apiResponse;
+  if (!eventData) {
+    logger.log("No event data in window._adobePartners");
+    return null;
+  }
+  logger.log("Found event data from global state", eventData);
+  return eventData;
+}
+function extractAttendeeData(logger) {
+  const data = getStorageItem(ATTENDEE_STORAGE_KEY);
+  if (!data) {
+    logger.log("No attendee data in localStorage");
+    return null;
+  }
+  logger.log("Found attendee data", data);
+  return data;
+}
 function customDataCollectionOnBeforeEventSendScript(content, event, testMode = false, cookieKeys = DEFAULT_COOKIE_KEYS) {
   return executeScript(
     {
@@ -650,6 +679,9 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
         logger.log("Extracted link daa-ll", linkClickLabel);
       }
       const checkout = extractCheckoutData(event, logger);
+      const isAdobeEventsPage = isHostnameMatch("*.adobeevents.com");
+      const eventData = isAdobeEventsPage ? extractEventDataFromGlobal(logger) : null;
+      const attendeeData = isAdobeEventsPage ? extractAttendeeData(logger) : null;
       if (pageName) {
         setNestedValue(content, "xdm.web.webPageDetails.name", pageName, true);
       }
@@ -660,7 +692,9 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
           { partnerData },
           conditionalProperties(cardCollection !== null, { cardCollection }),
           conditionalProperties(linkClickLabel !== "", { linkClickLabel }),
-          conditionalProperties(checkout !== null, { Checkout: checkout })
+          conditionalProperties(checkout !== null, { Checkout: checkout }),
+          conditionalProperties(eventData !== null, { eventData }),
+          conditionalProperties(attendeeData !== null, { attendeeData })
         ),
         true
       );

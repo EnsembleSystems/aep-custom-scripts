@@ -187,7 +187,7 @@ export function searchUrlMonitorScript(testMode: boolean = false): SearchUrlMoni
     {
       scriptName: 'Search URL Monitor',
       testMode,
-      testHeaderTitle: 'SEARCH URL MONITOR V2 - TEST MODE',
+      testHeaderTitle: 'SEARCH URL MONITOR - TEST MODE',
       onError: (error, logger) => {
         logger.error('Error installing URL change monitor:', error);
         return {

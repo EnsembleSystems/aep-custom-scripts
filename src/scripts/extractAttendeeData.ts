@@ -7,11 +7,7 @@
 
 import { executeScript } from '../utils/script.js';
 import { getStorageItem } from '../utils/storage.js';
-
-// Constants
-const STORAGE_KEYS = {
-  ATTENDEE: 'attendeaseMember',
-};
+import { ATTENDEE_STORAGE_KEY } from '../utils/constants.js';
 
 /**
  * Main entry point for the attendee data extractor
@@ -29,7 +25,7 @@ export function extractAttendeeDataScript(testMode: boolean = false): unknown {
       },
     },
     (logger) => {
-      const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
+      const attendeeData = getStorageItem(ATTENDEE_STORAGE_KEY);
 
       if (!attendeeData) {
         logger.log('No attendee data in localStorage');

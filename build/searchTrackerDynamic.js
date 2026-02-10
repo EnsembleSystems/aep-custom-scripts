@@ -254,7 +254,7 @@ function searchTrackerDynamicScript(testMode = false) {
     {
       scriptName: "Search Tracker Dynamic",
       testMode,
-      testHeaderTitle: "SEARCH TRACKER DYNAMIC V2 - TEST MODE",
+      testHeaderTitle: "SEARCH TRACKER DYNAMIC - TEST MODE",
       onError: (error, logger) => {
         logger.error("Error setting up search tracking:", error);
         return {

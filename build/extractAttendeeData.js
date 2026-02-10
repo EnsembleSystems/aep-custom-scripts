@@ -113,10 +113,10 @@ function getStorageItem(key) {
   }
 }
 
+// src/utils/constants.ts
+var ATTENDEE_STORAGE_KEY = "attendeaseMember";
+
 // src/scripts/extractAttendeeData.ts
-var STORAGE_KEYS = {
-  ATTENDEE: "attendeaseMember"
-};
 function extractAttendeeDataScript(testMode = false) {
   return executeScript(
     {
@@ -129,7 +129,7 @@ function extractAttendeeDataScript(testMode = false) {
       }
     },
     (logger) => {
-      const attendeeData = getStorageItem(STORAGE_KEYS.ATTENDEE);
+      const attendeeData = getStorageItem(ATTENDEE_STORAGE_KEY);
       if (!attendeeData) {
         logger.log("No attendee data in localStorage");
         return null;

@@ -66,7 +66,7 @@ export function searchConditionEntryScript(testMode: boolean = false): boolean {
     {
       scriptName: 'Search Condition Entry',
       testMode,
-      testHeaderTitle: 'SEARCH CONDITION ENTRY V2 - TEST MODE',
+      testHeaderTitle: 'SEARCH CONDITION ENTRY - TEST MODE',
       onError: (error, logger) => {
         logger.error('Error checking entry search:', error);
         return false;

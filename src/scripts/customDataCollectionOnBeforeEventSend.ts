@@ -31,7 +31,8 @@ import logEventInfo, { shouldProcessEventType } from '../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
 import type { PartnerCardCtx, CheckoutData, CartItem } from '../types';
 import { createLogger } from '../utils/logger';
-import { DEFAULT_COOKIE_KEYS } from '../utils/constants';
+import { DEFAULT_COOKIE_KEYS, ATTENDEE_STORAGE_KEY } from '../utils/constants';
+import { isHostnameMatch } from '../utils/url';
 
 // Constants for card metadata extraction
 const SELECTORS = {
@@ -100,6 +101,8 @@ interface LaunchEventContent {
       cardCollection?: unknown;
       linkClickLabel?: string;
       Checkout?: CheckoutData;
+      eventData?: unknown;
+      attendeeData?: unknown;
     };
     [key: string]: unknown;
   };
@@ -479,6 +482,32 @@ function extractCardCollectionFromEvent(
 }
 
 /**
+ * Reads event data from window global (stored by fetchEventData on page load)
+ */
+function extractEventDataFromGlobal(logger: ReturnType<typeof createLogger>): unknown | null {
+  const eventData = window._adobePartners?.eventData?.apiResponse;
+  if (!eventData) {
+    logger.log('No event data in window._adobePartners');
+    return null;
+  }
+  logger.log('Found event data from global state', eventData);
+  return eventData;
+}
+
+/**
+ * Reads attendee data from localStorage
+ */
+function extractAttendeeData(logger: ReturnType<typeof createLogger>): unknown | null {
+  const data = getStorageItem(ATTENDEE_STORAGE_KEY);
+  if (!data) {
+    logger.log('No attendee data in localStorage');
+    return null;
+  }
+  logger.log('Found attendee data', data);
+  return data;
+}
+
+/**
  * Main script for setting partner data on event
  *
  * @param content - The content object from Launch's before event send callback
@@ -534,6 +563,11 @@ export default function customDataCollectionOnBeforeEventSendScript(
       // Extract checkout data if Place Order button was clicked
       const checkout = extractCheckoutData(event, logger);
 
+      // Extract event and attendee data on adobeevents.com pages
+      const isAdobeEventsPage = isHostnameMatch('*.adobeevents.com');
+      const eventData = isAdobeEventsPage ? extractEventDataFromGlobal(logger) : null;
+      const attendeeData = isAdobeEventsPage ? extractAttendeeData(logger) : null;
+
       // Set page name in standard XDM location
       if (pageName) {
         setNestedValue(content, 'xdm.web.webPageDetails.name', pageName, true);
@@ -547,7 +581,9 @@ export default function customDataCollectionOnBeforeEventSendScript(
           { partnerData: partnerData as Record<string, never> },
           conditionalProperties(cardCollection !== null, { cardCollection }),
           conditionalProperties(linkClickLabel !== '', { linkClickLabel }),
-          conditionalProperties(checkout !== null, { Checkout: checkout })
+          conditionalProperties(checkout !== null, { Checkout: checkout }),
+          conditionalProperties(eventData !== null, { eventData }),
+          conditionalProperties(attendeeData !== null, { attendeeData })
         ),
         true
       );

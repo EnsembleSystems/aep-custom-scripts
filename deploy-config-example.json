@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Maps built AEP scripts to Launch resources (Data Elements, Rules, Extensions) for automated deployment",
+  "environments": {
+    "dev": {
+      "propertyId": "PR_REPLACE_WITH_DEV_PROPERTY_ID",
+      "resources": [
+        {
+          "script": "customDataCollectionOnBeforeEventSend",
+          "type": "extension",
+          "extensionId": "EX_REPLACE_WITH_EXTENSION_ID",
+          "settingsPath": "onBeforeEventSend.source",
+          "comment": "WebSDK Extension - Before Event Send callback"
+        },
+        {
+          "script": "customDataCollectionOnFilterClickCallback",
+          "type": "extension",
+          "extensionId": "EX_REPLACE_WITH_EXTENSION_ID",
+          "settingsPath": "onBeforeLinkClickSend.source",
+          "comment": "WebSDK Extension - Click Filter callback"
+        },
+        {
+          "script": "searchConditionEntry",
+          "type": "data_element",
+          "resourceId": "DE_REPLACE_WITH_ID",
+          "comment": "Data Element for entry search condition"
+        },
+        {
+          "script": "searchTrackerDynamic",
+          "type": "rule_action",
+          "ruleId": "RL_REPLACE_WITH_RULE_ID",
+          "ruleComponentId": "RC_REPLACE_WITH_ACTION_ID",
+          "comment": "Rule action for dynamic search tracking"
+        },
+        {
+          "script": "searchTrackerEntry",
+          "type": "rule_action",
+          "ruleId": "RL_REPLACE_WITH_RULE_ID",
+          "ruleComponentId": "RC_REPLACE_WITH_ACTION_ID",
+          "comment": "Rule action for entry search tracking"
+        },
+        {
+          "script": "searchUrlMonitor",
+          "type": "rule_action",
+          "ruleId": "RL_REPLACE_WITH_RULE_ID",
+          "ruleComponentId": "RC_REPLACE_WITH_ACTION_ID",
+          "comment": "Rule action to install URL monitor"
+        },
+        {
+          "script": "searchVariableSetter",
+          "type": "data_element",
+          "resourceId": "DE_REPLACE_WITH_ID",
+          "comment": "Data Element for search variable setter"
+        }
+      ]
+    },
+    "stage": {
+      "propertyId": "PR_REPLACE_WITH_STAGE_PROPERTY_ID",
+      "resources": []
+    },
+    "prod": {
+      "propertyId": "PR_REPLACE_WITH_PROD_PROPERTY_ID",
+      "resources": []
+    }
+  }
+}

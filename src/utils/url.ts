@@ -3,6 +3,20 @@
  */
 
 /**
+ * Checks if the current page hostname matches a pattern
+ * Supports wildcard prefix (e.g., '*.adobeevents.com')
+ * @param pattern - Hostname pattern to match against
+ * @returns true if current hostname matches
+ */
+export function isHostnameMatch(pattern: string): boolean {
+  const { hostname } = window.location;
+  if (pattern.startsWith('*.')) {
+    return hostname.endsWith(pattern.slice(1));
+  }
+  return hostname === pattern;
+}
+
+/**
  * Configuration for URL path structure parsing
  */
 export interface PathStructure {

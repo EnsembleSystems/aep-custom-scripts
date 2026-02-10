@@ -223,7 +223,7 @@ function searchTrackerEntryScript(testMode = false) {
     {
       scriptName: "Search Tracker Entry",
       testMode,
-      testHeaderTitle: "SEARCH TRACKER ENTRY V2 - TEST MODE",
+      testHeaderTitle: "SEARCH TRACKER ENTRY - TEST MODE",
       onError: (error, logger) => {
         logger.error("Error tracking entry search:", error);
         return {

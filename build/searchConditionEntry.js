@@ -191,7 +191,7 @@ function searchConditionEntryScript(testMode = false) {
     {
       scriptName: "Search Condition Entry",
       testMode,
-      testHeaderTitle: "SEARCH CONDITION ENTRY V2 - TEST MODE",
+      testHeaderTitle: "SEARCH CONDITION ENTRY - TEST MODE",
       onError: (error, logger) => {
         logger.error("Error checking entry search:", error);
         return false;
