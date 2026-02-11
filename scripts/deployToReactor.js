@@ -3,7 +3,7 @@
 /**
  * Deploy AEP Scripts to Adobe Launch via Reactor API
  *
- * This script uses the Adobe I/O Reactor API to programmatically update
+ * This script uses the @adobe/reactor-sdk to programmatically update
  * Launch resources (Data Elements, Rules, Extensions) with built script code.
  *
  * Usage:
@@ -22,6 +22,9 @@
 import { readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import ReactorSdk from '@adobe/reactor-sdk';
+
+const Reactor = ReactorSdk.default || ReactorSdk;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -102,99 +105,6 @@ function setNestedProperty(obj, path, value) {
   return obj;
 }
 
-// Reactor API client
-class ReactorClient {
-  constructor(accessToken, companyId) {
-    this.baseUrl = process.env.REACTOR_API_URL || 'https://reactor.adobe.io';
-    this.accessToken = accessToken;
-    this.companyId = companyId;
-  }
-
-  async fetch(path, options = {}) {
-    const url = `${this.baseUrl}${path}`;
-    const headers = {
-      Authorization: `Bearer ${this.accessToken}`,
-      'X-Api-Key': process.env.REACTOR_API_KEY || this.companyId,
-      'X-Gw-Ims-Org-Id': this.companyId,
-      'Content-Type': 'application/vnd.api+json',
-      Accept: 'application/vnd.api+json;revision=1',
-      ...options.headers,
-    };
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Reactor API error (${response.status}): ${errorText}`);
-    }
-
-    return response.json();
-  }
-
-  // Data Element operations
-  async getDataElement(dataElementId) {
-    return this.fetch(`/data_elements/${dataElementId}`);
-  }
-
-  async updateDataElement(dataElementId, settings) {
-    return this.fetch(`/data_elements/${dataElementId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        data: {
-          id: dataElementId,
-          type: 'data_elements',
-          attributes: {
-            settings: JSON.stringify(settings),
-          },
-        },
-      }),
-    });
-  }
-
-  // Rule Component operations (actions/conditions)
-  async getRuleComponent(ruleComponentId) {
-    return this.fetch(`/rule_components/${ruleComponentId}`);
-  }
-
-  async updateRuleComponent(ruleComponentId, settings) {
-    return this.fetch(`/rule_components/${ruleComponentId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        data: {
-          id: ruleComponentId,
-          type: 'rule_components',
-          attributes: {
-            settings: JSON.stringify(settings),
-          },
-        },
-      }),
-    });
-  }
-
-  // Extension operations
-  async getExtension(extensionId) {
-    return this.fetch(`/extensions/${extensionId}`);
-  }
-
-  async updateExtension(extensionId, settings) {
-    return this.fetch(`/extensions/${extensionId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        data: {
-          id: extensionId,
-          type: 'extensions',
-          attributes: {
-            settings: JSON.stringify(settings),
-          },
-        },
-      }),
-    });
-  }
-}
-
 // Deploy to Data Element
 async function deployToDataElement(client, resource, scriptContent, dryRun) {
   const { resourceId } = resource;
@@ -218,7 +128,11 @@ async function deployToDataElement(client, resource, scriptContent, dryRun) {
   };
 
   console.log(`   📤 Updating Data Element...`);
-  await client.updateDataElement(resourceId, newSettings);
+  await client.updateDataElement({
+    id: resourceId,
+    type: 'data_elements',
+    attributes: { settings: JSON.stringify(newSettings) },
+  });
 
   return { success: true };
 }
@@ -246,7 +160,11 @@ async function deployToRuleComponent(client, resource, scriptContent, dryRun) {
   };
 
   console.log(`   📤 Updating Rule Component...`);
-  await client.updateRuleComponent(ruleComponentId, newSettings);
+  await client.updateRuleComponent({
+    id: ruleComponentId,
+    type: 'rule_components',
+    attributes: { settings: JSON.stringify(newSettings) },
+  });
 
   return { success: true };
 }
@@ -272,7 +190,11 @@ async function deployToExtension(client, resource, scriptContent, dryRun) {
   setNestedProperty(newSettings, settingsPath, scriptContent);
 
   console.log(`   📤 Updating Extension at ${settingsPath}...`);
-  await client.updateExtension(extensionId, newSettings);
+  await client.updateExtension(extensionId, {
+    id: extensionId,
+    type: 'extensions',
+    attributes: { settings: JSON.stringify(newSettings) },
+  });
 
   return { success: true };
 }
@@ -360,11 +282,11 @@ async function deploy() {
 
   console.log(`Property ID: ${envConfig.propertyId}`);
 
-  // Initialize Reactor client
-  const client = new ReactorClient(
-    process.env.REACTOR_ACCESS_TOKEN,
-    process.env.REACTOR_COMPANY_ID
-  );
+  // Initialize Reactor SDK client
+  const client = new Reactor(process.env.REACTOR_ACCESS_TOKEN, {
+    reactorUrl: process.env.REACTOR_API_URL || 'https://reactor.adobe.io',
+    customHeaders: { 'x-gw-ims-org-id': process.env.REACTOR_COMPANY_ID },
+  });
 
   // Get list of resources to deploy
   let resourcesToDeploy = envConfig.resources || [];
