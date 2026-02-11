@@ -59,3 +59,17 @@ export const SEARCH_SOURCES = {
 } as const;
 
 export type SearchSource = (typeof SEARCH_SOURCES)[keyof typeof SEARCH_SOURCES];
+
+/**
+ * Mapping from URL parameter names to XDM searchFilters field names
+ * Only filters matching these keys will be mapped to XDM (unknown params are dropped)
+ * @constant
+ */
+export const FILTER_TO_XDM_MAP: Record<string, string> = {
+  'content-type': 'searchContentType',
+  functionality: 'searchFunctionality',
+  industries: 'searchIndustries',
+  products: 'searchProducts',
+  solutions: 'searchSolutions',
+  topic: 'searchTopic',
+} as const;

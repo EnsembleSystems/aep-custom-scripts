@@ -54,6 +54,7 @@ declare global {
     /** AEP Launch satellite object */
     _satellite?: {
       setVar: (name: string, value: unknown) => void;
+      getVar: (name: string) => Record<string, unknown> | undefined;
       track: (eventName: string) => void;
     };
   }

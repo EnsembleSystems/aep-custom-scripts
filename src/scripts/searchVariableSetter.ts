@@ -1,40 +1,45 @@
 /**
- * Search Variable Setter Script for AEP (v2 - Refactored)
+ * Search Variable Setter Script for AEP (v3 - XDM Variable)
  *
- * Reads search payload from window and sets AEP Launch variables.
- * Refactored for improved security, performance, and maintainability.
+ * Reads search payload from window and writes directly to the XDM Variable
+ * so search data is included in WebSDK events.
  *
- * Improvements:
- * - Better validation of payload structure
- * - Safe handling of missing data
- * - Type-safe variable setting
- * - Comprehensive error handling
- * - Follows SRP - single responsibility of setting Launch variables
+ * XDM path: xdm._adobepartners.searchResults
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 import { executeScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import type { SearchPayload } from '../utils/searchUrlParser.js';
+import { FILTER_TO_XDM_MAP } from '../utils/searchConfig.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-/**
- * Result returned by the script
- */
+/** XDM searchFilters structure */
+interface XdmSearchFilters {
+  searchContentType?: string[];
+  searchFunctionality?: string[];
+  searchIndustries?: string[];
+  searchProducts?: string[];
+  searchSolutions?: string[];
+  searchTopic?: string[];
+}
+
+/** XDM searchResults structure */
+interface XdmSearchResults {
+  searchTerm: string;
+  searchSource: string;
+  searchFilters: XdmSearchFilters;
+}
+
+/** Result returned by the script */
 export interface SearchVariableSetterResult {
-  /** Whether variables were set successfully */
   success: boolean;
-  /** Message describing the result */
   message: string;
-  /** Variables that were set */
-  variables?: {
-    searchTerm: string;
-    searchFilters: Record<string, string[]>;
-    searchSource: string;
-  };
+  searchResults?: XdmSearchResults;
 }
 
 /**
@@ -42,11 +47,10 @@ export interface SearchVariableSetterResult {
  */
 declare global {
   interface Window {
-    /** Current search payload */
     __searchPayload?: SearchPayload;
-    /** AEP Launch satellite object */
     _satellite?: {
       setVar: (name: string, value: unknown) => void;
+      getVar: (name: string) => Record<string, unknown> | undefined;
       track: (eventName: string) => void;
     };
   }
@@ -56,19 +60,7 @@ declare global {
 // CONSTANTS
 // ============================================================================
 
-/** Default values for missing data */
-const DEFAULTS = {
-  TERM: '',
-  FILTERS: {} as Record<string, string[]>,
-  SOURCE: 'unknown',
-} as const;
-
-/** Variable names in Launch */
-const VARIABLE_NAMES = {
-  TERM: 'searchTerm',
-  FILTERS: 'searchFilters',
-  SOURCE: 'searchSource',
-} as const;
+const XDM_VARIABLE_NAME = 'XDMVariable';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -76,20 +68,15 @@ const VARIABLE_NAMES = {
 
 /**
  * Safely reads and validates search payload from window
- *
- * @param logger - Logger instance for debugging
- * @returns Validated payload or null
  */
-function readSearchPayload(logger: typeof console): SearchPayload | null {
+function readSearchPayload(logger: Logger): SearchPayload | null {
   try {
     const payload = window.__searchPayload;
 
-    // Check if payload exists
     if (!payload || typeof payload !== 'object') {
       return null;
     }
 
-    // Validate structure
     if (typeof payload.term !== 'string') {
       logger.warn('Invalid payload: term is not a string');
       return null;
@@ -100,7 +87,6 @@ function readSearchPayload(logger: typeof console): SearchPayload | null {
       return null;
     }
 
-    // Validate filters (must be an object with string array values)
     if (payload.filters && typeof payload.filters === 'object') {
       const { filters } = payload;
       const isValid = Object.values(filters).every(
@@ -121,39 +107,55 @@ function readSearchPayload(logger: typeof console): SearchPayload | null {
   }
 }
 
+/**
+ * Maps generic filters to XDM searchFilters structure
+ * Only known filter keys (from FILTER_TO_XDM_MAP) are included
+ */
+function mapFiltersToXdm(filters: Record<string, string[]>, logger: Logger): XdmSearchFilters {
+  const xdmFilters: XdmSearchFilters = {};
+
+  Object.entries(filters).forEach(([key, values]) => {
+    const xdmKey = FILTER_TO_XDM_MAP[key];
+    if (xdmKey) {
+      (xdmFilters as Record<string, string[]>)[xdmKey] = values;
+      logger.log(`Mapped filter "${key}" → "${xdmKey}":`, values);
+    } else {
+      logger.log(`Skipping unmapped filter "${key}" (not in XDM schema)`);
+    }
+  });
+
+  return xdmFilters;
+}
+
+/**
+ * Ensures nested object path exists on a target object
+ */
+function ensurePath(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  let current = obj;
+  keys.forEach((key) => {
+    if (!current[key] || typeof current[key] !== 'object') {
+      current[key] = {};
+    }
+    current = current[key] as Record<string, unknown>;
+  });
+  return current;
+}
+
 // ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================
 
 /**
- * Sets AEP Launch variables from search payload
+ * Sets search data in the XDM Variable for WebSDK events
  *
  * This function:
  * 1. Reads window.__searchPayload safely
  * 2. Validates payload structure
- * 3. Sets Launch variables with defaults
- * 4. Returns status and values set
+ * 3. Maps filters to XDM schema field names
+ * 4. Writes searchResults into XDMVariable via _satellite.getVar()
  *
  * @param testMode - Enable verbose logging for testing
- * @returns Result object with success status and variables
- *
- * @example
- * ```typescript
- * // In AEP Launch Direct Call Rule for searchCommit:
- * // Sets searchTerm, searchFilters, searchSource variables
- * ```
- *
- * @example
- * ```typescript
- * // Enable debug mode and test:
- * localStorage.setItem('__aep_scripts_debug', 'true');
- * window.__searchPayload = {
- *   term: 'photoshop',
- *   filters: { category: ['tutorials'] },
- *   source: 'entry'
- * };
- * // Then trigger the script
- * ```
+ * @returns Result object with success status and XDM data
  */
 export function searchVariableSetterScript(testMode: boolean = false): SearchVariableSetterResult {
   return executeScript(
@@ -161,7 +163,7 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
       scriptName: 'Search Variable Setter',
       testMode,
       testHeaderTitle: 'SEARCH VARIABLE SETTER - TEST MODE',
-      onError: (error, logger) => {
+      onError: (error, logger): SearchVariableSetterResult => {
         logger.error('Error setting search variables:', error);
         return {
           success: false,
@@ -174,55 +176,71 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
       const payload = readSearchPayload(logger);
 
       if (!payload) {
-        logger.log('No search payload found, using defaults');
+        logger.log('No valid search payload found');
+        return {
+          success: false,
+          message: 'No valid search payload found',
+        };
       }
 
-      // Extract values with defaults
-      const term = payload?.term ?? DEFAULTS.TERM;
-      const filters = payload?.filters ?? DEFAULTS.FILTERS;
-      const source = payload?.source ?? DEFAULTS.SOURCE;
+      // Build XDM search results
+      const xdmFilters = mapFiltersToXdm(payload.filters, logger);
 
-      logger.log('Extracted values:', { term, filters, source });
+      const searchResults: XdmSearchResults = {
+        searchTerm: payload.term,
+        searchSource: payload.source,
+        searchFilters: xdmFilters,
+      };
 
-      // Set Launch variables
-      if (window._satellite && typeof window._satellite.setVar === 'function') {
+      logger.log('Built XDM searchResults:', searchResults);
+
+      // Get XDM Variable and set search results
+      if (window._satellite && typeof window._satellite.getVar === 'function') {
         try {
-          window._satellite.setVar(VARIABLE_NAMES.TERM, term);
-          window._satellite.setVar(VARIABLE_NAMES.FILTERS, filters);
-          window._satellite.setVar(VARIABLE_NAMES.SOURCE, source);
+          const xdmVar = window._satellite.getVar(XDM_VARIABLE_NAME);
 
-          logger.log('Successfully set Launch variables');
+          if (!xdmVar) {
+            logger.error(`XDM Variable "${XDM_VARIABLE_NAME}" not found`);
+            return {
+              success: false,
+              message: `XDM Variable "${XDM_VARIABLE_NAME}" not found`,
+              searchResults,
+            };
+          }
+
+          // Ensure the path xdm._adobepartners.searchResults exists
+          const searchResultsNode = ensurePath(xdmVar, ['_adobepartners', 'searchResults']);
+
+          // Set search results fields
+          searchResultsNode.searchTerm = searchResults.searchTerm;
+          searchResultsNode.searchSource = searchResults.searchSource;
+          searchResultsNode.searchFilters = searchResults.searchFilters;
+
+          logger.log('Successfully set XDM Variable searchResults');
 
           return {
             success: true,
-            message: 'Search variables set successfully',
-            variables: {
-              searchTerm: term,
-              searchFilters: filters,
-              searchSource: source,
-            },
+            message: 'Search results set in XDM Variable',
+            searchResults,
           };
         } catch (error) {
-          logger.error('Error setting Launch variables:', error);
+          logger.error('Error setting XDM Variable:', error);
           return {
             success: false,
-            message: 'Failed to set Launch variables',
+            message: 'Failed to set XDM Variable',
+            searchResults,
           };
         }
       } else {
         const message = testMode
-          ? '_satellite.setVar() not available (normal in test mode)'
-          : '_satellite.setVar() not available - ensure AEP Launch is loaded';
+          ? '_satellite.getVar() not available (normal in test mode)'
+          : '_satellite.getVar() not available - ensure AEP Launch is loaded';
         logger.warn(message);
 
         return {
           success: false,
           message: '_satellite not available',
-          variables: {
-            searchTerm: term,
-            searchFilters: filters,
-            searchSource: source,
-          },
+          searchResults,
         };
       }
     }

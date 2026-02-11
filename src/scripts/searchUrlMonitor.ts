@@ -41,6 +41,7 @@ declare global {
     __urlHooked?: boolean;
     _satellite?: {
       setVar: (name: string, value: unknown) => void;
+      getVar: (name: string) => Record<string, unknown> | undefined;
       track: (eventName: string) => void;
     };
   }

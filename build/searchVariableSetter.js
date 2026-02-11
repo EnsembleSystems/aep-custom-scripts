@@ -100,17 +100,18 @@ function executeScript(config, execute) {
   }
 }
 
+// src/utils/searchConfig.ts
+var FILTER_TO_XDM_MAP = {
+  "content-type": "searchContentType",
+  functionality: "searchFunctionality",
+  industries: "searchIndustries",
+  products: "searchProducts",
+  solutions: "searchSolutions",
+  topic: "searchTopic"
+};
+
 // src/scripts/searchVariableSetter.ts
-var DEFAULTS = {
-  TERM: "",
-  FILTERS: {},
-  SOURCE: "unknown"
-};
-var VARIABLE_NAMES = {
-  TERM: "searchTerm",
-  FILTERS: "searchFilters",
-  SOURCE: "searchSource"
-};
+var XDM_VARIABLE_NAME = "XDMVariable";
 function readSearchPayload(logger) {
   try {
     const payload = window.__searchPayload;
@@ -142,6 +143,29 @@ function readSearchPayload(logger) {
     return null;
   }
 }
+function mapFiltersToXdm(filters, logger) {
+  const xdmFilters = {};
+  Object.entries(filters).forEach(([key, values]) => {
+    const xdmKey = FILTER_TO_XDM_MAP[key];
+    if (xdmKey) {
+      xdmFilters[xdmKey] = values;
+      logger.log(`Mapped filter "${key}" \u2192 "${xdmKey}":`, values);
+    } else {
+      logger.log(`Skipping unmapped filter "${key}" (not in XDM schema)`);
+    }
+  });
+  return xdmFilters;
+}
+function ensurePath(obj, keys) {
+  let current = obj;
+  keys.forEach((key) => {
+    if (!current[key] || typeof current[key] !== "object") {
+      current[key] = {};
+    }
+    current = current[key];
+  });
+  return current;
+}
 function searchVariableSetterScript(testMode = false) {
   return executeScript(
     {
@@ -157,48 +181,57 @@ function searchVariableSetterScript(testMode = false) {
       }
     },
     (logger) => {
-      var _a, _b, _c;
       const payload = readSearchPayload(logger);
       if (!payload) {
-        logger.log("No search payload found, using defaults");
+        logger.log("No valid search payload found");
+        return {
+          success: false,
+          message: "No valid search payload found"
+        };
       }
-      const term = (_a = payload == null ? void 0 : payload.term) != null ? _a : DEFAULTS.TERM;
-      const filters = (_b = payload == null ? void 0 : payload.filters) != null ? _b : DEFAULTS.FILTERS;
-      const source = (_c = payload == null ? void 0 : payload.source) != null ? _c : DEFAULTS.SOURCE;
-      logger.log("Extracted values:", { term, filters, source });
-      if (window._satellite && typeof window._satellite.setVar === "function") {
+      const xdmFilters = mapFiltersToXdm(payload.filters, logger);
+      const searchResults = {
+        searchTerm: payload.term,
+        searchSource: payload.source,
+        searchFilters: xdmFilters
+      };
+      logger.log("Built XDM searchResults:", searchResults);
+      if (window._satellite && typeof window._satellite.getVar === "function") {
         try {
-          window._satellite.setVar(VARIABLE_NAMES.TERM, term);
-          window._satellite.setVar(VARIABLE_NAMES.FILTERS, filters);
-          window._satellite.setVar(VARIABLE_NAMES.SOURCE, source);
-          logger.log("Successfully set Launch variables");
+          const xdmVar = window._satellite.getVar(XDM_VARIABLE_NAME);
+          if (!xdmVar) {
+            logger.error(`XDM Variable "${XDM_VARIABLE_NAME}" not found`);
+            return {
+              success: false,
+              message: `XDM Variable "${XDM_VARIABLE_NAME}" not found`,
+              searchResults
+            };
+          }
+          const searchResultsNode = ensurePath(xdmVar, ["_adobepartners", "searchResults"]);
+          searchResultsNode.searchTerm = searchResults.searchTerm;
+          searchResultsNode.searchSource = searchResults.searchSource;
+          searchResultsNode.searchFilters = searchResults.searchFilters;
+          logger.log("Successfully set XDM Variable searchResults");
           return {
             success: true,
-            message: "Search variables set successfully",
-            variables: {
-              searchTerm: term,
-              searchFilters: filters,
-              searchSource: source
-            }
+            message: "Search results set in XDM Variable",
+            searchResults
           };
         } catch (error) {
-          logger.error("Error setting Launch variables:", error);
+          logger.error("Error setting XDM Variable:", error);
           return {
             success: false,
-            message: "Failed to set Launch variables"
+            message: "Failed to set XDM Variable",
+            searchResults
           };
         }
       } else {
-        const message = testMode ? "_satellite.setVar() not available (normal in test mode)" : "_satellite.setVar() not available - ensure AEP Launch is loaded";
+        const message = testMode ? "_satellite.getVar() not available (normal in test mode)" : "_satellite.getVar() not available - ensure AEP Launch is loaded";
         logger.warn(message);
         return {
           success: false,
           message: "_satellite not available",
-          variables: {
-            searchTerm: term,
-            searchFilters: filters,
-            searchSource: source
-          }
+          searchResults
         };
       }
     }

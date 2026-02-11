@@ -119,9 +119,15 @@ Update rule actions with custom code.
 2. Search for and select **Search URL Change** or **Dynamic Search Detection**
 3. Click on **Core - Custom Code (searchTrackerDynamic.js)**
 4. Copy and paste contents of `build/searchTrackerDynamic.js` into the custom JS code editor
-5. Click on **Core - Custom Code (searchVariableSetter.js)**
-6. Copy and paste contents of `build/searchVariableSetter.js` into the custom JS code editor
-7. Click **Keep Changes**
+5. Click **Keep Changes**
+
+### Search | searchCommit Event Handler
+
+1. Select **Rules** from the left sidebar
+2. Search for and select **Search URL Change** or **Dynamic Search Detection**
+3. Click on **Core - Custom Code (searchVariableSetter.js)**
+4. Copy and paste contents of `build/searchVariableSetter.js` into the custom JS code editor
+5. Click **Keep Changes**
 
 ---
 

@@ -60,5 +60,24 @@ declare global {
         apiResponse?: unknown;
       };
     };
+
+    /** AEP Launch satellite object */
+    _satellite?: {
+      setVar: (name: string, value: unknown) => void;
+      getVar: (name: string) => Record<string, unknown> | undefined;
+      track: (eventName: string) => void;
+    };
+
+    // Title change monitoring
+    /** Flag to prevent duplicate observer installation */
+    __titleMonitorHooked?: boolean;
+    /** MutationObserver instance for cleanup */
+    __titleMonitorObserver?: MutationObserver;
+
+    // Page view tracking
+    /** Debounce timer for page view tracking */
+    __pageViewTimer?: ReturnType<typeof setTimeout>;
+    /** Last tracked page view key for deduplication */
+    __lastPageViewKey?: string;
   }
 }
