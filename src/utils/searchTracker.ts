@@ -9,7 +9,7 @@ import type { Logger } from './logger.js';
 import { parseSearchUrl, createSearchPayload, generateSearchKey } from './searchUrlParser.js';
 import { SEARCH_TRACKING_EVENT, type SearchSource } from './searchConfig.js';
 import { fireSatelliteEvent } from './satellite.js';
-import { getPartnerState, setPartnerState } from './globalState.js';
+import { isDuplicate, setPartnerState } from './globalState.js';
 
 /**
  * Result returned by trackSearch
@@ -46,17 +46,13 @@ export function trackSearch(
   const searchKey = generateSearchKey();
   logger.log('Generated search key:', searchKey);
 
-  if (searchKey === getPartnerState('lastSearchKey')) {
-    logger.log('Duplicate search detected, skipping');
+  if (isDuplicate(searchKey, 'lastSearchKey', logger)) {
     return {
       success: false,
       message: 'Duplicate search (already tracked)',
       term: parsed.term,
     };
   }
-
-  setPartnerState('lastSearchKey', searchKey);
-  logger.log('Updated deduplication key');
 
   // Create and store payload
   const payload = createSearchPayload(parsed, source);

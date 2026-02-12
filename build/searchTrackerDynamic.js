@@ -246,6 +246,15 @@ function setPartnerState(key, value) {
   const ns = ensurePartnerNamespace();
   ns[key] = value;
 }
+function isDuplicate(key, stateKey, logger) {
+  if (key === getPartnerState(stateKey)) {
+    logger.log("Duplicate detected, skipping");
+    return true;
+  }
+  setPartnerState(stateKey, key);
+  logger.log("Updated deduplication key");
+  return false;
+}
 
 // src/utils/searchTracker.ts
 function trackSearch(source, logger, testMode) {
@@ -256,16 +265,13 @@ function trackSearch(source, logger, testMode) {
   }
   const searchKey = generateSearchKey();
   logger.log("Generated search key:", searchKey);
-  if (searchKey === getPartnerState("lastSearchKey")) {
-    logger.log("Duplicate search detected, skipping");
+  if (isDuplicate(searchKey, "lastSearchKey", logger)) {
     return {
       success: false,
       message: "Duplicate search (already tracked)",
       term: parsed.term
     };
   }
-  setPartnerState("lastSearchKey", searchKey);
-  logger.log("Updated deduplication key");
   const payload = createSearchPayload(parsed, source);
   if (!payload) {
     logger.error("Failed to create search payload");

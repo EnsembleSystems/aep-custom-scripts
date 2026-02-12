@@ -204,10 +204,11 @@ function mergeWithTransforms(data, transforms) {
   return __spreadValues(__spreadValues({}, data), transformed);
 }
 
-// src/utils/globalState.ts
-function ensurePath(obj, path) {
+// src/utils/object.ts
+function ensureNestedPath(obj, path) {
+  const keys = Array.isArray(path) ? path : path.split(".");
   let current = obj;
-  path.forEach((key) => {
+  keys.forEach((key) => {
     if (!(key in current) || typeof current[key] !== "object" || current[key] === null) {
       current[key] = {};
     }
@@ -215,6 +216,9 @@ function ensurePath(obj, path) {
   });
   return current;
 }
+
+// src/utils/globalState.ts
+var ensurePath = ensureNestedPath;
 function setGlobalValue(obj, path, value, logger) {
   const pathArray = Array.isArray(path) ? path : path.split(".");
   const lastKey = pathArray.pop();

@@ -14,6 +14,7 @@ import type { Logger } from '../utils/logger.js';
 import type { SearchPayload } from '../utils/searchUrlParser.js';
 import { FILTER_TO_XDM_MAP } from '../utils/searchConfig.js';
 import { ensurePath, getPartnerState } from '../utils/globalState.js';
+import { getSatelliteVar } from '../utils/satellite.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -168,51 +169,37 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
       logger.log('Built XDM searchResults:', searchResults);
 
       // Get XDM Variable and set search results
-      if (window._satellite && typeof window._satellite.getVar === 'function') {
-        try {
-          const xdmVar = window._satellite.getVar(XDM_VARIABLE_NAME);
+      const xdmVar = getSatelliteVar(XDM_VARIABLE_NAME, logger, testMode);
 
-          if (!xdmVar) {
-            logger.error(`XDM Variable "${XDM_VARIABLE_NAME}" not found`);
-            return {
-              success: false,
-              message: `XDM Variable "${XDM_VARIABLE_NAME}" not found`,
-              searchResults,
-            };
-          }
-
-          // Ensure the path xdm._adobepartners.searchResults exists
-          const searchResultsNode = ensurePath(xdmVar, ['_adobepartners', 'searchResults']);
-
-          // Set search results fields
-          searchResultsNode.searchTerm = searchResults.searchTerm;
-          searchResultsNode.searchSource = searchResults.searchSource;
-          searchResultsNode.searchFilters = searchResults.searchFilters;
-
-          logger.log('Successfully set XDM Variable searchResults');
-
-          return {
-            success: true,
-            message: 'Search results set in XDM Variable',
-            searchResults,
-          };
-        } catch (error) {
-          logger.error('Error setting XDM Variable:', error);
-          return {
-            success: false,
-            message: 'Failed to set XDM Variable',
-            searchResults,
-          };
-        }
-      } else {
-        const message = testMode
-          ? '_satellite.getVar() not available (normal in test mode)'
-          : '_satellite.getVar() not available - ensure AEP Launch is loaded';
-        logger.warn(message);
-
+      if (!xdmVar) {
         return {
           success: false,
-          message: '_satellite not available',
+          message: '_satellite or XDM Variable not available',
+          searchResults,
+        };
+      }
+
+      try {
+        // Ensure the path xdm._adobepartners.searchResults exists
+        const searchResultsNode = ensurePath(xdmVar, ['_adobepartners', 'searchResults']);
+
+        // Set search results fields
+        searchResultsNode.searchTerm = searchResults.searchTerm;
+        searchResultsNode.searchSource = searchResults.searchSource;
+        searchResultsNode.searchFilters = searchResults.searchFilters;
+
+        logger.log('Successfully set XDM Variable searchResults');
+
+        return {
+          success: true,
+          message: 'Search results set in XDM Variable',
+          searchResults,
+        };
+      } catch (error) {
+        logger.error('Error setting XDM Variable:', error);
+        return {
+          success: false,
+          message: 'Failed to set XDM Variable',
           searchResults,
         };
       }

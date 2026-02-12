@@ -15,6 +15,35 @@ interface SatelliteLogger {
 }
 
 /**
+ * Safely reads a Launch variable via _satellite.getVar()
+ *
+ * @param name - Variable name
+ * @param logger - Logger instance
+ * @param testMode - Whether in test mode (adjusts warning messages)
+ * @returns The variable value, or null if _satellite is unavailable
+ */
+export function getSatelliteVar(
+  name: string,
+  logger: SatelliteLogger,
+  testMode: boolean
+): Record<string, unknown> | null {
+  if (window._satellite && typeof window._satellite.getVar === 'function') {
+    const value = window._satellite.getVar(name);
+    if (!value) {
+      logger.warn(`Variable "${name}" not found`);
+      return null;
+    }
+    return value;
+  }
+
+  const message = testMode
+    ? '_satellite.getVar() not available (normal in test mode)'
+    : '_satellite.getVar() not available - ensure AEP Launch is loaded';
+  logger.warn(message);
+  return null;
+}
+
+/**
  * Safely sets a Launch variable via _satellite.setVar()
  *
  * @param name - Variable name

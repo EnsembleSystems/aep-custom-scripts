@@ -4,25 +4,16 @@
  */
 
 import type { Logger } from './logger.js';
+import { ensureNestedPath } from './object.js';
 
 /**
- * Ensures a nested path exists in an object, creating intermediate objects as needed
+ * Ensures a nested path exists in an object, creating intermediate objects as needed.
+ * Delegates to ensureNestedPath from object.ts.
  * @param obj - Root object
- * @param path - Array of property names representing the path
+ * @param path - Array of property names or dot-notation string
  * @returns The object at the end of the path
  */
-export function ensurePath(obj: Record<string, unknown>, path: string[]): Record<string, unknown> {
-  let current = obj;
-
-  path.forEach((key) => {
-    if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
-      current[key] = {};
-    }
-    current = current[key] as Record<string, unknown>;
-  });
-
-  return current;
-}
+export const ensurePath = ensureNestedPath;
 
 /**
  * Sets a value at a nested path in an object, creating intermediate objects as needed
@@ -68,6 +59,38 @@ export function setPartnerState<K extends keyof PartnerState>(
 ): void {
   const ns = ensurePartnerNamespace();
   ns[key] = value;
+}
+
+/**
+ * String-valued keys in PartnerState (for deduplication checks)
+ */
+type StringPartnerKeys = NonNullable<
+  {
+    [K in keyof PartnerState]: PartnerState[K] extends string | undefined ? K : never;
+  }[keyof PartnerState]
+>;
+
+/**
+ * Checks if a key matches the last-seen value stored in partner state.
+ * If not a duplicate, stores the new key for future checks.
+ *
+ * @param key - Current deduplication key
+ * @param stateKey - Partner state key to check/update (e.g. 'lastSearchKey')
+ * @param logger - Logger instance
+ * @returns true if duplicate (caller should skip), false if new
+ */
+export function isDuplicate(
+  key: string,
+  stateKey: StringPartnerKeys,
+  logger: { log(message: string, data?: unknown): void }
+): boolean {
+  if (key === getPartnerState(stateKey)) {
+    logger.log('Duplicate detected, skipping');
+    return true;
+  }
+  setPartnerState(stateKey, key);
+  logger.log('Updated deduplication key');
+  return false;
 }
 
 export default function setGlobalValue(

@@ -9,9 +9,9 @@
  */
 
 import { executeScript } from '../utils/script.js';
-import { fireSatelliteEvent } from '../utils/satellite.js';
+import { fireSatelliteEvent, getSatelliteVar } from '../utils/satellite.js';
 import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
-import { getPartnerState, setPartnerState } from '../utils/globalState.js';
+import { ensurePath, getPartnerState, isDuplicate, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -42,20 +42,6 @@ const XDM_VARIABLE_NAME = 'XDMVariable';
 // ============================================================================
 
 /**
- * Ensures nested object path exists on a target object
- */
-function ensurePath(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-  let current = obj;
-  keys.forEach((key) => {
-    if (!current[key] || typeof current[key] !== 'object') {
-      current[key] = {};
-    }
-    current = current[key] as Record<string, unknown>;
-  });
-  return current;
-}
-
-/**
  * Processes the page view after debounce
  *
  * @param title - Page title from event
@@ -73,32 +59,17 @@ function processPageView(
 ): void {
   logger.log('Processing SPA page view after debounce');
 
-  // Generate deduplication key
+  // Deduplicate by url + title
   const pageViewKey = `${url}|${title}`;
   logger.log('Generated page view key:', pageViewKey);
 
-  // Check for duplicate
-  if (pageViewKey === getPartnerState('lastPageViewKey')) {
-    logger.log('Duplicate page view detected, skipping');
+  if (isDuplicate(pageViewKey, 'lastPageViewKey', logger)) {
     return;
   }
-
-  // Update deduplication key
-  setPartnerState('lastPageViewKey', pageViewKey);
-  logger.log('Updated deduplication key');
 
   // Write page view data directly to XDM Variable
-  if (!window._satellite || typeof window._satellite.getVar !== 'function') {
-    const message = testMode
-      ? '_satellite.getVar() not available (normal in test mode)'
-      : '_satellite.getVar() not available - ensure AEP Launch is loaded';
-    logger.warn(message);
-    return;
-  }
-
-  const xdmVar = window._satellite.getVar(XDM_VARIABLE_NAME);
+  const xdmVar = getSatelliteVar(XDM_VARIABLE_NAME, logger, testMode);
   if (!xdmVar) {
-    logger.error(`XDM Variable "${XDM_VARIABLE_NAME}" not found`);
     return;
   }
 
