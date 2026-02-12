@@ -100,105 +100,113 @@ function executeScript(config, execute) {
   }
 }
 
-// src/scripts/searchUrlMonitor.ts
-var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
-var URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
-function dispatchUrlChangeEvent(url) {
+// src/utils/customEvent.ts
+function dispatchCustomEvent(eventName, detail) {
   try {
-    const detail = {
-      url,
-      timestamp: Date.now()
-    };
-    const event = new CustomEvent(URL_CHANGE_EVENT, {
+    const event = new CustomEvent(eventName, {
       detail,
       bubbles: true,
       cancelable: false
     });
     window.dispatchEvent(event);
+    return true;
   } catch (error) {
-    console.error("Failed to dispatch URL change event:", error);
+    console.error(`Failed to dispatch ${eventName} event:`, error);
+    return false;
   }
 }
-function installHistoryHooks(logger) {
-  const originalPushState = window.history.pushState;
-  const originalReplaceState = window.history.replaceState;
-  window.history.pushState = function pushStateHook(...args) {
-    try {
-      originalPushState.apply(window.history, args);
-      logger.log("pushState detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
-    } catch (error) {
-      logger.error("Error in pushState hook:", error);
-      originalPushState.apply(window.history, args);
-    }
-  };
-  window.history.replaceState = function replaceStateHook(...args) {
-    try {
-      originalReplaceState.apply(window.history, args);
-      logger.log("replaceState detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
-    } catch (error) {
-      logger.error("Error in replaceState hook:", error);
-      originalReplaceState.apply(window.history, args);
-    }
-  };
-  window.addEventListener(
-    "popstate",
-    () => {
-      logger.log("popstate detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
-    },
-    { passive: true }
-    // Performance optimization
-  );
-  logger.log("window.history API hooks installed successfully");
+
+// src/utils/spaPageViewConfig.ts
+var SPA_TITLE_CHANGE_EVENT = "spaPageTitleChanged";
+var DEFAULT_TITLE_PATTERNS = [
+  "React Include",
+  "React App",
+  "Loading...",
+  ""
+];
+function isDefaultTitle(title) {
+  const trimmed = title.trim();
+  return DEFAULT_TITLE_PATTERNS.some((pattern) => trimmed.toLowerCase() === pattern.toLowerCase());
 }
-function searchUrlMonitorScript(testMode = false) {
+
+// src/scripts/spaPageViewTitleMonitor.ts
+function installTitleObserver(logger) {
+  let previousUrl = document.referrer || "";
+  const titleElement = document.querySelector("title");
+  if (!titleElement) {
+    logger.warn("No <title> element found in document");
+    return;
+  }
+  const observer = new MutationObserver(() => {
+    const currentTitle2 = document.title;
+    if (isDefaultTitle(currentTitle2)) {
+      logger.log(`Title is still a default/placeholder: "${currentTitle2}"`);
+      return;
+    }
+    const currentUrl = window.location.href;
+    logger.log(`Title changed to: "${currentTitle2}"`);
+    dispatchCustomEvent(SPA_TITLE_CHANGE_EVENT, {
+      title: currentTitle2,
+      url: currentUrl,
+      referrer: previousUrl,
+      timestamp: Date.now()
+    });
+    previousUrl = currentUrl;
+  });
+  observer.observe(titleElement, { childList: true });
+  window.__titleMonitorObserver = observer;
+  logger.log("MutationObserver installed on <title> element");
+  const currentTitle = document.title;
+  if (!isDefaultTitle(currentTitle)) {
+    logger.log(`Title already set at install time: "${currentTitle}", dispatching immediately`);
+    dispatchCustomEvent(SPA_TITLE_CHANGE_EVENT, {
+      title: currentTitle,
+      url: window.location.href,
+      referrer: previousUrl,
+      timestamp: Date.now()
+    });
+  }
+}
+function spaPageViewTitleMonitorScript(testMode = false) {
   return executeScript(
     {
-      scriptName: "Search URL Monitor",
+      scriptName: "SPA Page View Title Monitor",
       testMode,
-      testHeaderTitle: "SEARCH URL MONITOR - TEST MODE",
+      testHeaderTitle: "SPA PAGE VIEW TITLE MONITOR - TEST MODE",
       onError: (error, logger) => {
-        logger.error("Error installing URL change monitor:", error);
+        logger.error("Error installing title change monitor:", error);
         return {
           success: false,
-          message: "Failed to install URL change monitor",
+          message: "Failed to install title change monitor",
           alreadyHooked: false
         };
       }
     },
     (logger) => {
-      if (!URL_PATTERN.test(window.location.pathname)) {
-        logger.log("URL does not match search pattern, skipping initialization");
-        return {
-          success: false,
-          message: "URL does not match search pattern",
-          alreadyHooked: false
-        };
-      }
-      if (window.__urlHooked) {
-        logger.log("URL change hooks already installed");
+      if (window.__titleMonitorHooked) {
+        logger.log("Title change observer already installed");
         return {
           success: true,
-          message: "URL change hooks already installed",
-          alreadyHooked: true
+          message: "Title change observer already installed",
+          alreadyHooked: true,
+          currentTitle: document.title
         };
       }
       try {
-        installHistoryHooks(logger);
-        window.__urlHooked = true;
-        logger.log("URL change hooks successfully installed");
+        installTitleObserver(logger);
+        window.__titleMonitorHooked = true;
+        logger.log("Title change observer successfully installed");
         return {
           success: true,
-          message: "URL change hooks installed successfully",
-          alreadyHooked: false
+          message: "Title change observer installed successfully",
+          alreadyHooked: false,
+          currentTitle: document.title
         };
       } catch (error) {
-        logger.error("Failed to install hooks:", error);
+        logger.error("Failed to install observer:", error);
         return {
           success: false,
-          message: "Failed to install URL change hooks",
+          message: "Failed to install title change observer",
           alreadyHooked: false
         };
       }
@@ -207,4 +215,4 @@ function searchUrlMonitorScript(testMode = false) {
 }
 
 
-return searchUrlMonitorScript(TEST_MODE);
+return spaPageViewTitleMonitorScript(TEST_MODE);

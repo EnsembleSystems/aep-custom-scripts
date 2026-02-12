@@ -64,6 +64,9 @@ interface UrlChangeDetail {
 /** Name of the custom event dispatched on URL changes */
 const URL_CHANGE_EVENT = 'partnersSearchUrlChanged';
 
+/** URL pattern required for initialization */
+const URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -199,6 +202,16 @@ export function searchUrlMonitorScript(testMode: boolean = false): SearchUrlMoni
       },
     },
     (logger) => {
+      // Only initialize on matching URLs
+      if (!URL_PATTERN.test(window.location.pathname)) {
+        logger.log('URL does not match search pattern, skipping initialization');
+        return {
+          success: false,
+          message: 'URL does not match search pattern',
+          alreadyHooked: false,
+        };
+      }
+
       // Check if already hooked
       if (window.__urlHooked) {
         logger.log('URL change hooks already installed');
