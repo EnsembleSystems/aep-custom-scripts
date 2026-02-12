@@ -33,21 +33,6 @@ export interface SearchUrlMonitorResult {
 }
 
 /**
- * Extend Window interface for URL monitor state
- */
-declare global {
-  interface Window {
-    /** Flag to prevent duplicate hook installation */
-    __urlHooked?: boolean;
-    _satellite?: {
-      setVar: (name: string, value: unknown) => void;
-      getVar: (name: string) => Record<string, unknown> | undefined;
-      track: (eventName: string) => void;
-    };
-  }
-}
-
-/**
  * Custom event detail for URL changes
  */
 interface UrlChangeDetail {

@@ -108,6 +108,7 @@ var DEBOUNCE_DELAY = 300;
 var MAX_TERM_LENGTH = 500;
 var MAX_FILTER_PARAMS = 50;
 var MAX_FILTER_VALUE_LENGTH = 1e3;
+var SEARCH_TRACKING_EVENT = "searchCommit";
 var SEARCH_SOURCES = {
   ENTRY: "entry",
   DYNAMIC: "url"
@@ -218,37 +219,55 @@ function generateSearchKey(url) {
   }
 }
 
-// src/scripts/searchTrackerDynamic.ts
-function processSearchUrl(logger, testMode) {
-  logger.log("Processing search URL parameters after debounce");
+// src/utils/satellite.ts
+function fireSatelliteEvent(eventName, logger, testMode) {
+  if (window._satellite && typeof window._satellite.track === "function") {
+    logger.log(`Triggering _satellite.track("${eventName}")`);
+    window._satellite.track(eventName);
+    return true;
+  }
+  const message = testMode ? "_satellite.track() not available (normal in test mode)" : "_satellite.track() not available - ensure AEP Launch is loaded";
+  logger.warn(message);
+  return false;
+}
+
+// src/utils/searchTracker.ts
+function trackSearch(source, logger, testMode) {
   const parsed = parseSearchUrl(void 0, logger);
   if (!parsed.hasValidTerm || !parsed.term) {
     logger.log("No valid search term found");
-    return;
+    return { success: false, message: "No valid search term found" };
   }
   const searchKey = generateSearchKey();
   logger.log("Generated search key:", searchKey);
   if (searchKey === window.__lastSearchKey) {
     logger.log("Duplicate search detected, skipping");
-    return;
+    return {
+      success: false,
+      message: "Duplicate search (already tracked)",
+      term: parsed.term
+    };
   }
   window.__lastSearchKey = searchKey;
   logger.log("Updated deduplication key");
-  const payload = createSearchPayload(parsed, SEARCH_SOURCES.DYNAMIC);
+  const payload = createSearchPayload(parsed, source);
   if (!payload) {
     logger.error("Failed to create search payload");
-    return;
+    return { success: false, message: "Failed to create search payload" };
   }
   window.__searchPayload = payload;
   logger.log("Stored search payload:", payload);
-  if (window._satellite && typeof window._satellite.track === "function") {
-    logger.log('Triggering _satellite.track("searchCommit")');
-    window._satellite.track("searchCommit");
-  } else {
-    const message = testMode ? "_satellite.track() not available (normal in test mode)" : "_satellite.track() not available - ensure AEP Launch is loaded";
-    logger.warn(message);
-  }
+  fireSatelliteEvent(SEARCH_TRACKING_EVENT, logger, testMode);
+  const filterCount = Object.keys(payload.filters).length;
+  return {
+    success: true,
+    message: "Search tracked successfully",
+    term: payload.term,
+    filterCount
+  };
 }
+
+// src/scripts/searchTrackerDynamic.ts
 function searchTrackerDynamicScript(testMode = false) {
   return executeScript(
     {
@@ -271,7 +290,7 @@ function searchTrackerDynamicScript(testMode = false) {
       const currentUrl = window.location.href;
       logger.log(`Setting up debounced search tracking (${DEBOUNCE_DELAY}ms delay)`);
       window.__searchUrlTimer = setTimeout(() => {
-        processSearchUrl(logger, testMode);
+        trackSearch(SEARCH_SOURCES.DYNAMIC, logger, testMode);
       }, DEBOUNCE_DELAY);
       return {
         success: true,

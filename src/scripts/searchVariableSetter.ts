@@ -13,6 +13,7 @@ import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
 import type { SearchPayload } from '../utils/searchUrlParser.js';
 import { FILTER_TO_XDM_MAP } from '../utils/searchConfig.js';
+import { ensurePath } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -40,20 +41,6 @@ export interface SearchVariableSetterResult {
   success: boolean;
   message: string;
   searchResults?: XdmSearchResults;
-}
-
-/**
- * Extend Window interface for search state
- */
-declare global {
-  interface Window {
-    __searchPayload?: SearchPayload;
-    _satellite?: {
-      setVar: (name: string, value: unknown) => void;
-      getVar: (name: string) => Record<string, unknown> | undefined;
-      track: (eventName: string) => void;
-    };
-  }
 }
 
 // ============================================================================
@@ -125,20 +112,6 @@ function mapFiltersToXdm(filters: Record<string, string[]>, logger: Logger): Xdm
   });
 
   return xdmFilters;
-}
-
-/**
- * Ensures nested object path exists on a target object
- */
-function ensurePath(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-  let current = obj;
-  keys.forEach((key) => {
-    if (!current[key] || typeof current[key] !== 'object') {
-      current[key] = {};
-    }
-    current = current[key] as Record<string, unknown>;
-  });
-  return current;
 }
 
 // ============================================================================

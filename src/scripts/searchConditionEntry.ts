@@ -21,16 +21,6 @@ import { parseSearchUrl } from '../utils/searchUrlParser.js';
 // TYPE DEFINITIONS
 // ============================================================================
 
-/**
- * Extend Window interface to include entry search state
- */
-declare global {
-  interface Window {
-    /** Flag to ensure entry search check runs only once per page load */
-    __entrySearchChecked?: boolean;
-  }
-}
-
 // ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================

@@ -53,6 +53,16 @@ export const MAX_FILTER_VALUE_LENGTH = 1000;
  * Search source identifiers
  * @constant
  */
+/**
+ * Direct call event name for search tracking
+ * @constant
+ */
+export const SEARCH_TRACKING_EVENT = 'searchCommit';
+
+/**
+ * Search source identifiers
+ * @constant
+ */
 export const SEARCH_SOURCES = {
   ENTRY: 'entry',
   DYNAMIC: 'url',

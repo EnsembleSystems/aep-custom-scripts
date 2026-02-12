@@ -11,7 +11,7 @@ import type { Logger } from './logger.js';
  * @param path - Array of property names representing the path
  * @returns The object at the end of the path
  */
-function ensurePath(obj: Record<string, unknown>, path: string[]): Record<string, unknown> {
+export function ensurePath(obj: Record<string, unknown>, path: string[]): Record<string, unknown> {
   let current = obj;
 
   path.forEach((key) => {

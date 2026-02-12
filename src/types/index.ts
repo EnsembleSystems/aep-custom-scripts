@@ -79,5 +79,17 @@ declare global {
     __pageViewTimer?: ReturnType<typeof setTimeout>;
     /** Last tracked page view key for deduplication */
     __lastPageViewKey?: string;
+
+    // Search tracking
+    /** Current search payload */
+    __searchPayload?: import('../utils/searchUrlParser.js').SearchPayload;
+    /** Debounce timer for dynamic search tracking */
+    __searchUrlTimer?: ReturnType<typeof setTimeout>;
+    /** Last tracked search key for deduplication */
+    __lastSearchKey?: string;
+    /** Flag to prevent duplicate URL hook installation */
+    __urlHooked?: boolean;
+    /** Flag to ensure entry search check runs only once per page load */
+    __entrySearchChecked?: boolean;
   }
 }

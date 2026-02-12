@@ -110,6 +110,18 @@ var FILTER_TO_XDM_MAP = {
   topic: "searchTopic"
 };
 
+// src/utils/globalState.ts
+function ensurePath(obj, path) {
+  let current = obj;
+  path.forEach((key) => {
+    if (!(key in current) || typeof current[key] !== "object" || current[key] === null) {
+      current[key] = {};
+    }
+    current = current[key];
+  });
+  return current;
+}
+
 // src/scripts/searchVariableSetter.ts
 var XDM_VARIABLE_NAME = "XDMVariable";
 function readSearchPayload(logger) {
@@ -155,16 +167,6 @@ function mapFiltersToXdm(filters, logger) {
     }
   });
   return xdmFilters;
-}
-function ensurePath(obj, keys) {
-  let current = obj;
-  keys.forEach((key) => {
-    if (!current[key] || typeof current[key] !== "object") {
-      current[key] = {};
-    }
-    current = current[key];
-  });
-  return current;
 }
 function searchVariableSetterScript(testMode = false) {
   return executeScript(
