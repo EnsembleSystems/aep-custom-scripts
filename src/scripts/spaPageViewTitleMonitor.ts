@@ -9,6 +9,7 @@
  */
 
 import { executeScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import dispatchCustomEvent from '../utils/customEvent.js';
 import { SPA_TITLE_CHANGE_EVENT, isDefaultTitle } from '../utils/spaPageViewConfig.js';
 import { setPartnerState, getPartnerState } from '../utils/globalState.js';
@@ -54,8 +55,8 @@ export interface TitleChangeDetail {
  *
  * @param logger - Logger instance for debugging
  */
-function installTitleObserver(logger: typeof console): void {
-  let previousUrl = getPartnerState('previousPageUrl') || document.referrer || '';
+function installTitleObserver(logger: Logger): void {
+  const previousUrl = document.referrer || '';
 
   const titleElement = document.querySelector('title');
 
@@ -74,7 +75,9 @@ function installTitleObserver(logger: typeof console): void {
 
     const currentUrl = window.location.href;
 
-    logger.log(`Title changed to: "${currentTitle}"`);
+    logger.log(
+      `Title changed to: "${currentTitle}", dispatching page view and disconnecting observer`
+    );
 
     dispatchCustomEvent<TitleChangeDetail>(SPA_TITLE_CHANGE_EVENT, {
       title: currentTitle,
@@ -83,8 +86,11 @@ function installTitleObserver(logger: typeof console): void {
       timestamp: Date.now(),
     });
 
-    previousUrl = currentUrl;
     setPartnerState('previousPageUrl', currentUrl);
+
+    // Disconnect after first valid title — subsequent SPA navigations are link clicks
+    observer.disconnect();
+    logger.log('Observer disconnected after first valid title change');
   });
 
   observer.observe(titleElement, { childList: true });
@@ -94,7 +100,7 @@ function installTitleObserver(logger: typeof console): void {
 
   logger.log('MutationObserver installed on <title> element');
 
-  // If the title is already set to a valid value, dispatch immediately
+  // If the title is already valid at install time, dispatch and disconnect immediately
   const currentTitle = document.title;
   if (!isDefaultTitle(currentTitle)) {
     logger.log(`Title already set at install time: "${currentTitle}", dispatching immediately`);
@@ -104,6 +110,8 @@ function installTitleObserver(logger: typeof console): void {
       referrer: previousUrl,
       timestamp: Date.now(),
     });
+    observer.disconnect();
+    logger.log('Observer disconnected — title was already valid at install time');
   }
 }
 
@@ -141,7 +149,7 @@ function installTitleObserver(logger: typeof console): void {
 export function spaPageViewTitleMonitorScript(
   testMode: boolean = false
 ): SpaPageViewTitleMonitorResult {
-  return executeScript(
+  return executeScript<SpaPageViewTitleMonitorResult>(
     {
       scriptName: 'SPA Page View Title Monitor',
       testMode,

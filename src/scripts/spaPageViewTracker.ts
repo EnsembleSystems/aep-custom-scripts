@@ -9,6 +9,7 @@
  */
 
 import { executeScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import { fireSatelliteEvent, getSatelliteVar } from '../utils/satellite.js';
 import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
 import { ensurePath, getPartnerState, isDuplicate, setPartnerState } from '../utils/globalState.js';
@@ -54,7 +55,7 @@ function processPageView(
   title: string,
   url: string,
   referrer: string,
-  logger: typeof console,
+  logger: Logger,
   testMode: boolean
 ): void {
   logger.log('Processing SPA page view after debounce');
@@ -120,7 +121,7 @@ function processPageView(
  * ```
  */
 export function spaPageViewTrackerScript(testMode: boolean = false): SpaPageViewTrackerResult {
-  return executeScript(
+  return executeScript<SpaPageViewTrackerResult>(
     {
       scriptName: 'SPA Page View Tracker',
       testMode,

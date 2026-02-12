@@ -147,7 +147,7 @@ function setPartnerState(key, value) {
 
 // src/scripts/spaPageViewTitleMonitor.ts
 function installTitleObserver(logger) {
-  let previousUrl = getPartnerState("previousPageUrl") || document.referrer || "";
+  const previousUrl = document.referrer || "";
   const titleElement = document.querySelector("title");
   if (!titleElement) {
     logger.warn("No <title> element found in document");
@@ -160,15 +160,18 @@ function installTitleObserver(logger) {
       return;
     }
     const currentUrl = window.location.href;
-    logger.log(`Title changed to: "${currentTitle2}"`);
+    logger.log(
+      `Title changed to: "${currentTitle2}", dispatching page view and disconnecting observer`
+    );
     dispatchCustomEvent(SPA_TITLE_CHANGE_EVENT, {
       title: currentTitle2,
       url: currentUrl,
       referrer: previousUrl,
       timestamp: Date.now()
     });
-    previousUrl = currentUrl;
     setPartnerState("previousPageUrl", currentUrl);
+    observer.disconnect();
+    logger.log("Observer disconnected after first valid title change");
   });
   observer.observe(titleElement, { childList: true });
   setPartnerState("titleMonitorObserver", observer);
@@ -182,6 +185,8 @@ function installTitleObserver(logger) {
       referrer: previousUrl,
       timestamp: Date.now()
     });
+    observer.disconnect();
+    logger.log("Observer disconnected \u2014 title was already valid at install time");
   }
 }
 function spaPageViewTitleMonitorScript(testMode = false) {

@@ -15,6 +15,7 @@
  */
 
 import { executeScript } from '../utils/script.js';
+import type { Logger } from '../utils/logger.js';
 import { getPartnerState, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
@@ -87,7 +88,7 @@ function dispatchUrlChangeEvent(url: string): void {
  *
  * @param logger - Logger instance for debugging
  */
-function installHistoryHooks(logger: typeof console): void {
+function installHistoryHooks(logger: Logger): void {
   // Store original methods
   const originalPushState = window.history.pushState;
   const originalReplaceState = window.history.replaceState;
