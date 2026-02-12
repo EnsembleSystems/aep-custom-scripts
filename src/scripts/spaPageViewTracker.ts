@@ -11,6 +11,7 @@
 import { executeScript } from '../utils/script.js';
 import { fireSatelliteEvent } from '../utils/satellite.js';
 import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
+import { getPartnerState, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -77,13 +78,13 @@ function processPageView(
   logger.log('Generated page view key:', pageViewKey);
 
   // Check for duplicate
-  if (pageViewKey === window.__lastPageViewKey) {
+  if (pageViewKey === getPartnerState('lastPageViewKey')) {
     logger.log('Duplicate page view detected, skipping');
     return;
   }
 
   // Update deduplication key
-  window.__lastPageViewKey = pageViewKey;
+  setPartnerState('lastPageViewKey', pageViewKey);
   logger.log('Updated deduplication key');
 
   // Write page view data directly to XDM Variable
@@ -169,17 +170,21 @@ export function spaPageViewTrackerScript(testMode: boolean = false): SpaPageView
       logger.log(`Title: "${title}", URL: "${url}"`);
 
       // Clear any existing timer
-      if (window.__pageViewTimer) {
-        clearTimeout(window.__pageViewTimer);
+      const existingTimer = getPartnerState('pageViewTimer');
+      if (existingTimer) {
+        clearTimeout(existingTimer);
         logger.log('Cleared existing page view timer');
       }
 
       logger.log(`Setting up debounced SPA page view tracking (${DEBOUNCE_DELAY}ms delay)`);
 
       // Set up debounced execution
-      window.__pageViewTimer = setTimeout(() => {
-        processPageView(title, url, referrer, logger, testMode);
-      }, DEBOUNCE_DELAY);
+      setPartnerState(
+        'pageViewTimer',
+        setTimeout(() => {
+          processPageView(title, url, referrer, logger, testMode);
+        }, DEBOUNCE_DELAY)
+      );
 
       return {
         success: true,

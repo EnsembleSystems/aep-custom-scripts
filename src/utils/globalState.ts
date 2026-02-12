@@ -35,6 +35,41 @@ export function ensurePath(obj: Record<string, unknown>, path: string[]): Record
  * setGlobalValue(window, ['_adobePartners', 'eventData', 'response'], data)
  * setGlobalValue(window, '_adobePartners.eventData.response', data)
  */
+/**
+ * Partner namespace type for convenience
+ */
+type PartnerState = NonNullable<Window['_adobePartners']>;
+
+/**
+ * Ensures window._adobePartners exists and returns it.
+ */
+function ensurePartnerNamespace(): PartnerState {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+
+/**
+ * Reads a value from the _adobePartners namespace on window.
+ * Returns undefined if the namespace or key doesn't exist.
+ */
+export function getPartnerState<K extends keyof PartnerState>(key: K): PartnerState[K] {
+  return window._adobePartners?.[key];
+}
+
+/**
+ * Writes a value to the _adobePartners namespace on window.
+ * Initializes the namespace if it doesn't exist.
+ */
+export function setPartnerState<K extends keyof PartnerState>(
+  key: K,
+  value: PartnerState[K]
+): void {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 export default function setGlobalValue(
   obj: Record<string, unknown>,
   path: string[] | string,

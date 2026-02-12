@@ -11,6 +11,7 @@ import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
 import { SEARCH_SOURCES, DEBOUNCE_DELAY } from '../utils/searchConfig.js';
 import { trackSearch } from '../utils/searchTracker.js';
+import { getPartnerState, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -59,8 +60,9 @@ export function searchTrackerDynamicScript(testMode: boolean = false): SearchTra
     },
     (logger) => {
       // Clear any existing timer
-      if (window.__searchUrlTimer) {
-        clearTimeout(window.__searchUrlTimer);
+      const existingTimer = getPartnerState('searchUrlTimer');
+      if (existingTimer) {
+        clearTimeout(existingTimer);
         logger.log('Cleared existing search timer');
       }
 
@@ -68,9 +70,12 @@ export function searchTrackerDynamicScript(testMode: boolean = false): SearchTra
       logger.log(`Setting up debounced search tracking (${DEBOUNCE_DELAY}ms delay)`);
 
       // Set up debounced execution using shared tracking flow
-      window.__searchUrlTimer = setTimeout(() => {
-        trackSearch(SEARCH_SOURCES.DYNAMIC, logger as unknown as Logger, testMode);
-      }, DEBOUNCE_DELAY);
+      setPartnerState(
+        'searchUrlTimer',
+        setTimeout(() => {
+          trackSearch(SEARCH_SOURCES.DYNAMIC, logger as unknown as Logger, testMode);
+        }, DEBOUNCE_DELAY)
+      );
 
       return {
         success: true,

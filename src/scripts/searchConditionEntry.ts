@@ -16,6 +16,7 @@
 
 import { executeScript } from '../utils/script.js';
 import { parseSearchUrl } from '../utils/searchUrlParser.js';
+import { getPartnerState, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -64,13 +65,13 @@ export function searchConditionEntryScript(testMode: boolean = false): boolean {
     },
     (logger) => {
       // Guard: Ensure single execution per page load
-      if (window.__entrySearchChecked) {
+      if (getPartnerState('entrySearchChecked')) {
         logger.log('Entry search already checked this page load');
         return false;
       }
 
       // Mark as checked
-      window.__entrySearchChecked = true;
+      setPartnerState('entrySearchChecked', true);
       logger.log('Entry search check initialized');
 
       // Parse and validate URL

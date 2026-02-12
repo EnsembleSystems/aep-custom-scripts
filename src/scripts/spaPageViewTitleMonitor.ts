@@ -11,6 +11,7 @@
 import { executeScript } from '../utils/script.js';
 import dispatchCustomEvent from '../utils/customEvent.js';
 import { SPA_TITLE_CHANGE_EVENT, isDefaultTitle } from '../utils/spaPageViewConfig.js';
+import { setPartnerState, getPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -88,7 +89,7 @@ function installTitleObserver(logger: typeof console): void {
   observer.observe(titleElement, { childList: true });
 
   // Store observer for cleanup access
-  window.__titleMonitorObserver = observer;
+  setPartnerState('titleMonitorObserver', observer);
 
   logger.log('MutationObserver installed on <title> element');
 
@@ -155,7 +156,7 @@ export function spaPageViewTitleMonitorScript(
     },
     (logger) => {
       // Check if already hooked
-      if (window.__titleMonitorHooked) {
+      if (getPartnerState('titleMonitorHooked')) {
         logger.log('Title change observer already installed');
         return {
           success: true,
@@ -170,7 +171,7 @@ export function spaPageViewTitleMonitorScript(
         installTitleObserver(logger);
 
         // Mark as hooked
-        window.__titleMonitorHooked = true;
+        setPartnerState('titleMonitorHooked', true);
         logger.log('Title change observer successfully installed');
 
         return {

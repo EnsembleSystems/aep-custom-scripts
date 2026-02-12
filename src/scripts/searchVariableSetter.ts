@@ -13,7 +13,7 @@ import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
 import type { SearchPayload } from '../utils/searchUrlParser.js';
 import { FILTER_TO_XDM_MAP } from '../utils/searchConfig.js';
-import { ensurePath } from '../utils/globalState.js';
+import { ensurePath, getPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -58,7 +58,7 @@ const XDM_VARIABLE_NAME = 'XDMVariable';
  */
 function readSearchPayload(logger: Logger): SearchPayload | null {
   try {
-    const payload = window.__searchPayload;
+    const payload = getPartnerState('searchPayload');
 
     if (!payload || typeof payload !== 'object') {
       return null;

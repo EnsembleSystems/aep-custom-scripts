@@ -129,6 +129,22 @@ function isDefaultTitle(title) {
   return DEFAULT_TITLE_PATTERNS.some((pattern) => trimmed.toLowerCase() === pattern.toLowerCase());
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 // src/scripts/spaPageViewTitleMonitor.ts
 function installTitleObserver(logger) {
   let previousUrl = document.referrer || "";
@@ -154,7 +170,7 @@ function installTitleObserver(logger) {
     previousUrl = currentUrl;
   });
   observer.observe(titleElement, { childList: true });
-  window.__titleMonitorObserver = observer;
+  setPartnerState("titleMonitorObserver", observer);
   logger.log("MutationObserver installed on <title> element");
   const currentTitle = document.title;
   if (!isDefaultTitle(currentTitle)) {
@@ -183,7 +199,7 @@ function spaPageViewTitleMonitorScript(testMode = false) {
       }
     },
     (logger) => {
-      if (window.__titleMonitorHooked) {
+      if (getPartnerState("titleMonitorHooked")) {
         logger.log("Title change observer already installed");
         return {
           success: true,
@@ -194,7 +210,7 @@ function spaPageViewTitleMonitorScript(testMode = false) {
       }
       try {
         installTitleObserver(logger);
-        window.__titleMonitorHooked = true;
+        setPartnerState("titleMonitorHooked", true);
         logger.log("Title change observer successfully installed");
         return {
           success: true,

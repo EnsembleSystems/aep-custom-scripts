@@ -59,6 +59,30 @@ declare global {
       eventData?: {
         apiResponse?: unknown;
       };
+
+      // Title change monitoring
+      /** Flag to prevent duplicate observer installation */
+      titleMonitorHooked?: boolean;
+      /** MutationObserver instance for cleanup */
+      titleMonitorObserver?: MutationObserver;
+
+      // Page view tracking
+      /** Debounce timer for page view tracking */
+      pageViewTimer?: ReturnType<typeof setTimeout>;
+      /** Last tracked page view key for deduplication */
+      lastPageViewKey?: string;
+
+      // Search tracking
+      /** Current search payload */
+      searchPayload?: import('../utils/searchUrlParser.js').SearchPayload;
+      /** Debounce timer for dynamic search tracking */
+      searchUrlTimer?: ReturnType<typeof setTimeout>;
+      /** Last tracked search key for deduplication */
+      lastSearchKey?: string;
+      /** Flag to prevent duplicate URL hook installation */
+      urlHooked?: boolean;
+      /** Flag to ensure entry search check runs only once per page load */
+      entrySearchChecked?: boolean;
     };
 
     /** AEP Launch satellite object */
@@ -67,29 +91,5 @@ declare global {
       getVar: (name: string) => Record<string, unknown> | undefined;
       track: (eventName: string) => void;
     };
-
-    // Title change monitoring
-    /** Flag to prevent duplicate observer installation */
-    __titleMonitorHooked?: boolean;
-    /** MutationObserver instance for cleanup */
-    __titleMonitorObserver?: MutationObserver;
-
-    // Page view tracking
-    /** Debounce timer for page view tracking */
-    __pageViewTimer?: ReturnType<typeof setTimeout>;
-    /** Last tracked page view key for deduplication */
-    __lastPageViewKey?: string;
-
-    // Search tracking
-    /** Current search payload */
-    __searchPayload?: import('../utils/searchUrlParser.js').SearchPayload;
-    /** Debounce timer for dynamic search tracking */
-    __searchUrlTimer?: ReturnType<typeof setTimeout>;
-    /** Last tracked search key for deduplication */
-    __lastSearchKey?: string;
-    /** Flag to prevent duplicate URL hook installation */
-    __urlHooked?: boolean;
-    /** Flag to ensure entry search check runs only once per page load */
-    __entrySearchChecked?: boolean;
   }
 }

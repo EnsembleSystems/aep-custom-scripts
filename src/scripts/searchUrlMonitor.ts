@@ -15,6 +15,7 @@
  */
 
 import { executeScript } from '../utils/script.js';
+import { getPartnerState, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -198,7 +199,7 @@ export function searchUrlMonitorScript(testMode: boolean = false): SearchUrlMoni
       }
 
       // Check if already hooked
-      if (window.__urlHooked) {
+      if (getPartnerState('urlHooked')) {
         logger.log('URL change hooks already installed');
         return {
           success: true,
@@ -212,7 +213,7 @@ export function searchUrlMonitorScript(testMode: boolean = false): SearchUrlMoni
         installHistoryHooks(logger);
 
         // Mark as hooked
-        window.__urlHooked = true;
+        setPartnerState('urlHooked', true);
         logger.log('URL change hooks successfully installed');
 
         return {

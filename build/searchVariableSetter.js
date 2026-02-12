@@ -121,12 +121,16 @@ function ensurePath(obj, path) {
   });
   return current;
 }
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
 
 // src/scripts/searchVariableSetter.ts
 var XDM_VARIABLE_NAME = "XDMVariable";
 function readSearchPayload(logger) {
   try {
-    const payload = window.__searchPayload;
+    const payload = getPartnerState("searchPayload");
     if (!payload || typeof payload !== "object") {
       return null;
     }

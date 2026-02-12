@@ -230,6 +230,22 @@ function fireSatelliteEvent(eventName, logger, testMode) {
   return false;
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 // src/utils/searchTracker.ts
 function trackSearch(source, logger, testMode) {
   const parsed = parseSearchUrl(void 0, logger);
@@ -239,7 +255,7 @@ function trackSearch(source, logger, testMode) {
   }
   const searchKey = generateSearchKey();
   logger.log("Generated search key:", searchKey);
-  if (searchKey === window.__lastSearchKey) {
+  if (searchKey === getPartnerState("lastSearchKey")) {
     logger.log("Duplicate search detected, skipping");
     return {
       success: false,
@@ -247,14 +263,14 @@ function trackSearch(source, logger, testMode) {
       term: parsed.term
     };
   }
-  window.__lastSearchKey = searchKey;
+  setPartnerState("lastSearchKey", searchKey);
   logger.log("Updated deduplication key");
   const payload = createSearchPayload(parsed, source);
   if (!payload) {
     logger.error("Failed to create search payload");
     return { success: false, message: "Failed to create search payload" };
   }
-  window.__searchPayload = payload;
+  setPartnerState("searchPayload", payload);
   logger.log("Stored search payload:", payload);
   fireSatelliteEvent(SEARCH_TRACKING_EVENT, logger, testMode);
   const filterCount = Object.keys(payload.filters).length;

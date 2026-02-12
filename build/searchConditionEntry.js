@@ -185,6 +185,22 @@ function parseSearchUrl(url, logger) {
   }
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 // src/scripts/searchConditionEntry.ts
 function searchConditionEntryScript(testMode = false) {
   return executeScript(
@@ -198,11 +214,11 @@ function searchConditionEntryScript(testMode = false) {
       }
     },
     (logger) => {
-      if (window.__entrySearchChecked) {
+      if (getPartnerState("entrySearchChecked")) {
         logger.log("Entry search already checked this page load");
         return false;
       }
-      window.__entrySearchChecked = true;
+      setPartnerState("entrySearchChecked", true);
       logger.log("Entry search check initialized");
       const parsed = parseSearchUrl(void 0, logger);
       if (!parsed.hasValidTerm) {

@@ -116,6 +116,22 @@ function fireSatelliteEvent(eventName, logger, testMode) {
 var SPA_PAGE_VIEW_COMMIT_EVENT = "spaPageViewCommit";
 var DEBOUNCE_DELAY = 300;
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 // src/scripts/spaPageViewTracker.ts
 var XDM_VARIABLE_NAME = "XDMVariable";
 function ensurePath(obj, keys) {
@@ -132,11 +148,11 @@ function processPageView(title, url, referrer, logger, testMode) {
   logger.log("Processing SPA page view after debounce");
   const pageViewKey = `${url}|${title}`;
   logger.log("Generated page view key:", pageViewKey);
-  if (pageViewKey === window.__lastPageViewKey) {
+  if (pageViewKey === getPartnerState("lastPageViewKey")) {
     logger.log("Duplicate page view detected, skipping");
     return;
   }
-  window.__lastPageViewKey = pageViewKey;
+  setPartnerState("lastPageViewKey", pageViewKey);
   logger.log("Updated deduplication key");
   if (!window._satellite || typeof window._satellite.getVar !== "function") {
     const message = testMode ? "_satellite.getVar() not available (normal in test mode)" : "_satellite.getVar() not available - ensure AEP Launch is loaded";
@@ -177,14 +193,18 @@ function spaPageViewTrackerScript(testMode = false) {
       const url = window.location.href;
       const referrer = document.referrer || "";
       logger.log(`Title: "${title}", URL: "${url}"`);
-      if (window.__pageViewTimer) {
-        clearTimeout(window.__pageViewTimer);
+      const existingTimer = getPartnerState("pageViewTimer");
+      if (existingTimer) {
+        clearTimeout(existingTimer);
         logger.log("Cleared existing page view timer");
       }
       logger.log(`Setting up debounced SPA page view tracking (${DEBOUNCE_DELAY}ms delay)`);
-      window.__pageViewTimer = setTimeout(() => {
-        processPageView(title, url, referrer, logger, testMode);
-      }, DEBOUNCE_DELAY);
+      setPartnerState(
+        "pageViewTimer",
+        setTimeout(() => {
+          processPageView(title, url, referrer, logger, testMode);
+        }, DEBOUNCE_DELAY)
+      );
       return {
         success: true,
         message: `SPA page view tracking timer set (${DEBOUNCE_DELAY}ms delay)`,

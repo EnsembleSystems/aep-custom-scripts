@@ -100,6 +100,22 @@ function executeScript(config, execute) {
   }
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerState(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
 // src/scripts/searchUrlMonitor.ts
 var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
 var URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
@@ -177,7 +193,7 @@ function searchUrlMonitorScript(testMode = false) {
           alreadyHooked: false
         };
       }
-      if (window.__urlHooked) {
+      if (getPartnerState("urlHooked")) {
         logger.log("URL change hooks already installed");
         return {
           success: true,
@@ -187,7 +203,7 @@ function searchUrlMonitorScript(testMode = false) {
       }
       try {
         installHistoryHooks(logger);
-        window.__urlHooked = true;
+        setPartnerState("urlHooked", true);
         logger.log("URL change hooks successfully installed");
         return {
           success: true,
