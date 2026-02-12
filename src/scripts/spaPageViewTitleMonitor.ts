@@ -55,7 +55,7 @@ export interface TitleChangeDetail {
  * @param logger - Logger instance for debugging
  */
 function installTitleObserver(logger: typeof console): void {
-  let previousUrl = document.referrer || '';
+  let previousUrl = getPartnerState('previousPageUrl') || document.referrer || '';
 
   const titleElement = document.querySelector('title');
 
@@ -84,6 +84,7 @@ function installTitleObserver(logger: typeof console): void {
     });
 
     previousUrl = currentUrl;
+    setPartnerState('previousPageUrl', currentUrl);
   });
 
   observer.observe(titleElement, { childList: true });

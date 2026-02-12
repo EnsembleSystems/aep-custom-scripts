@@ -147,7 +147,7 @@ function setPartnerState(key, value) {
 
 // src/scripts/spaPageViewTitleMonitor.ts
 function installTitleObserver(logger) {
-  let previousUrl = document.referrer || "";
+  let previousUrl = getPartnerState("previousPageUrl") || document.referrer || "";
   const titleElement = document.querySelector("title");
   if (!titleElement) {
     logger.warn("No <title> element found in document");
@@ -168,6 +168,7 @@ function installTitleObserver(logger) {
       timestamp: Date.now()
     });
     previousUrl = currentUrl;
+    setPartnerState("previousPageUrl", currentUrl);
   });
   observer.observe(titleElement, { childList: true });
   setPartnerState("titleMonitorObserver", observer);

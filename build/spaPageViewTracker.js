@@ -191,7 +191,7 @@ function spaPageViewTrackerScript(testMode = false) {
     (logger) => {
       const { title } = document;
       const url = window.location.href;
-      const referrer = document.referrer || "";
+      const referrer = getPartnerState("previousPageUrl") || document.referrer || "";
       logger.log(`Title: "${title}", URL: "${url}"`);
       const existingTimer = getPartnerState("pageViewTimer");
       if (existingTimer) {

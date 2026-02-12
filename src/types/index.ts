@@ -71,6 +71,8 @@ declare global {
       pageViewTimer?: ReturnType<typeof setTimeout>;
       /** Last tracked page view key for deduplication */
       lastPageViewKey?: string;
+      /** Previous page URL for SPA referrer tracking */
+      previousPageUrl?: string;
 
       // Search tracking
       /** Current search payload */
