@@ -1,1150 +1,232 @@
 # AEP Custom Scripts (TypeScript)
 
-TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection. These scripts are designed to be embedded as custom code in AEP Data Elements and can also be tested standalone in browser consoles.
+TypeScript-based data fetchers for Adobe Experience Platform (AEP) Data Collection. Scripts are embedded as custom code in AEP Data Elements and Rules.
 
-> **⚡ Recent Updates**:
+> **⚡ Recent Updates (February 2026)**:
 >
-> **February 2026 - Entry Search Tracking**:
->
-> - **New entry search scripts**: `searchConditionEntry` (condition) and `searchTrackerEntry` (action)
-> - **Page load search detection**: Tracks searches when users arrive with search params in URL
-> - **Two tracking modes**: Entry search (page load) and dynamic search (URL changes after page load)
-> - **Shared infrastructure**: Both modes use same payload structure and variable setters
->
-> **February 2026 - Search Tracking Scripts**:
->
-> - **Dynamic search tracking**: URL parameter extraction, search variable setters, URL change monitoring
-> - **Runtime-controlled tracking**: Debounced search event triggers, deduplication
-> - **Terminology update**: Changed "keyword" to "term" for consistency
-> - **ESLint configuration**: Enhanced for search tracking scripts with proper ignores
->
-> **February 2026 - SnapLogic Support**:
->
-> - **New SnapLogic scripts**: Chimera card transforms (by ID and by URL)
-> - **ES5-compatible build**: esbuild + Babel output for Nashorn/JDK 7-8
-> - **Shared hash utility**: Rolling hash reused across AEP and SnapLogic
->
-> **January 2026 - v2.0 Architecture Refactor**:
->
-> - **Separated filtering from data extraction**: Filter callback now only checks `event.isTrusted` (3KB, 71% smaller)
-> - **All data extraction in before-send**: Uses `event.composedPath()` to extract partner data and card metadata
-> - **Removed window.\_adobePartners**: No shared state between callbacks - cleaner architecture
-> - **Better performance**: Lightweight filter callback, focused responsibilities
->
-> **December 2025**:
->
-> - **Direct Promise Returns**: Removed IIFE wrapper for proper AEP Launch Promise support
-> - **Clean Formatting**: Output code now starts at column 0 with no extra indentation
-> - See [AEP_PROMISE_FIX.md](AEP_PROMISE_FIX.md) for technical details
-
-## Features
-
-- ✅ **TypeScript-first**: Full type safety and modern JavaScript features
-- 🔧 **DRY Architecture**: Shared utilities eliminate code duplication
-- ⚡ **esbuild-Powered**: Lightning-fast builds with optimal bundle sizes
-- 🧩 **SnapLogic Support**: ES5-compatible bundles for Nashorn/JDK 7-8
-- 🎯 **ES2017 Output**: Promise `.then()` chains (no `async/await`) for maximum AEP compatibility
-- 🔓 **Direct Promise Returns**: No IIFE wrapper - AEP Launch natively supports ES6+ Promises
-- 📖 **Readable Output**: No minification, clean indentation - AEP handles minification automatically
-- 🧪 **Runtime Debug Mode**: Toggle debug output via localStorage - no rebuild needed
-- 📝 **Well-documented**: Comprehensive TypeScript types and JSDoc comments
-- 🚀 **Zero Configuration**: Direct script-to-bundle workflow
+> - **SPA Page View Tracking** - `spaPageViewTitleMonitor` + `spaPageViewTracker` for React SPA navigation
+> - **Utility Refactors** - New `satellite.ts`, `searchTracker.ts`, `searchConfig.ts`, `searchUrlParser.ts`, `customEvent.ts`; enhanced `globalState.ts` with deduplication
+> - **Search Tracking** - Five scripts for entry (page load) and dynamic (URL change) search tracking
+> - **SnapLogic Support** - ES5-compatible Chimera card transforms for Nashorn/JDK 7-8
 
 ## Quick Start
 
-### Installation
-
 ```bash
 npm install
+npm run build          # Build AEP scripts → build/
+npm run build:snaplogic # Build SnapLogic scripts → build-snaplogic/
+npm run build:all      # Build both
 ```
+
+### Creating a New Script
+
+```bash
+# Copy the appropriate template
+cp src/scripts/templateAsync.ts src/scripts/myScript.ts  # async (API calls, fetch)
+cp src/scripts/templateSync.ts src/scripts/myScript.ts   # sync (cookies, DOM)
+
+# Edit, then build
+npm run build
+# Output: build/myScript.js — ready for AEP
+```
+
+esbuild auto-discovers scripts, bundles utilities inline, transpiles to ES2017, and outputs readable code (AEP handles minification).
 
 ### Debug Mode
 
-Debug mode is controlled at **runtime** via localStorage - no rebuild or environment variables needed:
+Toggle at **runtime** via localStorage — no rebuild needed:
 
 ```javascript
-// Enable debug mode in browser DevTools console:
-localStorage.setItem('__aep_scripts_debug', 'true');
-
-// Disable debug mode:
-localStorage.removeItem('__aep_scripts_debug');
+localStorage.setItem('__aep_scripts_debug', 'true'); // Enable
+localStorage.removeItem('__aep_scripts_debug'); // Disable
 ```
 
-**Benefits**:
+## Available Scripts
 
-- Test production-deployed code directly
-- No rebuild or redeployment needed
-- Toggle debug output on any environment
-- Only developers who know the key can enable it
+Built scripts in [`build/`](build/) are committed to the repo. To deploy: click link → "Raw" → copy → paste into AEP.
 
-### Creating a New Script (Streamlined!)
+### Adobe Events
 
-Choose the appropriate template based on your needs:
+| Script                                                 | Description                                              |
+| ------------------------------------------------------ | -------------------------------------------------------- |
+| [fetchEventData.js](build/fetchEventData.js)           | Fetches event data via API (`/api/event.json?meta=true`) |
+| [getEventData.js](build/getEventData.js)               | Gets event data from `window._adobePartners.eventData`   |
+| [extractAttendeeData.js](build/extractAttendeeData.js) | Extracts attendee data from localStorage                 |
 
-**For async operations** (API calls, fetch, promises):
+### Partner & Analytics
 
-```bash
-# 1. Copy the async template
-cp src/scripts/templateAsync.ts src/scripts/myScript.ts
+| Script                                                                                             | Description                                                                             |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [extractPartnerData.js](build/extractPartnerData.js)                                               | Extracts DXP value from `partner_data` cookie                                           |
+| [extractPublisherId.js](build/extractPublisherId.js)                                               | Extracts publisher/owner ID from DOM links                                              |
+| [customOnPageLoad.js](build/customOnPageLoad.js)                                                   | Custom page load placeholder                                                            |
+| [customDataCollectionOnBeforeEventSend.js](build/customDataCollectionOnBeforeEventSend.js)         | Before event send callback — extracts partner data + card metadata via `composedPath()` |
+| [customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js) | Click filter — validates `event.isTrusted` only (~3KB)                                  |
 
-# 2. Edit your script (add your logic)
+### Search Tracking
 
-# 3. Build
-npm run build
+| Script                                                   | Description                                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [searchConditionEntry.js](build/searchConditionEntry.js) | Condition: checks for valid search term in URL on page load                   |
+| [searchTrackerEntry.js](build/searchTrackerEntry.js)     | Action: extracts search params on page load, fires `searchCommit`             |
+| [searchTrackerDynamic.js](build/searchTrackerDynamic.js) | Extracts search params on URL change, debounced (300ms), fires `searchCommit` |
+| [searchUrlMonitor.js](build/searchUrlMonitor.js)         | Hooks History API, dispatches `partnersSearchUrlChanged` event                |
+| [searchVariableSetter.js](build/searchVariableSetter.js) | Reads search payload, sets Launch variables via `_satellite.setVar()`         |
 
-# 4. Deploy build/myScript.js to AEP
+### SPA Page View Tracking
+
+| Script                                                         | Description                                                                     |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [spaPageViewTitleMonitor.js](build/spaPageViewTitleMonitor.js) | MutationObserver on `<title>` — dispatches `spaPageTitleChanged` on valid title |
+| [spaPageViewTracker.js](build/spaPageViewTracker.js)           | Debounced page view tracker — sets XDM variables, fires `spaPageViewCommit`     |
+
+### SnapLogic
+
+Built scripts in [`build-snaplogic/`](build-snaplogic/) (ES5 for Nashorn/JDK 7-8):
+
+| Script                                                                         | Description                         |
+| ------------------------------------------------------------------------------ | ----------------------------------- |
+| [transformChimeraCardsById.js](build-snaplogic/transformChimeraCardsById.js)   | XDM records keyed by hashed card ID |
+| [transformChimeraCardsByUrl.js](build-snaplogic/transformChimeraCardsByUrl.js) | XDM records keyed by URL (deduped)  |
+
+## Script Details
+
+### Before Event Send Callback
+
+Paste into Launch Extension → Data Collection → "Edit on before event send callback".
+
+- Skips page view events
+- Extracts partner data from `partner_data` cookie
+- Extracts card metadata from `event.composedPath()` (shadow DOM support)
+- Sets data in `content.xdm._adobepartners`
+
+Card context fields: `cardTitle`, `contentID`, `contentType`, `ctaText`, `filterContext`, `name`, `position`, `sectionID`
+
+### Search Tracking Flow
+
+**Entry search** (page load with search params):
+
+1. `searchConditionEntry` checks URL for valid term → returns `true`/`false`
+2. `searchTrackerEntry` extracts params, stores payload, fires `searchCommit`
+3. `searchVariableSetter` reads payload, sets `searchTerm`/`searchFilters`/`searchSource`
+
+**Dynamic search** (URL changes after page load):
+
+1. `searchUrlMonitor` hooks History API, dispatches `partnersSearchUrlChanged`
+2. `searchTrackerDynamic` extracts params (300ms debounce), stores payload, fires `searchCommit`
+3. `searchVariableSetter` reads payload, sets Launch variables
+
+**Shared behavior**:
+
+- Term extracted from `term`, `q`, or `keyword` params (in order)
+- Comma-delimited values split: `?key=val1,val2` → `["val1", "val2"]`
+- UTM params and `filters` param ignored
+- Deduplication prevents double-firing
+- Min term length: 2 chars
+- Payload stored in `window._adobePartners.searchPayload`
+
+**Example**: `/search?term=photoshop&category=tutorials` →
+
+```javascript
+{ term: "photoshop", filters: { category: ["tutorials"] }, source: "url" }
 ```
 
-**For sync operations** (cookies, localStorage, DOM):
+### SPA Page View Tracking Flow
 
-```bash
-# 1. Copy the sync template
-cp src/scripts/templateSync.ts src/scripts/myScript.ts
-
-# 2. Edit your script (add your logic)
-
-# 3. Build
-npm run build
-
-# 4. Deploy build/myScript.js to AEP
-```
-
-**That's it!** esbuild handles everything automatically!
-
-### Building Existing Scripts
-
-```bash
-npm run build
-```
-
-This automatically (**using esbuild**):
-
-1. Auto-discovers all scripts in `src/scripts/`
-2. Bundles each script with all utilities inlined
-3. Transpiles to ES2017 JavaScript (Promises, no `async/await`)
-4. Adds direct return pattern (no IIFE wrapper):
-   - Pattern: `const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true'; ... return scriptName(TEST_MODE);`
-   - Scripts with async operations return Promises via `.then()` chains
-   - AEP Launch natively awaits returned Promises (ES6+ support)
-   - Clean indentation - code starts at column 0
-5. Outputs readable, production-ready files to `build/` (~4-5KB each)
-
-**Note**: No minification applied, clean formatting - AEP handles minification automatically!
-
-### Building SnapLogic Scripts
-
-```bash
-npm run build:snaplogic
-```
-
-This build:
-
-1. Auto-discovers scripts in `src/snaplogic/scripts/`
-2. Bundles with esbuild (ES2015 target)
-3. Transpiles to ES5 with Babel for Nashorn compatibility
-4. Adds SnapLogic `ScriptHook` wrapper
-5. Outputs ready-to-deploy files to `build-snaplogic/`
-
-### Available Scripts
-
-After building, you'll find these bundled scripts in `build/`:
-
-**Adobe Events Scripts:**
-
-- **`fetchEventData.js`** - Adobe Events event data fetcher (API call)
-- **`getEventData.js`** - Adobe Events event data getter (from window object)
-- **`extractAttendeeData.js`** - Adobe Events attendee data extractor
-
-**Partner & Analytics Scripts:**
-
-- **`extractPartnerData.js`** - Partner cookie data extractor
-- **`extractPublisherId.js`** - Publisher/Owner ID extractor
-- **`customOnPageLoad.js`** - Custom on page load placeholder script
-- **`customDataCollectionOnBeforeEventSend.js`** - Before event send callback
-- **`customDataCollectionOnFilterClickCallback.js`** - Filter click callback with card tracking
-
-**Search Tracking Scripts:**
-
-- **`searchConditionEntry.js`** - Condition checker for entry search (page load with search params)
-- **`searchTrackerEntry.js`** - Entry search parameter extractor and tracker (page load)
-- **`searchVariableSetter.js`** - Sets AEP Launch variables from `window.__searchPayload`
-- **`searchTrackerDynamic.js`** - Extracts search terms and filters from URL, triggers tracking (dynamic)
-- **`searchUrlMonitor.js`** - Monitors History API for URL changes in SPAs
-
-**Templates:**
-
-- **`templateAsync.js`** - Template for async scripts (for reference)
-- **`templateSync.js`** - Template for sync scripts (for reference)
-
-### Available SnapLogic Scripts
-
-After building, you'll find these bundled scripts in `build-snaplogic/`:
-
-- **`transformChimeraCardsById.js`** - XDM records keyed by hashed card ID
-- **`transformChimeraCardsByUrl.js`** - XDM records keyed by URL (deduped)
-
-## 📥 Download Latest Scripts
-
-### Quick Access for Teammates
-
-Ready-to-deploy bundled scripts (committed to repository):
-
-**Adobe Events:**
-
-- **[fetchEventData.js](build/fetchEventData.js)** - Adobe Events event data fetcher (API call)
-- **[getEventData.js](build/getEventData.js)** - Adobe Events event data getter (from window)
-- **[extractAttendeeData.js](build/extractAttendeeData.js)** - Adobe Events attendee data extractor
-
-**Partner & Analytics:**
-
-- **[extractPartnerData.js](build/extractPartnerData.js)** - Partner cookie extractor
-- **[extractPublisherId.js](build/extractPublisherId.js)** - Publisher ID extractor
-- **[customOnPageLoad.js](build/customOnPageLoad.js)** - Custom on page load placeholder
-- **[customDataCollectionOnBeforeEventSend.js](build/customDataCollectionOnBeforeEventSend.js)** - Before event send callback
-- **[customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js)** - Filter click callback with card tracking
-
-**Search Tracking:**
-
-- **[searchConditionEntry.js](build/searchConditionEntry.js)** - Entry search condition checker (page load)
-- **[searchTrackerEntry.js](build/searchTrackerEntry.js)** - Entry search extractor and tracker (page load)
-- **[searchVariableSetter.js](build/searchVariableSetter.js)** - Sets Launch variables from search payload
-- **[searchTrackerDynamic.js](build/searchTrackerDynamic.js)** - Extracts search from URL and triggers tracking (dynamic)
-- **[searchUrlMonitor.js](build/searchUrlMonitor.js)** - Monitors History API for URL changes
-
-**To use**: Click the link → Click "Raw" → Copy all → Paste into AEP Data Element
-
-### SnapLogic Bundles
-
-Ready-to-deploy SnapLogic scripts (committed to repository):
-
-- **[transformChimeraCardsById.js](build-snaplogic/transformChimeraCardsById.js)** - XDM records keyed by hashed card ID
-- **[transformChimeraCardsByUrl.js](build-snaplogic/transformChimeraCardsByUrl.js)** - XDM records keyed by URL (deduped)
-
-### Production Releases
-
-For stable, versioned deployments see [Releases](../../releases) page.
-
-## Deploying to AEP
-
-1. Download the script you need from links above (or run `npm run build` locally)
-2. Copy the **entire** bundled code
-3. Paste into AEP Data Element as custom code
-4. Save and test!
-
-**Note**: The code you paste will be readable (not minified). AEP automatically minifies custom code blocks when you save them.
+1. `spaPageViewTitleMonitor` installs MutationObserver on `<title>`
+2. Filters out placeholder titles ("React Include", "React App", "Loading...", empty)
+3. On valid title, dispatches `spaPageTitleChanged` with title/URL/referrer
+4. `spaPageViewTracker` receives event, debounces (300ms), deduplicates by `url|title`
+5. Sets XDM fields on `XDMVariable`: `web.webPageDetails` + `web.webReferrer`
+6. Fires `spaPageViewCommit` direct call event
 
 ## Project Structure
 
 ```
-aep-custom-scripts/
-├── src/
-│   ├── scripts/           # Main script implementations
-│   │   ├── fetchEventData.ts                           # Fetches event data via API
-│   │   ├── getEventData.ts                             # Gets event data from window
-│   │   ├── extractAttendeeData.ts                      # Extracts attendee data
-│   │   ├── extractPartnerData.ts                       # Extracts partner cookie data
-│   │   ├── extractPublisherId.ts                       # Extracts publisher ID
-│   │   ├── customOnPageLoad.ts                         # Custom on page load placeholder
-│   │   ├── customDataCollectionOnBeforeEventSend.ts    # Before event send callback
-│   │   ├── customDataCollectionOnFilterClickCallback.ts # Filter click with card tracking
-│   │   ├── searchConditionEntry.ts                         # Entry search condition checker
-│   │   ├── searchTrackerEntry.ts                         # Entry search extractor and tracker
-│   │   ├── searchVariableSetter.ts                            # Sets Launch variables from search payload
-│   │   ├── searchTrackerDynamic.ts                       # Extracts search from URL (dynamic)
-│   │   ├── searchUrlMonitor.ts                         # Monitors History API for URL changes
-│   │   ├── templateAsync.ts                            # Template for async scripts
-│   │   └── templateSync.ts                             # Template for sync scripts
-│   ├── utils/             # Shared utilities (DRY)
-│   │   ├── script.ts      # Script execution wrappers
-│   │   ├── logger.ts      # Consistent logging
-│   │   ├── fetch.ts       # Fetch with timeout
-│   │   ├── cookie.ts      # Cookie parsing
-│   │   ├── storage.ts     # LocalStorage helpers
-│   │   ├── validation.ts  # Input validation
-│   │   ├── dom.ts         # DOM manipulation & shadow DOM helpers
-│   │   ├── extraction.ts  # Data extraction pipeline
-│   │   ├── object.ts      # Object utilities
-│   │   ├── events.ts      # Event handling utilities
-│   │   ├── transform.ts   # Data transformation
-│   │   ├── url.ts         # URL utilities
-│   │   ├── globalState.ts # Window state management
-│   │   ├── constants.ts   # Shared constants
-│   │   └── dates.ts       # Date utilities
-│   ├── types/             # TypeScript type definitions
-│   │   └── index.ts       # Common types (PartnerCardCtx, etc.)
-│   └── index.ts           # Main exports
-├── scripts/
-│   └── buildWithEsbuild.js  # esbuild-based build script
-│   └── buildSnaplogic.js    # esbuild + Babel build for SnapLogic
-├── build/                 # Bundled scripts (ready for AEP)
-│   ├── fetchEventData.js
-│   ├── getEventData.js
-│   ├── extractAttendeeData.js
-│   ├── extractPartnerData.js
-│   ├── extractPublisherId.js
-│   ├── customOnPageLoad.js
-│   ├── customDataCollectionOnBeforeEventSend.js
-│   └── customDataCollectionOnFilterClickCallback.js
-├── src/snaplogic/          # SnapLogic scripts and utilities
-│   ├── scripts/
-│   │   ├── transformChimeraCardsById.ts
-│   │   └── transformChimeraCardsByUrl.ts
-│   ├── utils/
-│   │   ├── array.ts
-│   │   ├── card.ts
-│   │   └── date.ts
-│   └── types/
-│       └── index.ts
-├── build-snaplogic/         # Bundled SnapLogic scripts
-│   ├── transformChimeraCardsById.js
-│   └── transformChimeraCardsByUrl.js
-├── tsconfig.json          # TypeScript configuration
-├── tsconfig.snaplogic.json # SnapLogic TypeScript configuration
-└── package.json           # Project metadata
+src/
+├── scripts/              # AEP script entry points
+├── utils/                # Shared utilities
+│   ├── script.ts         # executeScript / executeAsyncScript wrappers
+│   ├── logger.ts         # Consistent logging
+│   ├── satellite.ts      # Safe _satellite interaction
+│   ├── globalState.ts    # Window state management & deduplication
+│   ├── searchConfig.ts   # Search tracking constants & XDM mapping
+│   ├── searchUrlParser.ts # Secure URL parser (XSS protection)
+│   ├── searchTracker.ts  # Shared search tracking flow
+│   ├── spaPageViewConfig.ts # SPA page view constants
+│   ├── customEvent.ts    # Safe CustomEvent dispatching
+│   ├── fetch.ts, cookie.ts, storage.ts, dom.ts, validation.ts
+│   ├── extraction.ts, object.ts, events.ts, transform.ts, url.ts
+│   ├── hash.ts, constants.ts, dates.ts
+│   └── index.ts
+├── types/index.ts        # PartnerCardCtx, CartItem, CheckoutData, Window augmentation
+└── snaplogic/            # SnapLogic scripts & ES5-compatible utils
+build/                    # Bundled AEP scripts (committed)
+build-snaplogic/          # Bundled SnapLogic scripts (committed)
+scripts/                  # Build tooling (esbuild, Babel, deploy)
 ```
+
+## NPM Scripts
+
+```bash
+# Build
+npm run build              # AEP scripts
+npm run build:snaplogic    # SnapLogic scripts
+npm run build:all          # Both
+npm run clean              # Remove build artifacts
+
+# Development
+npm run dev                # TypeScript watch mode
+npm run type-check         # Type-check AEP
+npm run type-check:snaplogic # Type-check SnapLogic
+npm run lint:fix           # Lint and fix
+npm run format             # Format with Prettier
+
+# Deploy to AEP Launch
+npm run deploy -- --env=dev
+npm run deploy -- --env=stage
+npm run deploy -- --env=prod
+npm run deploy -- --dry-run --env=prod
+npm run deploy -- --env=dev --script=searchUrlMonitor  # Single script
+npm run deploy:dev         # Shortcut
+npm run deploy:dry-run     # Shortcut
+```
+
+## Development Workflow
+
+```bash
+# 1. Edit source in src/
+# 2. Build
+npm run build
+
+# 3. Commit source + built files
+git add src/ build/*.js
+git commit -m "Your message"
+```
+
+Pre-commit hooks (Husky + lint-staged) auto-run ESLint and Prettier.
 
 ## GitHub Workflows
 
 ### Chimera Collection to SFTP
 
-**Diagram**: ![](./images/UPP-AEP%20-%20Frame%201.jpg)
+![](./images/UPP-AEP%20-%20Frame%201.jpg)
 
-**Workflow:** [.github/workflows/fetch-chimera-sftp.yml](.github/workflows/fetch-chimera-sftp.yml)
+[.github/workflows/fetch-chimera-sftp.yml](.github/workflows/fetch-chimera-sftp.yml) — Fetches Chimera API card data and uploads NDJSON to SFTP every 15 minutes.
 
-Automated workflow that fetches card data from the Chimera API and uploads to SFTP for AEP ingestion.
+**Process**: Fetch cards → `rollingHash()` IDs → extract tags/CTAs → generate `by-id` and `by-url` NDJSON files → upload to SFTP
 
-**Schedule:** Runs every 15 minutes via cron, or manually via workflow_dispatch.
+**Required config**: `CHIMERA_URL_{DEV,STAGE,PROD}`, `ORIGIN_SELECTION`, `SFTP_HOST`, `SFTP_PORT`, `SFTP_USER`, `SFTP_PATH`, `SFTP_PRIVATE_KEY` (secret)
 
-**Environments:** Runs in parallel for dev, stage, and prod (configurable via manual trigger).
+## Build Details
 
-**Process:**
-
-1. Fetches card collection from Chimera API endpoint
-2. Transforms cards using `rollingHash()` for shortened IDs
-3. Extracts tag IDs and CTA hrefs (from ctaLink, overlayLink, and footer sections)
-4. Generates two NDJSON output files per environment:
-   - `chimera-collection-xdm-by-id-{env}.ndjson` - One record per card (keyed by hashed card ID)
-   - `chimera-collection-xdm-by-url-{env}.ndjson` - One record per unique URL (keyed by URL)
-5. Uploads both files to SFTP server
-6. Reports duplicate URLs in workflow summary (URLs appearing in multiple cards)
-
-**XDM Record Format:**
-
-```json
-{
-  "_id": "hashedId or url",
-  "_adobepartners": {
-    "caasCard": {
-      "id": "hashedId",
-      "ctahrefs": ["url1", "url2"],
-      "tags": ["tag1", "tag2"],
-      "snapshot_ts": "2026-01-23T12:00:00.000Z"
-    }
-  }
-}
-```
-
-**Required Repository Configuration:**
-
-| Type     | Name                | Description                                                                                              |
-| -------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Variable | `CHIMERA_URL_DEV`   | Chimera API URL for dev environment                                                                      |
-| Variable | `CHIMERA_URL_STAGE` | Chimera API URL for stage environment                                                                    |
-| Variable | `CHIMERA_URL_PROD`  | Chimera API URL for prod environment                                                                     |
-| Variable | `ORIGIN_SELECTION`  | Comma-delimited origin filter (e.g., `bacom,experienceleague,news,da-dx-partners`). Leave empty to omit. |
-| Variable | `SFTP_HOST`         | SFTP server hostname                                                                                     |
-| Variable | `SFTP_PORT`         | SFTP server port (default: 22)                                                                           |
-| Variable | `SFTP_USER`         | SFTP username                                                                                            |
-| Variable | `SFTP_PATH`         | Remote directory path (default: .)                                                                       |
-| Secret   | `SFTP_PRIVATE_KEY`  | SSH private key for SFTP authentication                                                                  |
-
-## Script Descriptions
-
-### 1. Event Data Fetcher (`fetchEventData`)
-
-Fetches event data from Adobe Events pages via API.
-
-**Use on**: `*.adobeevents.com` pages
-
-**Returns**: Promise that resolves to event data object (from `/api/event.json?meta=true`) or `null` on error
-
-**Note**: This script makes an API call and stores the result on `window._adobePartners.eventData.apiResponse`. The data is also returned directly as a Promise.
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  timeout: 10000, // Request timeout in ms
-  debug: false, // Enable debug logging
-};
-```
-
-### 2. Event Data Getter (`getEventData`)
-
-Gets event data from `window._adobePartners.eventData.apiResponse` on Adobe Events pages.
-
-**Use on**: `*.adobeevents.com` pages
-
-**Returns**: Event data object (from `window._adobePartners.eventData.apiResponse`) or `null` if not found
-
-**Note**: This script retrieves data previously stored by `fetchEventData`. Use this in data elements that need the event data after it's been fetched.
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  debug: false, // Enable debug logging
-};
-```
-
-### 3. Attendee Data Extractor (`extractAttendeeData`)
-
-Extracts attendee data from localStorage on Adobe Events pages.
-
-**Use on**: `*.adobeevents.com` pages
-
-**Returns**: Attendee data object (from localStorage key `attendeaseMember`) or `null` if not found
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  debug: false, // Enable debug logging
-};
-```
-
-### 4. Partner Data Extractor (`extractPartnerData`)
-
-Extracts partner data from browser cookies and returns the DXP value.
-
-**How it works**:
-
-- Reads the `partner_data` cookie (customizable)
-- Parses the cookie value as URL-decoded JSON
-- Extracts and returns the value from the `DXP` key
-- Falls back to returning the entire object if no `DXP` key exists
-
-**Returns**: DXP value object (e.g., `{"status": "NOT_PARTNER"}`) or `null` if not found
-
-**Example**: Cookie `{"DXP": {"status": "NOT_PARTNER"}}` → Returns `{"status": "NOT_PARTNER"}`
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  debug: false,
-  cookieKey: 'partner_data', // Customize cookie name
-};
-```
-
-### 5. Publisher ID Extractor (`extractPublisherId`)
-
-Extracts publisher or owner IDs for Adobe Exchange apps by parsing DOM links.
-
-**Use on**: Adobe Exchange pages with publisher links
-
-**How it works**:
-
-- Searches for `<a>` tags with `href` starting with `/publisher/`
-- Extracts and validates the publisher ID from the URL path
-- Supports UUID and Salesforce ID formats
-
-**Returns**: `string` (publisher/owner ID) or `null`
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  debug: false, // Enable debug logging
-};
-```
-
-**No API keys required** - this script uses DOM parsing only.
-
-### 6. Custom On Page Load (`customOnPageLoad`)
-
-A placeholder script for custom on-page load functionality.
-
-**Use on**: Any page where you need custom page load logic
-
-**Usage in AEP Launch**:
-
-- Use as a **Rule Action** on page load (Page Bottom or DOM Ready event)
-- Customize the script logic as needed for your use case
-
-**Returns**: `null` (placeholder implementation)
-
-**Configuration** (default in source):
-
-```typescript
-const config = {
-  debug: false, // Enable debug logging
-};
-```
-
-### 7. Custom Data Collection - Before Event Send (`customDataCollectionOnBeforeEventSend`)
-
-Callback script for Launch Extension's "before event send" hook. **Handles ALL data extraction**.
-
-**Use on**: Adobe Partner pages (in Launch Extension configuration)
-
-**Usage in AEP Launch**:
-
-- Paste into Launch Extension → Data Collection → "Edit on before event send callback"
-- Automatically extracts partner data from cookies
-- Extracts partner card metadata from `event.composedPath()`
-- Sets both in `content.xdm._adobepartners`
-
-**How it works** (v2.0 - Refactored Architecture):
-
-- Skips page view events
-- Extracts partner data from cookie using `extractPartnerDataScript`
-- Extracts card metadata from event's composed path (uses `event.composedPath()`)
-- Finds partner card and wrapper elements in the event path
-- Extracts card metadata from shadow DOM (card title, CTA text, position, etc.)
-- Sets both partner data and card collection in XDM structure
-- **No window.\_adobePartners storage needed** - direct extraction
-
-**Returns**: Modified `content` object with partner data and card collection
-
-**Example card context**:
-
-```typescript
-{
-  cardTitle: "Example Card",
-  contentID: "12345",
-  contentType: "partner_card",
-  ctaText: "Learn More",
-  filterContext: "partner-solutions",
-  name: "Example Card",
-  position: "1",
-  sectionID: "partner-cards-section"
-}
-```
-
-**Configuration** (default in source):
-
-```typescript
-const DEFAULT_COOKIE_KEY = 'partner_data';
-```
-
-**Shadow DOM Support**: Uses `event.composedPath()` to traverse through shadow DOM boundaries.
-
-### 8. Custom Data Collection - Filter Click Callback (`customDataCollectionOnFilterClickCallback`)
-
-Click filter callback that validates user-initiated clicks. **Handles ONLY filtering logic**.
-
-**Use on**: Adobe Partner pages with partner card collections
-
-**Usage in AEP Launch**:
-
-- Use with Launch's before event send callback
-- Filters out programmatic (non-trusted) click events
-- Returns `true` for genuine user clicks, `false` for programmatic clicks
-
-**How it works** (v2.0 - Refactored Architecture):
-
-- Checks if event object is provided
-- Validates `event.isTrusted` property
-- Returns `false` to suppress programmatic clicks
-- Returns `true` to allow genuine user clicks
-- **No data extraction** - that happens in before event send callback
-- **No window.\_adobePartners storage** - clean separation of concerns
-
-**Returns**: `boolean` - `true` if click should be processed, `false` if suppressed
-
-**Example usage**:
-
-```javascript
-// In Launch Extension before event send callback:
-const shouldProcess = customDataCollectionOnFilterClickCallback(content, event);
-if (!shouldProcess) {
-  return; // Suppress programmatic click
-}
-```
-
-**Architecture Benefits**:
-
-- **Lightweight**: Only ~3KB (was 11KB before refactor)
-- **Single responsibility**: Filtering only, no data extraction
-- **No side effects**: No window object manipulation
-- **Easy to test**: Simple boolean return value
-
-### 9. Set Search Variables (`searchVariableSetter`)
-
-Reads search payload from `window.__searchPayload` and sets AEP Launch variables using `_satellite.setVar()`.
-
-**Use on**: Pages with search functionality
-
-**How it works**:
-
-- Reads `window.__searchPayload` object (set by `searchTrackerDynamic` or other scripts)
-- Extracts `term`, `filters`, and `source` properties
-- Sets three Launch variables: `searchTerm`, `searchFilters`, and `searchSource`
-- Provides defaults for missing values
-- Synchronous execution
-
-**Returns**: Result object with success status and variables set
-
-**Example payload**:
-
-```javascript
-window.__searchPayload = {
-  term: 'photoshop',
-  filters: { category: ['tutorials'], level: ['beginner'] },
-  source: 'url',
-};
-```
-
-**Variables set**:
-
-- `searchTerm`: The search term (string)
-- `searchFilters`: Filter key-value pairs (object)
-- `searchSource`: Source of the search (e.g., "url")
-
-**Configuration** (default in source):
-
-```typescript
-// No configuration needed - reads from window.__searchPayload
-```
-
-### 10. Track Search From URL (`searchTrackerDynamic`)
-
-Parses URL search parameters to extract search terms and filters, then triggers an AEP tracking event after a debounce delay.
-
-**Use on**: Pages with URL-based search (e.g., `/search?term=photoshop&category=tutorials`)
-
-**How it works**:
-
-- Debounced execution (300ms delay to handle rapid URL changes)
-- Extracts search term from `term`, `q`, or `keyword` URL parameters (checked in that order)
-- Filters out UTM parameters and other ignored params
-- Deduplicates identical searches (prevents double-firing)
-- Builds filters object from remaining URL params
-- **Handles comma-delimited values**: Splits `?key=val1,val2` into separate array elements
-- Stores payload in `window.__searchPayload`
-- Triggers `_satellite.track('searchCommit')` event
-
-**Returns**: Result object with success status and URL
-
-**Example URL 1**: `/search?term=photoshop&category=tutorials&level=beginner`
-
-**Extracted data**:
-
-```javascript
-{
-  term: "photoshop",
-  filters: {
-    category: ["tutorials"],
-    level: ["beginner"]
-  },
-  source: "url"
-}
-```
-
-**Example URL 2** (comma-delimited values): `/search?term=data&functionality=caas:functionality/data-activation,caas:functionality/analysis-insights`
-
-**Extracted data**:
-
-```javascript
-{
-  term: "data",
-  filters: {
-    functionality: [
-      "caas:functionality/data-activation",
-      "caas:functionality/analysis-insights"
-    ]
-  },
-  source: "url"
-}
-```
-
-**Configuration** (constants in source):
-
-```typescript
-const DEBOUNCE_DELAY = 300; // ms
-const IGNORED_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'filters'];
-const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
-const MIN_TERM_LENGTH = 2; // Minimum characters
-```
-
-**Features**:
-
-- **Debouncing**: Waits 300ms before processing to handle rapid URL changes
-- **Deduplication**: Prevents tracking identical searches multiple times
-- **Flexible term extraction**: Supports multiple parameter names
-- **UTM filtering**: Automatically removes tracking parameters
-
-### 11. URL Change Monitor (`searchUrlMonitor`)
-
-Hooks into the History API to detect URL changes and dispatches custom events for single-page applications.
-
-**Use on**: Single-page applications that use `pushState`/`replaceState` for navigation
-
-**How it works**:
-
-- Hooks `history.pushState()` and `history.replaceState()` methods
-- Listens for `popstate` events (browser back/forward)
-- Dispatches `partnersSearchUrlChanged` custom event on any URL change
-- Prevents duplicate hooks with `window.__urlHooked` flag
-- Synchronous execution
-
-**Returns**: Result object with success status and hook status
-
-**Example usage in AEP**:
-
-1. Add this script to a Page Bottom rule
-2. Create a separate rule that listens for the custom event:
-   - Event Type: Custom Event
-   - Custom Event Name: `partnersSearchUrlChanged`
-   - Action: Track the URL change or trigger other scripts
-
-**Dispatched event**:
-
-```javascript
-// Custom event dispatched on URL change
-new CustomEvent('partnersSearchUrlChanged', {
-  detail: {
-    url: window.location.href,
-    timestamp: Date.now(),
-  },
-});
-```
-
-**Features**:
-
-- **Comprehensive coverage**: Catches pushState, replaceState, and popstate
-- **No double-hooking**: Checks if hooks are already installed
-- **Custom event**: Easy to listen for in Launch rules
-- **Lightweight**: ~4KB bundled
-
-### 12. Check Entry Search (`searchConditionEntry`)
-
-Condition script that checks if the current page load is an entry search (user arrived with search parameters already in the URL).
-
-**Use on**: Pages with search functionality
-
-**How it works**:
-
-- Runs only once per page load (uses `window.__entrySearchChecked` flag)
-- Checks for valid search term in URL params (`term`, `q`, or `keyword`)
-- Validates minimum term length (2 characters)
-- Returns boolean for use in AEP Launch Rule conditions
-- Synchronous execution
-
-**Returns**: `boolean` - `true` if valid entry search detected, `false` otherwise
-
-**Example usage in AEP**:
-
-1. Create a rule named "Track Entry Search"
-2. Add event: Page Bottom (or DOM Ready)
-3. Add condition: Custom Code → Paste [searchConditionEntry.js](build/searchConditionEntry.js)
-4. Add action: Custom Code → Paste [searchTrackerEntry.js](build/searchTrackerEntry.js)
-
-**Example URL that returns `true`**:
-
-```
-/search?term=adobe+report&industries=caas:industry/financial-services
-```
-
-**Example URLs that return `false`**:
-
-```
-/search/                    # No search params
-/search/#                   # No search params
-/search?term=a              # Term too short (< 2 chars)
-```
-
-**Configuration** (constants in source):
-
-```typescript
-const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
-const MIN_TERM_LENGTH = 2; // Minimum characters
-```
-
-**Features**:
-
-- **One-time execution**: Only runs once per page load
-- **Flexible term extraction**: Supports multiple parameter names
-- **Validation**: Ensures minimum term length
-- **Lightweight**: ~4KB bundled
-
-### 13. Track Entry Search (`searchTrackerEntry`)
-
-Action script that processes entry search parameters (when user arrives with search parameters already in the URL) and triggers searchCommit event.
-
-**Use on**: Pages with search functionality
-
-**How it works**:
-
-- Extracts search term from `term`, `q`, or `keyword` URL parameters (checked in that order)
-- Filters out UTM parameters and other ignored params
-- Builds filters object from remaining URL params
-- **Handles comma-delimited values**: Splits `?key=val1,val2` into separate array elements
-- Deduplicates identical searches (prevents double-firing)
-- Stores payload in `window.__searchPayload` with source: "entry"
-- Triggers `_satellite.track('searchCommit')` event
-- No debouncing (runs immediately on page load)
-- Synchronous execution
-
-**Returns**: Result object with success status and search term
-
-**Example URL**:
-
-```
-/search?term=adobe+report&industries=caas:industry/financial-services&content-type=caas:content-type/report
-```
-
-**Extracted data**:
-
-```javascript
-{
-  term: "adobe report",
-  filters: {
-    industries: ["caas:industry/financial-services"],
-    "content-type": ["caas:content-type/report"]
-  },
-  source: "entry"
-}
-```
-
-**Configuration** (constants in source):
-
-```typescript
-const IGNORED_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'filters'];
-const TERM_PARAMS = ['term', 'q', 'keyword']; // Checked in order
-const MIN_TERM_LENGTH = 2; // Minimum characters
-```
-
-**Features**:
-
-- **Immediate execution**: No debouncing (runs on page load)
-- **Deduplication**: Prevents tracking identical searches multiple times
-- **Flexible term extraction**: Supports multiple parameter names
-- **UTM filtering**: Automatically removes tracking parameters
-- **Comma-delimited support**: Splits multi-value parameters correctly
-
-**Difference from `searchTrackerDynamic`**:
-
-- **Entry search**: Runs on page load, source: "entry", no debouncing
-- **Dynamic search**: Runs on URL changes, source: "url", 300ms debouncing
-
-## Browser Console Testing
-
-Debug mode is controlled at runtime via localStorage - no rebuild needed:
-
-### Enable Debug Mode
-
-1. **Enable debug mode** in browser DevTools console:
-
-   ```javascript
-   localStorage.setItem('__aep_scripts_debug', 'true');
-   ```
-
-2. Reload the page or trigger the script
-
-3. Check console for `[Script Name Test]` output with formatted results
-
-4. **Disable debug mode** when done:
-
-   ```javascript
-   localStorage.removeItem('__aep_scripts_debug');
-   ```
-
-**Benefits**:
-
-- Test production-deployed code directly
-- No rebuild or redeployment needed
-- Toggle debug output on any environment
-- Only developers who know the key can enable it
-
-**Example Output**:
-
-```
-================================================================================
-EVENT DATA EXTRACTOR - TEST MODE
-================================================================================
-[Event Data Test] Fetching event data from https://...
-[Event Data Test] Event data received {...}
-================================================================================
-RESULT:
-================================================================================
-{
-  "eventId": "...",
-  "eventName": "..."
-}
-================================================================================
-```
-
-## Development
-
-### For Developers: Update Workflow
-
-When you make changes to the TypeScript source:
-
-```bash
-# 1. Make your changes in src/
-# 2. Build the bundled scripts
-npm run build
-
-# 3. Commit both source and built files
-git add src/ build/*.js
-git commit -m "Update feature XYZ"
-git push
-```
-
-**Important**:
-
-- Built files (`build/*.js`) are committed to the repository so teammates always have access to the latest scripts
-- Debug mode is controlled at runtime via localStorage (`__aep_scripts_debug`) - no build flags needed
-- Output files are readable (not minified) - AEP applies minification when you save them
-
-### For Teammates: Getting Latest Scripts
-
-**Option A - Via GitHub** (No build required):
-
-1. Browse to [build/](build/) folder in GitHub
-2. Click on the `.js` file you need
-3. Click "Raw" button
-4. Copy all and paste into AEP
-
-**Option B - Via Git Clone** (No build required):
-
-```bash
-git pull
-# Files are in build/*.js
-```
-
-**Option C - Build Yourself**:
-
-```bash
-npm install
-npm run build
-# Files generated in build/*.js
-```
-
-### Available NPM Scripts
-
-```bash
-npm run build              # Full build: clean + bundle with esbuild
-npm run clean              # Remove dist/ and build/
-npm run dev                # TypeScript watch mode
-npm run type-check         # Type-check without emitting files
-npm run lint               # Lint code
-npm run lint:fix           # Lint and fix code
-npm run format             # Format code with Prettier
-npm run format:check       # Check code formatting
-```
-
-### Creating Production Releases
-
-For major versions or production deployments:
-
-```bash
-# 1. Build and test
-npm run build
-
-# 2. Commit changes
-git add .
-git commit -m "Release v2.1.0: [describe changes]"
-
-# 3. Create a tag
-git tag -a v2.1.0 -m "Release v2.1.0"
-git push origin v2.1.0
-
-# 4. Create GitHub Release
-# - Go to GitHub → Releases → "Create new release"
-# - Choose tag v2.1.0
-# - Upload the files from build/*.js (bundled, readable code)
-# - Add release notes describing changes
-```
-
-Teammates can then download from the [Releases](../../releases) page for stable, production-ready versions.
-
-**Note**: The bundled files are readable JavaScript - AEP will minify them automatically when saved.
-
-### Adding a New Script
-
-1. **Copy the appropriate template**:
-
-   For async operations (API calls, fetch):
-
-   ```bash
-   cp src/scripts/templateAsync.ts src/scripts/yourScript.ts
-   ```
-
-   For sync operations (cookies, localStorage, DOM):
-
-   ```bash
-   cp src/scripts/templateSync.ts src/scripts/yourScript.ts
-   ```
-
-2. **Edit your script**:
-   - Replace "Template" with your script name in types and functions
-   - Update config and logic
-   - Import utilities you need from `src/utils/`
-   - Follow existing patterns for error handling
-
-3. **Build**:
-   ```bash
-   npm run build
-   ```
-
-That's it! The esbuild system:
-
-- ✅ Auto-discovers your new script
-- ✅ Auto-bundles your imported utilities
-- ✅ Transpiles to ES2017 automatically
-- ✅ Outputs readable code (AEP handles minification)
-
-## Shared Utilities
-
-All scripts use common utilities from `src/utils/` (eliminating duplication):
-
-- **`script.ts`** - Script execution wrappers (`executeScript`, `executeAsyncScript`)
-- **`logger.ts`** - Consistent logging (`createLogger`)
-- **`fetch.ts`** - Fetch with timeout and error helpers
-- **`cookie.ts`** - Cookie parsing (`getCookie`, `parseJsonCookie`)
-- **`storage.ts`** - LocalStorage helpers (`getStorageItem`, `setStorageItem`)
-- **`validation.ts`** - Input validation (UUID, Salesforce ID formats)
-- **`dom.ts`** - DOM manipulation with shadow DOM support (`queryShadow`, `findInComposedPath`)
-- **`extraction.ts`** - Data extraction pipeline pattern
-- **`object.ts`** - Object manipulation utilities
-- **`events.ts`** - Event handling utilities
-- **`transform.ts`** - Data transformation helpers
-- **`url.ts`** - URL utilities
-- **`globalState.ts`** - Window state management
-- **`constants.ts`** - Shared constants
-- **`dates.ts`** - Date utilities
-
-## APIs Used
-
-### Adobe Events API
-
-- **Endpoint**: `/api/event.json?meta=true` (relative to event domain)
-- **Method**: GET
-- **Auth**: None required (same-origin request)
-
-## Migration from JavaScript
-
-The original JavaScript files (`fetchEventData.js`, etc.) have been refactored into TypeScript with these improvements:
-
-### Before (JavaScript - Duplicated Code)
-
-```javascript
-// Each file had its own copy of:
-function log(message, data) {
-  /* ... */
-}
-function fetchWithTimeout(url, options, timeoutMs) {
-  /* ... */
-}
-function getCookie(name) {
-  /* ... */
-}
-// ... etc
-```
-
-### After (TypeScript - DRY)
-
-```typescript
-// Shared utilities imported from common modules:
-import { createLogger } from '../utils/logger.js';
-import { fetchWithTimeout } from '../utils/fetch.js';
-import { getCookie } from '../utils/cookie.js';
-```
-
-**Benefits**:
-
-- 🎯 Single source of truth for common functionality
-- 🐛 Easier bug fixes (fix once, affects all scripts)
-- 📏 Smaller codebase overall
-- 🔒 Type safety catches errors at compile time
-- 🧪 More testable and maintainable
-
-## Security Features
-
-✅ **Built-in protections**:
-
-1. **Response size validation**: 5MB limit prevents memory exhaustion attacks
-2. **Request timeouts**: 10-second default prevents hanging requests
-3. **Input validation**: Publisher IDs validated against UUID and Salesforce ID formats
-4. **Safe JSON parsing**: All parsing wrapped in try-catch blocks
-5. **No credentials required**: Scripts use DOM parsing and same-origin API calls
-
-## Build Output Details
-
-The build process with **esbuild** produces AEP-compatible code:
-
-```
-📦 Building: fetchEventData
-   Bundling with esbuild...
-✅ fetchEventData:
-   Original:  2,453 bytes (TypeScript source)
-   Bundled:   5,148 bytes
-   Wrapped:   5,253 bytes
-   Output:    /path/to/build/fetchEventData.js
-```
-
-**Key Features**:
-
-- ✅ **ES2017 output**: Promises with `.then()` chains (no `async/await` keywords)
-- ✅ **Readable code**: Full variable names and formatting for easier debugging
-- ✅ **Direct Promise returns**: No IIFE wrapper needed
-  - Pattern: `const TEST_MODE = localStorage.getItem('__aep_scripts_debug') === 'true'; ... return scriptName(TEST_MODE);`
-  - Scripts with async operations return Promises via `.then()` chains
-  - AEP Launch natively awaits returned Promises
-- ✅ **Runtime debug mode**: Toggle via localStorage - no rebuild needed
-- ✅ **Fast builds**: 10-100x faster than webpack-based bundlers
-- ✅ **Tree-shaking**: Dead code elimination
-
-**Output Strategy**:
-
-- ✅ No minification (AEP handles this automatically)
-- ✅ Readable variable names for easier debugging
-- ✅ Clean formatting preserved
-- ✅ No `async/await` keywords (uses Promise `.then()` chains instead)
-
-## TypeScript Configuration
-
-The project uses strict TypeScript settings for maximum type safety:
-
-```json
-{
-  "strict": true,
-  "noUnusedLocals": true,
-  "noUnusedParameters": true,
-  "noImplicitReturns": true,
-  "noFallthroughCasesInSwitch": true
-}
-```
-
-## Browser Compatibility
-
-**Output Target**: ES2017
-
-**Supported Environments**:
-
-- Chrome/Edge 58+ (2017+)
-- Firefox 52+ (2017+)
-- Safari 10.1+ (2017+)
-
-**Key ES2017 Features Used**:
-
-- Promises (`.then()` chains, no `async/await` keywords in output)
-- Object spread operator
-- Template literals
-- Arrow functions
-- Classes
+- **esbuild** bundles each script with utilities inlined
+- **ES2017 output** — Promises with `.then()` chains, no `async/await`
+- **Readable output** — no minification (AEP handles it)
+- **Direct return pattern** — no IIFE wrapper
+- **Runtime debug mode** — localStorage toggle, no rebuild needed
+- **SnapLogic** — esbuild + Babel → ES5 for Nashorn
 
 ## License
 
 ISC
-
-## Support
-
-For issues or questions:
-
-1. Check this README for quick start and script descriptions
-2. Review TypeScript types and JSDoc comments in source files
-3. Examine the source code for implementation details
