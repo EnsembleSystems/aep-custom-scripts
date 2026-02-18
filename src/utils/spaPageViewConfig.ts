@@ -1,9 +1,33 @@
 /**
  * Shared configuration for SPA page view tracking scripts
  *
- * Centralizes all SPA page view constants to ensure consistency
- * across spaPageViewTitleMonitor and spaPageViewTracker.
+ * Centralizes all SPA page view constants, types, and helpers
+ * to ensure consistency across spaPageViewTitleMonitor and spaPageViewTracker.
  */
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Custom event detail for SPA title changes
+ * This is the shared contract between the title monitor (producer)
+ * and the page view tracker (consumer).
+ */
+export interface TitleChangeDetail {
+  /** The new page title */
+  title: string;
+  /** Current page URL */
+  url: string;
+  /** Previous page URL (referrer) */
+  referrer: string;
+  /** Timestamp of the change */
+  timestamp: number;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
 /**
  * Custom event name dispatched when the SPA title changes

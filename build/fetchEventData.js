@@ -144,9 +144,7 @@ function isNetworkError(error) {
 }
 
 // src/utils/constants.ts
-var constants_default = {
-  EVENT_DATA_READY_EVENT: "eventDataReady"
-};
+var EVENT_DATA_READY_EVENT = "eventDataReady";
 
 // src/utils/dates.ts
 function extractDates(objects) {
@@ -305,7 +303,7 @@ function fetchEventDataScript(testMode = false) {
       try {
         const transformedData = transformEventData(data, logger);
         storeEventDataGlobally(transformedData, logger);
-        dispatchCustomEvent(constants_default.EVENT_DATA_READY_EVENT);
+        dispatchCustomEvent(EVENT_DATA_READY_EVENT);
         return transformedData;
       } catch (err) {
         logger.warn("Could not transform or store data:", err);

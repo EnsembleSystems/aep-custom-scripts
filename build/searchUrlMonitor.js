@@ -116,25 +116,27 @@ function setPartnerState(key, value) {
   ns[key] = value;
 }
 
-// src/scripts/searchUrlMonitor.ts
-var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
-var URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
-function dispatchUrlChangeEvent(url) {
+// src/utils/customEvent.ts
+function dispatchCustomEvent(eventName, detail) {
   try {
-    const detail = {
-      url,
-      timestamp: Date.now()
-    };
-    const event = new CustomEvent(URL_CHANGE_EVENT, {
+    const event = new CustomEvent(eventName, {
       detail,
       bubbles: true,
       cancelable: false
     });
     window.dispatchEvent(event);
+    return true;
   } catch (error) {
-    console.error("Failed to dispatch URL change event:", error);
+    console.error(`Failed to dispatch ${eventName} event:`, error);
+    return false;
   }
 }
+
+// src/utils/searchConfig.ts
+var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
+var URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
+
+// src/scripts/searchUrlMonitor.ts
 function installHistoryHooks(logger) {
   const originalPushState = window.history.pushState;
   const originalReplaceState = window.history.replaceState;
@@ -142,7 +144,10 @@ function installHistoryHooks(logger) {
     try {
       originalPushState.apply(window.history, args);
       logger.log("pushState detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now()
+      });
     } catch (error) {
       logger.error("Error in pushState hook:", error);
       originalPushState.apply(window.history, args);
@@ -152,7 +157,10 @@ function installHistoryHooks(logger) {
     try {
       originalReplaceState.apply(window.history, args);
       logger.log("replaceState detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now()
+      });
     } catch (error) {
       logger.error("Error in replaceState hook:", error);
       originalReplaceState.apply(window.history, args);
@@ -162,7 +170,10 @@ function installHistoryHooks(logger) {
     "popstate",
     () => {
       logger.log("popstate detected, dispatching URL change event");
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now()
+      });
     },
     { passive: true }
     // Performance optimization

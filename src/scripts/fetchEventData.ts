@@ -13,7 +13,7 @@ import {
   isAbortError,
   isNetworkError,
 } from '../utils/fetch.js';
-import CONSTANTS from '../utils/constants.js';
+import { EVENT_DATA_READY_EVENT } from '../utils/constants.js';
 import { extractDates } from '../utils/dates.js';
 import { dispatchCustomEvent } from '../utils/dom.js';
 import { mergeWithTransforms } from '../utils/transform.js';
@@ -134,7 +134,7 @@ export function fetchEventDataScript(testMode: boolean = false): Promise<unknown
         storeEventDataGlobally(transformedData, logger);
 
         // Dispatch event to notify other listeners
-        dispatchCustomEvent(CONSTANTS.EVENT_DATA_READY_EVENT);
+        dispatchCustomEvent(EVENT_DATA_READY_EVENT);
 
         return transformedData;
       } catch (err) {

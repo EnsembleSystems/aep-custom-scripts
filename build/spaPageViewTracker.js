@@ -168,8 +168,10 @@ function isDuplicate(key, stateKey, logger) {
   return false;
 }
 
-// src/scripts/spaPageViewTracker.ts
+// src/utils/constants.ts
 var XDM_VARIABLE_NAME = "XDMVariable";
+
+// src/scripts/spaPageViewTracker.ts
 function processPageView(title, url, referrer, logger, testMode) {
   logger.log("Processing SPA page view after debounce");
   const pageViewKey = `${url}|${title}`;

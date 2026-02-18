@@ -12,6 +12,7 @@ import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
 import dispatchCustomEvent from '../utils/customEvent.js';
 import { SPA_TITLE_CHANGE_EVENT, isDefaultTitle } from '../utils/spaPageViewConfig.js';
+import type { TitleChangeDetail } from '../utils/spaPageViewConfig.js';
 import { setPartnerState, getPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
@@ -30,20 +31,6 @@ export interface SpaPageViewTitleMonitorResult {
   alreadyHooked: boolean;
   /** Current title at install time */
   currentTitle?: string;
-}
-
-/**
- * Custom event detail for title changes
- */
-export interface TitleChangeDetail {
-  /** The new page title */
-  title: string;
-  /** Current page URL */
-  url: string;
-  /** Previous page URL (referrer) */
-  referrer: string;
-  /** Timestamp of the change */
-  timestamp: number;
 }
 
 // ============================================================================

@@ -51,6 +51,24 @@ export interface CheckoutData {
   itemsInCart: CartItem[];
 }
 
+/**
+ * IMS organization data extracted from localStorage
+ * Used by extractImsData and customDataCollectionOnBeforeEventSend
+ */
+export interface ImsData {
+  imsID: string;
+  imsName: string;
+}
+
+/**
+ * Publisher data extracted from DOM links
+ * Used by extractPublisherData and customDataCollectionOnBeforeEventSend
+ */
+export interface PublisherData {
+  publisherID: string;
+  description: string;
+}
+
 // Extend Window interface to include Adobe Partners namespace
 declare global {
   interface Window {

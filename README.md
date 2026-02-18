@@ -150,16 +150,16 @@ src/
 │   ├── logger.ts         # Consistent logging
 │   ├── satellite.ts      # Safe _satellite interaction
 │   ├── globalState.ts    # Window state management & deduplication
-│   ├── searchConfig.ts   # Search tracking constants & XDM mapping
+│   ├── searchConfig.ts   # Search tracking constants, types & XDM mapping
 │   ├── searchUrlParser.ts # Secure URL parser (XSS protection)
 │   ├── searchTracker.ts  # Shared search tracking flow
-│   ├── spaPageViewConfig.ts # SPA page view constants
+│   ├── spaPageViewConfig.ts # SPA page view constants & types
 │   ├── customEvent.ts    # Safe CustomEvent dispatching
 │   ├── fetch.ts, cookie.ts, storage.ts, dom.ts, validation.ts
 │   ├── extraction.ts, object.ts, events.ts, transform.ts, url.ts
 │   ├── hash.ts, constants.ts, dates.ts
 │   └── index.ts
-├── types/index.ts        # PartnerCardCtx, CartItem, CheckoutData, Window augmentation
+├── types/index.ts        # PartnerCardCtx, CartItem, CheckoutData, ImsData, PublisherData, Window augmentation
 └── snaplogic/            # SnapLogic scripts & ES5-compatible utils
 build/                    # Bundled AEP scripts (committed)
 build-snaplogic/          # Bundled SnapLogic scripts (committed)

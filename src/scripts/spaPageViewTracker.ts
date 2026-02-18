@@ -13,6 +13,7 @@ import type { Logger } from '../utils/logger.js';
 import { fireSatelliteEvent, getSatelliteVar } from '../utils/satellite.js';
 import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
 import { ensurePath, getPartnerState, isDuplicate, setPartnerState } from '../utils/globalState.js';
+import { XDM_VARIABLE_NAME } from '../utils/constants.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -31,12 +32,6 @@ export interface SpaPageViewTrackerResult {
   /** URL from the event */
   url?: string;
 }
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const XDM_VARIABLE_NAME = 'XDMVariable';
 
 // ============================================================================
 // HELPER FUNCTIONS

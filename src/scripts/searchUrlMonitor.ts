@@ -17,6 +17,8 @@
 import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
 import { getPartnerState, setPartnerState } from '../utils/globalState.js';
+import dispatchCustomEvent from '../utils/customEvent.js';
+import { URL_CHANGE_EVENT, URL_PATTERN } from '../utils/searchConfig.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -44,45 +46,6 @@ interface UrlChangeDetail {
   timestamp: number;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Name of the custom event dispatched on URL changes */
-const URL_CHANGE_EVENT = 'partnersSearchUrlChanged';
-
-/** URL pattern required for initialization */
-const URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Dispatches URL change event safely
- *
- * @param url - The new URL
- */
-function dispatchUrlChangeEvent(url: string): void {
-  try {
-    const detail: UrlChangeDetail = {
-      url,
-      timestamp: Date.now(),
-    };
-
-    const event = new CustomEvent(URL_CHANGE_EVENT, {
-      detail,
-      bubbles: true,
-      cancelable: false,
-    });
-
-    window.dispatchEvent(event);
-  } catch (error) {
-    // Silently fail - don't break page functionality
-    console.error('Failed to dispatch URL change event:', error);
-  }
-}
-
 /**
  * Installs window.history API hooks
  *
@@ -103,7 +66,10 @@ function installHistoryHooks(logger: Logger): void {
 
       // Dispatch change event
       logger.log('pushState detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent<UrlChangeDetail>(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       // Restore original behavior on error
       logger.error('Error in pushState hook:', error);
@@ -121,7 +87,10 @@ function installHistoryHooks(logger: Logger): void {
 
       // Dispatch change event
       logger.log('replaceState detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent<UrlChangeDetail>(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       // Restore original behavior on error
       logger.error('Error in replaceState hook:', error);
@@ -134,7 +103,10 @@ function installHistoryHooks(logger: Logger): void {
     'popstate',
     () => {
       logger.log('popstate detected, dispatching URL change event');
-      dispatchUrlChangeEvent(window.location.href);
+      dispatchCustomEvent<UrlChangeDetail>(URL_CHANGE_EVENT, {
+        url: window.location.href,
+        timestamp: Date.now(),
+      });
     },
     { passive: true } // Performance optimization
   );

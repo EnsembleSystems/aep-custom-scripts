@@ -11,15 +11,11 @@ import { executeScript } from '../utils/script.js';
 import { getStorageItem } from '../utils/storage.js';
 import { isObject, isString, isArray } from '../utils/validation.js';
 import type { Logger } from '../utils/logger.js';
+import type { ImsData } from '../types/index.js';
 
 // Constants
 const SELECTED_ORG_KEY = 'selectedOrg';
 const ORGS_ARR_KEY = 'orgsArr';
-
-interface ImsData {
-  imsID: string;
-  imsName: string;
-}
 
 interface OrgRecord {
   orgID: string;

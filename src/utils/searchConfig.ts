@@ -1,9 +1,30 @@
 /**
  * Shared configuration for search tracking scripts
  *
- * Centralizes all search-related constants to ensure consistency
- * across all search tracking implementations.
+ * Centralizes all search-related constants, types, and XDM schema
+ * to ensure consistency across all search tracking implementations.
  */
+
+// ============================================================================
+// URL MONITORING CONSTANTS
+// ============================================================================
+
+/**
+ * Custom event name dispatched when the URL changes (via History API hooks)
+ * @constant
+ */
+export const URL_CHANGE_EVENT = 'partnersSearchUrlChanged';
+
+/**
+ * URL pattern required for search URL monitor initialization
+ * Only pages matching this pattern will have History API hooks installed
+ * @constant
+ */
+export const URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
+
+// ============================================================================
+// SEARCH PARAMETER CONSTANTS
+// ============================================================================
 
 /**
  * URL parameter names that contain the search term (checked in priority order)
@@ -50,10 +71,6 @@ export const MAX_FILTER_PARAMS = 50;
 export const MAX_FILTER_VALUE_LENGTH = 1000;
 
 /**
- * Search source identifiers
- * @constant
- */
-/**
  * Direct call event name for search tracking
  * @constant
  */
@@ -83,3 +100,24 @@ export const FILTER_TO_XDM_MAP: Record<string, string> = {
   solutions: 'searchSolutions',
   topic: 'searchTopic',
 } as const;
+
+// ============================================================================
+// XDM SEARCH TYPES
+// ============================================================================
+
+/** XDM searchFilters structure */
+export interface XdmSearchFilters {
+  searchContentType?: string[];
+  searchFunctionality?: string[];
+  searchIndustries?: string[];
+  searchProducts?: string[];
+  searchSolutions?: string[];
+  searchTopic?: string[];
+}
+
+/** XDM searchResults structure */
+export interface XdmSearchResults {
+  searchTerm: string;
+  searchSource: string;
+  searchFilters: XdmSearchFilters;
+}
