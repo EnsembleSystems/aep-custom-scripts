@@ -27,8 +27,6 @@ interface OrgRecord {
   orgName: string;
 }
 
-const EMPTY_IMS_DATA: ImsData = { imsID: '', imsName: '' };
-
 /**
  * Extracts IMS data from a selectedOrg object (has id and name fields)
  */
@@ -77,7 +75,7 @@ function findOrgInArray(orgId: string, logger: Logger): ImsData | null {
  * Main entry point for the IMS data extractor
  * @param testMode - Set to true for console testing, false for AEP deployment
  */
-export function extractImsDataScript(testMode: boolean = false): ImsData {
+export function extractImsDataScript(testMode: boolean = false): ImsData | null {
   return executeScript(
     {
       scriptName: 'IMS Data',
@@ -85,7 +83,7 @@ export function extractImsDataScript(testMode: boolean = false): ImsData {
       testHeaderTitle: 'IMS DATA EXTRACTOR - TEST MODE',
       onError: (error, logger) => {
         logger.error('Unexpected error extracting IMS data:', error);
-        return EMPTY_IMS_DATA;
+        return null;
       },
     },
     (logger) => {
@@ -93,7 +91,7 @@ export function extractImsDataScript(testMode: boolean = false): ImsData {
 
       if (selectedOrg === null) {
         logger.log('No selectedOrg found in localStorage');
-        return EMPTY_IMS_DATA;
+        return null;
       }
 
       // Case 1: selectedOrg is an object with id/name
@@ -109,7 +107,7 @@ export function extractImsDataScript(testMode: boolean = false): ImsData {
       }
 
       logger.log('Unable to resolve IMS data from localStorage');
-      return EMPTY_IMS_DATA;
+      return null;
     }
   );
 }

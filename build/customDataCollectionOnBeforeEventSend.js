@@ -513,7 +513,6 @@ function createPathStructure(type, config) {
 // src/scripts/extractImsData.ts
 var SELECTED_ORG_KEY = "selectedOrg";
 var ORGS_ARR_KEY = "orgsArr";
-var EMPTY_IMS_DATA = { imsID: "", imsName: "" };
 function extractFromOrgObject(selectedOrg, logger) {
   if (!isObject(selectedOrg) || !isString(selectedOrg.id) || !selectedOrg.id) {
     return null;
@@ -553,14 +552,14 @@ function extractImsDataScript(testMode = false) {
       testHeaderTitle: "IMS DATA EXTRACTOR - TEST MODE",
       onError: (error, logger) => {
         logger.error("Unexpected error extracting IMS data:", error);
-        return EMPTY_IMS_DATA;
+        return null;
       }
     },
     (logger) => {
       const selectedOrg = getStorageItem(SELECTED_ORG_KEY);
       if (selectedOrg === null) {
         logger.log("No selectedOrg found in localStorage");
-        return EMPTY_IMS_DATA;
+        return null;
       }
       const fromObject = extractFromOrgObject(selectedOrg, logger);
       if (fromObject) return fromObject;
@@ -571,7 +570,7 @@ function extractImsDataScript(testMode = false) {
         if (fromArray) return fromArray;
       }
       logger.log("Unable to resolve IMS data from localStorage");
-      return EMPTY_IMS_DATA;
+      return null;
     }
   );
 }
