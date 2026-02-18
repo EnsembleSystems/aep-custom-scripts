@@ -237,11 +237,25 @@ function mergeNonNull(...objects) {
 }
 
 // src/utils/validation.ts
+function isValidPublisherId(id) {
+  if (!id || typeof id !== "string") {
+    return false;
+  }
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const salesforcePattern = /^[a-z0-9]{15}([a-z0-9]{3})?$/i;
+  return uuidPattern.test(id) || salesforcePattern.test(id);
+}
 function isObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function hasProperty(value, property) {
   return isObject(value) && property in value;
+}
+function isString(value) {
+  return typeof value === "string";
+}
+function isArray(value) {
+  return Array.isArray(value);
 }
 
 // src/utils/constants.ts
@@ -428,6 +442,218 @@ function isHostnameMatch(pattern) {
     return hostname.endsWith(pattern.slice(1));
   }
   return hostname === pattern;
+}
+function splitPath(path) {
+  if (!path || typeof path !== "string") {
+    return [];
+  }
+  return path.split("/");
+}
+function validatePathStructure(segments, structure) {
+  if (structure.minSegments && segments.length < structure.minSegments) {
+    return false;
+  }
+  if (structure.requiredSegments) {
+    const allMatch = Object.entries(structure.requiredSegments).every(([key, expectedValue]) => {
+      const segmentIndex = structure.segments[key];
+      if (segmentIndex === void 0) return true;
+      return segments[segmentIndex] === expectedValue;
+    });
+    if (!allMatch) {
+      return false;
+    }
+  }
+  return true;
+}
+function extractPathSegments(path, structure) {
+  const segments = splitPath(path);
+  if (!validatePathStructure(segments, structure)) {
+    return null;
+  }
+  const result = {};
+  Object.entries(structure.segments).forEach(([key, index]) => {
+    const value = segments[index];
+    if (value) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+function extractAndValidate(path, structure, segmentKey, validator) {
+  const extracted = extractPathSegments(path, structure);
+  if (!extracted || !extracted[segmentKey]) {
+    return null;
+  }
+  const value = extracted[segmentKey];
+  if (validator && !validator(value)) {
+    return null;
+  }
+  return value;
+}
+function createPathStructure(type, config) {
+  var _a;
+  switch (type) {
+    case "nested-resource":
+      return {
+        segments: {
+          empty: 0,
+          resourceType: 1,
+          subtype: 2,
+          id: 3,
+          name: 4
+        },
+        minSegments: (_a = config.minSegments) != null ? _a : 4,
+        requiredSegments: config.resourceType ? { resourceType: config.resourceType } : void 0
+      };
+    default:
+      throw new Error(`Unsupported path structure type: ${type}`);
+  }
+}
+
+// src/scripts/extractImsData.ts
+var SELECTED_ORG_KEY = "selectedOrg";
+var ORGS_ARR_KEY = "orgsArr";
+var EMPTY_IMS_DATA = { imsID: "", imsName: "" };
+function extractFromOrgObject(selectedOrg, logger) {
+  if (!isObject(selectedOrg) || !isString(selectedOrg.id) || !selectedOrg.id) {
+    return null;
+  }
+  const id = selectedOrg.id;
+  const { name } = selectedOrg;
+  logger.log("Found IMS data from selectedOrg object", { id, name });
+  return { imsID: id, imsName: isString(name) ? name : "" };
+}
+function findOrgInArray(orgId, logger) {
+  const orgsArr = getStorageItem(ORGS_ARR_KEY);
+  if (!isArray(orgsArr) || orgsArr.length === 0) {
+    logger.log("No orgsArr found in localStorage");
+    return null;
+  }
+  const match = orgsArr.find(
+    (org) => isObject(org) && isString(org.orgID) && org.orgID === orgId
+  );
+  if (!match) {
+    logger.log(`No matching org found for ID: ${orgId}`);
+    return null;
+  }
+  logger.log("Found IMS data from orgsArr lookup", {
+    orgCode: match.orgCode,
+    orgName: match.orgName
+  });
+  return {
+    imsID: isString(match.orgCode) ? match.orgCode : "",
+    imsName: isString(match.orgName) ? match.orgName : ""
+  };
+}
+function extractImsDataScript(testMode = false) {
+  return executeScript(
+    {
+      scriptName: "IMS Data",
+      testMode,
+      testHeaderTitle: "IMS DATA EXTRACTOR - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error extracting IMS data:", error);
+        return EMPTY_IMS_DATA;
+      }
+    },
+    (logger) => {
+      const selectedOrg = getStorageItem(SELECTED_ORG_KEY);
+      if (selectedOrg === null) {
+        logger.log("No selectedOrg found in localStorage");
+        return EMPTY_IMS_DATA;
+      }
+      const fromObject = extractFromOrgObject(selectedOrg, logger);
+      if (fromObject) return fromObject;
+      if (isString(selectedOrg) && selectedOrg || typeof selectedOrg === "number") {
+        const orgId = String(selectedOrg);
+        logger.log(`selectedOrg is a string/numeric ID: ${orgId}, looking up in orgsArr`);
+        const fromArray = findOrgInArray(orgId, logger);
+        if (fromArray) return fromArray;
+      }
+      logger.log("Unable to resolve IMS data from localStorage");
+      return EMPTY_IMS_DATA;
+    }
+  );
+}
+
+// src/scripts/extractPublisherData.ts
+var PUBLISHER_URL_STRUCTURE = createPathStructure("nested-resource", {
+  resourceType: "publisher",
+  minSegments: 4
+});
+function extractPublisherId(href, logger) {
+  const publisherId = extractAndValidate(href, PUBLISHER_URL_STRUCTURE, "id", isValidPublisherId);
+  if (!publisherId) {
+    logger.log("Invalid or missing publisher ID in URL", href);
+    return null;
+  }
+  return publisherId;
+}
+var UI_TEXT_PATTERNS = ["view all", "see all", "show more", "see more", "load more"];
+function getPublisherNameFromLink(link) {
+  const text = (link.textContent || "").trim();
+  if (!text) return "";
+  if (UI_TEXT_PATTERNS.includes(text.toLowerCase())) return "";
+  return text;
+}
+function extractPublisherName(links, logger) {
+  var _a, _b;
+  const byTestId = document.querySelector('[data-testid="publisherName-display"]');
+  if ((_a = byTestId == null ? void 0 : byTestId.textContent) == null ? void 0 : _a.trim()) {
+    logger.log("Found publisher name via data-testid", byTestId.textContent.trim());
+    return byTestId.textContent.trim();
+  }
+  const byLaunchId = document.querySelector('[data-launchid="Publisher"]');
+  if ((_b = byLaunchId == null ? void 0 : byLaunchId.textContent) == null ? void 0 : _b.trim()) {
+    logger.log("Found publisher name via data-launchid", byLaunchId.textContent.trim());
+    return byLaunchId.textContent.trim();
+  }
+  for (let i = 0; i < links.length; i += 1) {
+    const name = getPublisherNameFromLink(links[i]);
+    if (name) {
+      logger.log("Found publisher name via link text", name);
+      return name;
+    }
+  }
+  logger.log("No publisher name found in DOM");
+  return "";
+}
+function extractPublisherDataScript(testMode = false) {
+  return executeScript(
+    {
+      scriptName: "Publisher Data",
+      testMode,
+      testHeaderTitle: "PUBLISHER DATA EXTRACTOR - TEST MODE",
+      onError: (error, logger) => {
+        logger.error("Unexpected error parsing publisher data:", error);
+        return null;
+      }
+    },
+    (logger) => {
+      logger.log("Searching for publisher links in DOM");
+      const links = document.querySelectorAll('a[href^="/publisher/"]');
+      logger.log(`Found ${links.length} publisher links`);
+      let publisherId = null;
+      for (let i = 0; i < links.length; i += 1) {
+        const href = links[i].getAttribute("href");
+        if (href) {
+          publisherId = extractPublisherId(href, logger);
+          if (publisherId) break;
+        }
+      }
+      if (!publisherId) {
+        logger.log("No valid publisher link found in DOM");
+        return null;
+      }
+      const description = extractPublisherName(links, logger);
+      const publisherData = {
+        publisherID: publisherId,
+        description
+      };
+      logger.log("Found valid publisher data", publisherData);
+      return publisherData;
+    }
+  );
 }
 
 // src/scripts/customDataCollectionOnBeforeEventSend.ts
@@ -701,8 +927,12 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       }
       const pageName = document.title;
       logger.log("Extracted page name", pageName);
+      const imsData = extractImsDataScript(testMode);
+      logger.log("Extracted IMS data from localStorage", imsData);
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log("Extracted partner data from cookie", partnerData);
+      const publisherData = extractPublisherDataScript(testMode);
+      logger.log("Extracted publisher data from localStorage", publisherData);
       const cardCollection = extractCardCollectionFromEvent(event, logger);
       const linkClickLabel = extractLinkDaaLl(event, logger);
       if (linkClickLabel) {
@@ -720,11 +950,17 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
         "xdm._adobepartners",
         mergeNonNull(
           { partnerData },
+          conditionalProperties(imsData !== null, {
+            IMS: imsData
+          }),
           conditionalProperties(cardCollection !== null, { cardCollection }),
           conditionalProperties(linkClickLabel !== "", { linkClickLabel }),
           conditionalProperties(checkout !== null, { Checkout: checkout }),
           conditionalProperties(eventData !== null, { eventData }),
-          conditionalProperties(attendeeData !== null, { attendeeData })
+          conditionalProperties(attendeeData !== null, { attendeeData }),
+          conditionalProperties(publisherData !== null, {
+            publisherData
+          })
         ),
         true
       );

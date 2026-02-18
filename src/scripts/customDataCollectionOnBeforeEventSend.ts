@@ -33,6 +33,8 @@ import type { PartnerCardCtx, CheckoutData, CartItem } from '../types';
 import { createLogger } from '../utils/logger';
 import { DEFAULT_COOKIE_KEYS, ATTENDEE_STORAGE_KEY } from '../utils/constants';
 import { isHostnameMatch } from '../utils/url';
+import { extractImsDataScript } from './extractImsData';
+import { extractPublisherDataScript } from './extractPublisherData';
 
 // Constants for card metadata extraction
 const SELECTORS = {
@@ -547,9 +549,17 @@ export default function customDataCollectionOnBeforeEventSendScript(
       const pageName = document.title;
       logger.log('Extracted page name', pageName);
 
+      // Extract IMS data from localStorage
+      const imsData = extractImsDataScript(testMode);
+      logger.log('Extracted IMS data from localStorage', imsData);
+
       // Extract partner data from cookies
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
       logger.log('Extracted partner data from cookie', partnerData);
+
+      // Extract publisher data from localStorage
+      const publisherData = extractPublisherDataScript(testMode);
+      logger.log('Extracted publisher data from localStorage', publisherData);
 
       // Extract card collection context from event if available
       const cardCollection = extractCardCollectionFromEvent(event, logger);
@@ -579,11 +589,17 @@ export default function customDataCollectionOnBeforeEventSendScript(
         'xdm._adobepartners',
         mergeNonNull(
           { partnerData: partnerData as Record<string, never> },
+          conditionalProperties(imsData !== null, {
+            IMS: imsData as unknown as Record<string, never>,
+          }),
           conditionalProperties(cardCollection !== null, { cardCollection }),
           conditionalProperties(linkClickLabel !== '', { linkClickLabel }),
           conditionalProperties(checkout !== null, { Checkout: checkout }),
           conditionalProperties(eventData !== null, { eventData }),
-          conditionalProperties(attendeeData !== null, { attendeeData })
+          conditionalProperties(attendeeData !== null, { attendeeData }),
+          conditionalProperties(publisherData !== null, {
+            publisherData: publisherData as unknown as Record<string, never>,
+          })
         ),
         true
       );
