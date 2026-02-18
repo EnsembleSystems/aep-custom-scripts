@@ -66,3 +66,18 @@ export function extractData<TResult>(config: ExtractionConfig<TResult>): TResult
 
   return config.transformer ? config.transformer(parsed) : parsed;
 }
+
+/**
+ * Safely parses a JSON string into an object
+ * Unlike parseJsonCookie, does not URL-decode the input
+ * @param value - Raw JSON string
+ * @returns Parsed object or null if invalid
+ */
+export function parseJsonObject(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}

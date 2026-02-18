@@ -58,7 +58,7 @@ Built scripts in [`build/`](build/) are committed to the repo. To deploy: click 
 | Script                                                                                             | Description                                                                             |
 | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | [extractPartnerData.js](build/extractPartnerData.js)                                               | Extracts DXP value from `partner_data` cookie                                           |
-| [extractPublisherId.js](build/extractPublisherId.js)                                               | Extracts publisher/owner ID from DOM links                                              |
+| [extractPublisherData.js](build/extractPublisherData.js)                                           | Extracts publisher ID and name from DOM links                                           |
 | [customOnPageLoad.js](build/customOnPageLoad.js)                                                   | Custom page load placeholder                                                            |
 | [customDataCollectionOnBeforeEventSend.js](build/customDataCollectionOnBeforeEventSend.js)         | Before event send callback — extracts partner data + card metadata via `composedPath()` |
 | [customDataCollectionOnFilterClickCallback.js](build/customDataCollectionOnFilterClickCallback.js) | Click filter — validates `event.isTrusted` only (~3KB)                                  |

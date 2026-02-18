@@ -136,6 +136,30 @@ export function conditionalProperties<T extends Record<string, unknown>>(
 }
 
 /**
+ * Picks only specified fields from a source object, excluding null/undefined/empty values
+ * @param source - Source object to pick fields from
+ * @param fields - Array of field names to pick
+ * @returns New object with only the specified fields
+ *
+ * @example
+ * const data = { email: 'a@b.com', name: 'Alice', secret: '123' };
+ * const picked = pickFields(data, ['email', 'name']);
+ * // Returns: { email: 'a@b.com', name: 'Alice' }
+ */
+export function pickFields(
+  source: Record<string, unknown>,
+  fields: readonly string[]
+): Record<string, unknown> {
+  return fields.reduce<Record<string, unknown>>((acc, field) => {
+    const value = source[field];
+    if (value !== null && value !== undefined && value !== '') {
+      acc[field] = value;
+    }
+    return acc;
+  }, {});
+}
+
+/**
  * Merges objects, excluding null/undefined values
  * @param objects - Objects to merge
  * @returns Merged object without null/undefined values

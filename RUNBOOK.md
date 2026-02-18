@@ -146,10 +146,10 @@ Update rule actions with custom code.
 
 ## 5. TODO
 
-### Missing Publisher/Partner ID extraction
+### Missing Publisher/Partner Data extraction
 
 1. Select **Data Elements** or **Rules\*** from the left sidebar
 2. Search for and select **TBD: Not defined yet**
 3. Click **Open Editor**
-4. Copy and paste contents of `src/scripts/extractPublisherId.ts`
+4. Copy and paste contents of `src/scripts/extractPublisherData.ts`
 5. Click **Keep Changes**

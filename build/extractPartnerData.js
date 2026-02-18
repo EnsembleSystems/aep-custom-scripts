@@ -139,6 +139,14 @@ function extractData(config) {
   }
   return config.transformer ? config.transformer(parsed) : parsed;
 }
+function parseJsonObject(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // src/utils/cookie.ts
 function getCookie(name) {
@@ -182,6 +190,15 @@ function removeProperties(data, propertiesToRemove) {
   }
   return data;
 }
+function pickFields(source, fields) {
+  return fields.reduce((acc, field) => {
+    const value = source[field];
+    if (value !== null && value !== void 0 && value !== "") {
+      acc[field] = value;
+    }
+    return acc;
+  }, {});
+}
 function mergeNonNull(...objects) {
   return objects.reduce((acc, obj) => {
     if (!obj) return acc;
@@ -204,6 +221,7 @@ function hasProperty(value, property) {
 
 // src/utils/constants.ts
 var DEFAULT_COOKIE_KEYS = ["partner_data", "partner_info"];
+var EXCHANGE_SESSION_STORAGE_KEY = "adobeid_ims_profile/exchangeweb2/false/AdobeID,additional_info.ownerOrg,additional_info.projectedProductContext,additional_info.roles,adobeio.appregistry.read,adobeio_api,ee.GROUP_ADPEXG,gnav,isv-installation-service.read,isv-installation-service.write,openid,pps.read,read_organizations,service_principals.read,service_principals.write,unified_dev_portal";
 
 // src/utils/storage.ts
 function getStorageItem(key) {
@@ -221,6 +239,7 @@ function getStorageItem(key) {
 // src/scripts/extractPartnerData.ts
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
 var MAGE_CACHE_STORAGE_KEY = "mage-cache-storage";
+var SESSION_STORAGE_FIELDS = ["email", "first_name", "last_name"];
 function extractFromCookie(key, logger) {
   return extractData({
     source: () => getCookie(key),
@@ -232,6 +251,16 @@ function extractFromCookie(key, logger) {
     logger,
     errorMessage: `Error parsing ${key} from cookie`,
     notFoundMessage: `No data in ${key} cookie`
+  });
+}
+function extractFromSessionStorage(key, logger) {
+  return extractData({
+    source: () => sessionStorage.getItem(key),
+    parser: parseJsonObject,
+    transformer: (data) => pickFields(data, SESSION_STORAGE_FIELDS),
+    logger,
+    errorMessage: `Error parsing ${key} from session storage`,
+    notFoundMessage: `No data in ${key} session storage`
   });
 }
 function extractEmailFromStorage() {
@@ -253,9 +282,10 @@ function extractPartnerDataScript(testMode = false, cookieKeys = DEFAULT_COOKIE_
       }
     },
     (logger) => {
+      const sessionData = extractFromSessionStorage(EXCHANGE_SESSION_STORAGE_KEY, logger);
       const mergedData = cookieKeys.reduce(
         (acc, key) => mergeNonNull(acc, extractFromCookie(key, logger)),
-        {}
+        mergeNonNull(sessionData)
       );
       if (!mergedData.email) {
         const email = extractEmailFromStorage();
@@ -265,7 +295,7 @@ function extractPartnerDataScript(testMode = false, cookieKeys = DEFAULT_COOKIE_
         }
       }
       if (Object.keys(mergedData).length === 0) {
-        logger.log("No partner data found in cookies or storage");
+        logger.log("No partner data found in cookies, session storage, or localStorage");
         return null;
       }
       logger.log("Found partner data", mergedData);

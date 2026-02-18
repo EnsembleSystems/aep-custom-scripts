@@ -1,21 +1,26 @@
 /**
  * Partner Data Extractor for Adobe Experience Platform (AEP)
  *
- * Extracts partner data from browser cookies and returns the DXP value.
+ * Extracts partner data from browser cookies, session storage, and localStorage.
+ * Sources (in merge order, later sources take precedence):
+ * 1. Session storage (Exchange IMS profile - name, email)
+ * 2. Cookies (partner_data, partner_info - DXP payload)
+ * 3. localStorage (mage-cache-storage - email fallback)
  */
 
 import { executeScript } from '../utils/script.js';
-import { extractData } from '../utils/extraction.js';
+import { extractData, parseJsonObject } from '../utils/extraction.js';
 import { getCookie, parseJsonCookie } from '../utils/cookie.js';
-import removeProperties, { mergeNonNull } from '../utils/object.js';
+import removeProperties, { mergeNonNull, pickFields } from '../utils/object.js';
 import { hasProperty } from '../utils/validation.js';
-import { DEFAULT_COOKIE_KEYS } from '../utils/constants.js';
+import { DEFAULT_COOKIE_KEYS, EXCHANGE_SESSION_STORAGE_KEY } from '../utils/constants.js';
 import { getStorageItem } from '../utils/storage.js';
 import type { Logger } from '../utils/logger.js';
 
 // Constants
 const PROPERTIES_TO_REMOVE = ['latestAgreementAcceptedVersion'];
 const MAGE_CACHE_STORAGE_KEY = 'mage-cache-storage';
+const SESSION_STORAGE_FIELDS: readonly string[] = ['email', 'first_name', 'last_name'];
 
 /**
  * Extracts and cleans partner data from a cookie
@@ -31,6 +36,20 @@ function extractFromCookie(key: string, logger: Logger): Record<string, unknown>
     logger,
     errorMessage: `Error parsing ${key} from cookie`,
     notFoundMessage: `No data in ${key} cookie`,
+  });
+}
+
+/**
+ * Extracts and filters partner data from session storage (Exchange IMS profile)
+ */
+function extractFromSessionStorage(key: string, logger: Logger): Record<string, unknown> | null {
+  return extractData({
+    source: () => sessionStorage.getItem(key),
+    parser: parseJsonObject,
+    transformer: (data) => pickFields(data, SESSION_STORAGE_FIELDS),
+    logger,
+    errorMessage: `Error parsing ${key} from session storage`,
+    notFoundMessage: `No data in ${key} session storage`,
   });
 }
 
@@ -65,9 +84,11 @@ export function extractPartnerDataScript(
       },
     },
     (logger) => {
+      const sessionData = extractFromSessionStorage(EXCHANGE_SESSION_STORAGE_KEY, logger);
+
       const mergedData = cookieKeys.reduce(
         (acc, key) => mergeNonNull(acc, extractFromCookie(key, logger)),
-        {} as Record<string, unknown>
+        mergeNonNull(sessionData) as Record<string, unknown>
       );
 
       if (!mergedData.email) {
@@ -79,7 +100,7 @@ export function extractPartnerDataScript(
       }
 
       if (Object.keys(mergedData).length === 0) {
-        logger.log('No partner data found in cookies or storage');
+        logger.log('No partner data found in cookies, session storage, or localStorage');
         return null;
       }
 

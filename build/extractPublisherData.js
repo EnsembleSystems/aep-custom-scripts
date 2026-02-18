@@ -178,7 +178,7 @@ function createPathStructure(type, config) {
   }
 }
 
-// src/scripts/extractPublisherId.ts
+// src/scripts/extractPublisherData.ts
 var PUBLISHER_URL_STRUCTURE = createPathStructure("nested-resource", {
   resourceType: "publisher",
   minSegments: 4
@@ -191,14 +191,43 @@ function extractPublisherId(href, logger) {
   }
   return publisherId;
 }
-function extractPublisherIdScript(testMode = false) {
+var UI_TEXT_PATTERNS = ["view all", "see all", "show more", "see more", "load more"];
+function getPublisherNameFromLink(link) {
+  const text = (link.textContent || "").trim();
+  if (!text) return "";
+  if (UI_TEXT_PATTERNS.includes(text.toLowerCase())) return "";
+  return text;
+}
+function extractPublisherName(links, logger) {
+  var _a, _b;
+  const byTestId = document.querySelector('[data-testid="publisherName-display"]');
+  if ((_a = byTestId == null ? void 0 : byTestId.textContent) == null ? void 0 : _a.trim()) {
+    logger.log("Found publisher name via data-testid", byTestId.textContent.trim());
+    return byTestId.textContent.trim();
+  }
+  const byLaunchId = document.querySelector('[data-launchid="Publisher"]');
+  if ((_b = byLaunchId == null ? void 0 : byLaunchId.textContent) == null ? void 0 : _b.trim()) {
+    logger.log("Found publisher name via data-launchid", byLaunchId.textContent.trim());
+    return byLaunchId.textContent.trim();
+  }
+  for (let i = 0; i < links.length; i += 1) {
+    const name = getPublisherNameFromLink(links[i]);
+    if (name) {
+      logger.log("Found publisher name via link text", name);
+      return name;
+    }
+  }
+  logger.log("No publisher name found in DOM");
+  return "";
+}
+function extractPublisherDataScript(testMode = false) {
   return executeScript(
     {
-      scriptName: "Publisher ID",
+      scriptName: "Publisher Data",
       testMode,
-      testHeaderTitle: "PUBLISHER ID EXTRACTOR - TEST MODE",
+      testHeaderTitle: "PUBLISHER DATA EXTRACTOR - TEST MODE",
       onError: (error, logger) => {
-        logger.error("Unexpected error parsing publisher ID:", error);
+        logger.error("Unexpected error parsing publisher data:", error);
         return null;
       }
     },
@@ -206,21 +235,28 @@ function extractPublisherIdScript(testMode = false) {
       logger.log("Searching for publisher links in DOM");
       const links = document.querySelectorAll('a[href^="/publisher/"]');
       logger.log(`Found ${links.length} publisher links`);
+      let publisherId = null;
       for (let i = 0; i < links.length; i += 1) {
         const href = links[i].getAttribute("href");
         if (href) {
-          const publisherId = extractPublisherId(href, logger);
-          if (publisherId) {
-            logger.log("Found valid publisher ID", publisherId);
-            return publisherId;
-          }
+          publisherId = extractPublisherId(href, logger);
+          if (publisherId) break;
         }
       }
-      logger.log("No valid publisher link found in DOM");
-      return null;
+      if (!publisherId) {
+        logger.log("No valid publisher link found in DOM");
+        return null;
+      }
+      const description = extractPublisherName(links, logger);
+      const publisherData = {
+        publisherID: publisherId,
+        description
+      };
+      logger.log("Found valid publisher data", publisherData);
+      return publisherData;
     }
   );
 }
 
 
-return extractPublisherIdScript(TEST_MODE);
+return extractPublisherDataScript(TEST_MODE);
