@@ -57,6 +57,7 @@ export const DEFAULT_TITLE_PATTERNS: readonly string[] = [
   'React Include',
   'React App',
   'Loading...',
+  'Adobe Solution Partner Directory',
   '',
 ];
 

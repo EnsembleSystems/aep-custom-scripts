@@ -122,6 +122,7 @@ var DEFAULT_TITLE_PATTERNS = [
   "React Include",
   "React App",
   "Loading...",
+  "Adobe Solution Partner Directory",
   ""
 ];
 function isDefaultTitle(title) {
