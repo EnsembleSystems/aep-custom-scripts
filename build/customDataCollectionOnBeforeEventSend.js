@@ -921,11 +921,15 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
     (logger) => {
       var _a;
       logEventInfo(event, logger);
+      const pageName = document.title;
+      logger.log("Extracted page name", pageName);
+      if (pageName) {
+        setNestedValue(content, "xdm.web.webPageDetails.name", pageName, true);
+        setNestedValue(content, "xdm.web.webPageDetails.viewName", pageName, true);
+      }
       if (!shouldProcessEventType((_a = content.xdm) == null ? void 0 : _a.eventType, ["web.webpagedetails.pageViews"], logger)) {
         return content;
       }
-      const pageName = document.title;
-      logger.log("Extracted page name", pageName);
       const imsData = extractImsDataScript(testMode);
       logger.log("Extracted IMS data from localStorage", imsData);
       const partnerData = extractPartnerDataScript(testMode, cookieKeys);
@@ -941,9 +945,6 @@ function customDataCollectionOnBeforeEventSendScript(content, event, testMode = 
       const isAdobeEventsPage = isHostnameMatch("*.adobeevents.com");
       const eventData = isAdobeEventsPage ? extractEventDataFromGlobal(logger) : null;
       const attendeeData = isAdobeEventsPage ? extractAttendeeData(logger) : null;
-      if (pageName) {
-        setNestedValue(content, "xdm.web.webPageDetails.name", pageName, true);
-      }
       setNestedValue(
         content,
         "xdm._adobepartners",

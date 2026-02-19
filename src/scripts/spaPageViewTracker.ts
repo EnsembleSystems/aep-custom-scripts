@@ -3,17 +3,20 @@
  *
  * Handles spaPageTitleChanged events from the SPA title change monitor.
  * Debounces rapid title changes, deduplicates identical page views,
- * sets Launch variables, and triggers the spaPageViewCommit event.
+ * and triggers the spaPageViewCommit event.
+ *
+ * Note: Page name/viewName are set by the before-send callback from
+ * document.title, not here — XDMVariable mutations don't persist to
+ * the beacon payload.
  *
  * @version 1.1.0
  */
 
 import { executeScript } from '../utils/script.js';
 import type { Logger } from '../utils/logger.js';
-import { fireSatelliteEvent, getSatelliteVar } from '../utils/satellite.js';
+import { fireSatelliteEvent } from '../utils/satellite.js';
 import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
-import { ensurePath, getPartnerState, isDuplicate, setPartnerState } from '../utils/globalState.js';
-import { XDM_VARIABLE_NAME } from '../utils/constants.js';
+import { getPartnerState, isDuplicate, setPartnerState } from '../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -42,17 +45,10 @@ export interface SpaPageViewTrackerResult {
  *
  * @param title - Page title from event
  * @param url - Page URL from event
- * @param referrer - Previous URL from event
  * @param logger - Logger instance for debugging
  * @param testMode - Whether in test mode
  */
-function processPageView(
-  title: string,
-  url: string,
-  referrer: string,
-  logger: Logger,
-  testMode: boolean
-): void {
+function processPageView(title: string, url: string, logger: Logger, testMode: boolean): void {
   logger.log('Processing SPA page view after debounce');
 
   // Deduplicate by url + title
@@ -63,25 +59,8 @@ function processPageView(
     return;
   }
 
-  // Write page view data directly to XDM Variable
-  const xdmVar = getSatelliteVar(XDM_VARIABLE_NAME, logger, testMode);
-  if (!xdmVar) {
-    return;
-  }
-
-  // Set web.webPageDetails fields
-  const webPageDetails = ensurePath(xdmVar, ['web', 'webPageDetails']);
-  webPageDetails.name = title;
-  webPageDetails.viewName = title;
-  webPageDetails.URL = url;
-
-  // Set web.webReferrer fields
-  const webReferrer = ensurePath(xdmVar, ['web', 'webReferrer']);
-  webReferrer.URL = referrer;
-
-  logger.log('Set XDM Variable web.webPageDetails:', { name: title, viewName: title, URL: url });
-  logger.log('Set XDM Variable web.webReferrer:', { URL: referrer });
-
+  // Page name/viewName are set by the before-send callback from document.title.
+  // This script only needs to deduplicate and fire the commit event.
   fireSatelliteEvent(SPA_PAGE_VIEW_COMMIT_EVENT, logger, testMode);
 }
 
@@ -93,11 +72,10 @@ function processPageView(
  * Sets up debounced SPA page view tracking from a title change event
  *
  * This function:
- * 1. Reads title, url, and referrer from the custom event detail
+ * 1. Reads title and url from document
  * 2. Clears any existing debounce timer
  * 3. Sets up new debounced execution (300ms)
- * 4. After delay, deduplicates and sets Launch variables
- * 5. Triggers spaPageViewCommit direct call event
+ * 4. After delay, deduplicates and triggers spaPageViewCommit direct call event
  *
  * @param testMode - Enable verbose logging for testing
  * @returns Result object with success status
@@ -132,7 +110,6 @@ export function spaPageViewTrackerScript(testMode: boolean = false): SpaPageView
     (logger) => {
       const { title } = document;
       const url = window.location.href;
-      const referrer = getPartnerState('previousPageUrl') || document.referrer || '';
 
       logger.log(`Title: "${title}", URL: "${url}"`);
 
@@ -149,7 +126,7 @@ export function spaPageViewTrackerScript(testMode: boolean = false): SpaPageView
       setPartnerState(
         'pageViewTimer',
         setTimeout(() => {
-          processPageView(title, url, referrer, logger, testMode);
+          processPageView(title, url, logger, testMode);
         }, DEBOUNCE_DELAY)
       );
 

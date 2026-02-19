@@ -101,19 +101,6 @@ function executeScript(config, execute) {
 }
 
 // src/utils/satellite.ts
-function getSatelliteVar(name, logger, testMode) {
-  if (window._satellite && typeof window._satellite.getVar === "function") {
-    const value = window._satellite.getVar(name);
-    if (!value) {
-      logger.warn(`Variable "${name}" not found`);
-      return null;
-    }
-    return value;
-  }
-  const message = testMode ? "_satellite.getVar() not available (normal in test mode)" : "_satellite.getVar() not available - ensure AEP Launch is loaded";
-  logger.warn(message);
-  return null;
-}
 function fireSatelliteEvent(eventName, logger, testMode) {
   if (window._satellite && typeof window._satellite.track === "function") {
     logger.log(`Triggering _satellite.track("${eventName}")`);
@@ -129,21 +116,7 @@ function fireSatelliteEvent(eventName, logger, testMode) {
 var SPA_PAGE_VIEW_COMMIT_EVENT = "spaPageViewCommit";
 var DEBOUNCE_DELAY = 300;
 
-// src/utils/object.ts
-function ensureNestedPath(obj, path) {
-  const keys = Array.isArray(path) ? path : path.split(".");
-  let current = obj;
-  keys.forEach((key) => {
-    if (!(key in current) || typeof current[key] !== "object" || current[key] === null) {
-      current[key] = {};
-    }
-    current = current[key];
-  });
-  return current;
-}
-
 // src/utils/globalState.ts
-var ensurePath = ensureNestedPath;
 function ensurePartnerNamespace() {
   if (!window._adobePartners) {
     window._adobePartners = {};
@@ -168,29 +141,14 @@ function isDuplicate(key, stateKey, logger) {
   return false;
 }
 
-// src/utils/constants.ts
-var XDM_VARIABLE_NAME = "XDMVariable";
-
 // src/scripts/spaPageViewTracker.ts
-function processPageView(title, url, referrer, logger, testMode) {
+function processPageView(title, url, logger, testMode) {
   logger.log("Processing SPA page view after debounce");
   const pageViewKey = `${url}|${title}`;
   logger.log("Generated page view key:", pageViewKey);
   if (isDuplicate(pageViewKey, "lastPageViewKey", logger)) {
     return;
   }
-  const xdmVar = getSatelliteVar(XDM_VARIABLE_NAME, logger, testMode);
-  if (!xdmVar) {
-    return;
-  }
-  const webPageDetails = ensurePath(xdmVar, ["web", "webPageDetails"]);
-  webPageDetails.name = title;
-  webPageDetails.viewName = title;
-  webPageDetails.URL = url;
-  const webReferrer = ensurePath(xdmVar, ["web", "webReferrer"]);
-  webReferrer.URL = referrer;
-  logger.log("Set XDM Variable web.webPageDetails:", { name: title, viewName: title, URL: url });
-  logger.log("Set XDM Variable web.webReferrer:", { URL: referrer });
   fireSatelliteEvent(SPA_PAGE_VIEW_COMMIT_EVENT, logger, testMode);
 }
 function spaPageViewTrackerScript(testMode = false) {
@@ -210,7 +168,6 @@ function spaPageViewTrackerScript(testMode = false) {
     (logger) => {
       const { title } = document;
       const url = window.location.href;
-      const referrer = getPartnerState("previousPageUrl") || document.referrer || "";
       logger.log(`Title: "${title}", URL: "${url}"`);
       const existingTimer = getPartnerState("pageViewTimer");
       if (existingTimer) {
@@ -221,7 +178,7 @@ function spaPageViewTrackerScript(testMode = false) {
       setPartnerState(
         "pageViewTimer",
         setTimeout(() => {
-          processPageView(title, url, referrer, logger, testMode);
+          processPageView(title, url, logger, testMode);
         }, DEBOUNCE_DELAY)
       );
       return {

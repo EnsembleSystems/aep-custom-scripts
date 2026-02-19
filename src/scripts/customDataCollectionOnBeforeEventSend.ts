@@ -538,16 +538,21 @@ export default function customDataCollectionOnBeforeEventSendScript(
       // Log event information
       logEventInfo(event, logger);
 
-      // Skip page view events
+      // Extract and set page name for ALL event types (including page views)
+      const pageName = document.title;
+      logger.log('Extracted page name', pageName);
+
+      if (pageName) {
+        setNestedValue(content, 'xdm.web.webPageDetails.name', pageName, true);
+        setNestedValue(content, 'xdm.web.webPageDetails.viewName', pageName, true);
+      }
+
+      // Skip page view events for partner data enrichment
       if (
         !shouldProcessEventType(content.xdm?.eventType, ['web.webpagedetails.pageViews'], logger)
       ) {
         return content;
       }
-
-      // Extract page name (page title)
-      const pageName = document.title;
-      logger.log('Extracted page name', pageName);
 
       // Extract IMS data from localStorage
       const imsData = extractImsDataScript(testMode);
@@ -577,11 +582,6 @@ export default function customDataCollectionOnBeforeEventSendScript(
       const isAdobeEventsPage = isHostnameMatch('*.adobeevents.com');
       const eventData = isAdobeEventsPage ? extractEventDataFromGlobal(logger) : null;
       const attendeeData = isAdobeEventsPage ? extractAttendeeData(logger) : null;
-
-      // Set page name in standard XDM location
-      if (pageName) {
-        setNestedValue(content, 'xdm.web.webPageDetails.name', pageName, true);
-      }
 
       // Set partner data in _adobepartners using nested object utilities
       setNestedValue(
