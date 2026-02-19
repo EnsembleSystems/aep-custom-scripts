@@ -103,6 +103,20 @@ declare global {
       urlHooked?: boolean;
       /** Flag to ensure entry search check runs only once per page load */
       entrySearchChecked?: boolean;
+
+      // Publisher name monitoring
+      /** Flag to prevent duplicate publisher observer installation */
+      publisherMonitorHooked?: boolean;
+      /** MutationObserver instance watching for the publisher name element */
+      publisherMonitorObserver?: MutationObserver;
+      /** Timeout ID for the 10s publisher monitor auto-disconnect */
+      publisherMonitorTimeout?: ReturnType<typeof setTimeout>;
+      /** Publisher name detected by the observer */
+      publisherName?: string;
+      /** Debounce timer for publisher name tracking */
+      publisherNameTimer?: ReturnType<typeof setTimeout>;
+      /** Last tracked publisher name key for deduplication */
+      lastPublisherNameKey?: string;
     };
 
     /** AEP Launch satellite object */
