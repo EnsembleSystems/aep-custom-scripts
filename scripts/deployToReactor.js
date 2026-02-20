@@ -107,10 +107,11 @@ function setNestedProperty(obj, path, value) {
 
 // Deploy to Data Element
 async function deployToDataElement(client, resource, scriptContent, dryRun) {
-  const { resourceId } = resource;
+  const { resourceId, script } = resource;
+  const name = `${script}.js`;
 
   if (dryRun) {
-    console.log(`   🔍 DRY RUN - Would update Data Element: ${resourceId}`);
+    console.log(`   🔍 DRY RUN - Would update Data Element: ${resourceId} (name: ${name})`);
     return { success: true, dryRun: true };
   }
 
@@ -127,11 +128,11 @@ async function deployToDataElement(client, resource, scriptContent, dryRun) {
     source: scriptContent,
   };
 
-  console.log(`   📤 Updating Data Element...`);
+  console.log(`   📤 Updating Data Element (name: ${name})...`);
   await client.updateDataElement({
     id: resourceId,
     type: 'data_elements',
-    attributes: { settings: JSON.stringify(newSettings) },
+    attributes: { name, settings: JSON.stringify(newSettings) },
   });
 
   return { success: true };
@@ -139,10 +140,11 @@ async function deployToDataElement(client, resource, scriptContent, dryRun) {
 
 // Deploy to Rule Component (action/condition)
 async function deployToRuleComponent(client, resource, scriptContent, dryRun) {
-  const { ruleComponentId } = resource;
+  const { ruleComponentId, script } = resource;
+  const name = `${script}.js`;
 
   if (dryRun) {
-    console.log(`   🔍 DRY RUN - Would update Rule Component: ${ruleComponentId}`);
+    console.log(`   🔍 DRY RUN - Would update Rule Component: ${ruleComponentId} (name: ${name})`);
     return { success: true, dryRun: true };
   }
 
@@ -159,11 +161,11 @@ async function deployToRuleComponent(client, resource, scriptContent, dryRun) {
     source: scriptContent,
   };
 
-  console.log(`   📤 Updating Rule Component...`);
+  console.log(`   📤 Updating Rule Component (name: ${name})...`);
   await client.updateRuleComponent({
     id: ruleComponentId,
     type: 'rule_components',
-    attributes: { settings: JSON.stringify(newSettings) },
+    attributes: { name, settings: JSON.stringify(newSettings) },
   });
 
   return { success: true };
