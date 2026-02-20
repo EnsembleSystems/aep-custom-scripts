@@ -12,9 +12,9 @@
  * @version 2.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import { trackElement, type ElementTrackerConfig } from '../utils/spaEventTracker.js';
-import { SPA_PUBLISHER_NAME_COMMIT_EVENT, DEBOUNCE_DELAY } from '../utils/spaPublisherConfig.js';
+import { executeScript } from '../../utils/script.js';
+import { trackElement, type ElementTrackerConfig } from '../../utils/spaEventTracker.js';
+import { SPA_PUBLISHER_NAME_COMMIT_EVENT, DEBOUNCE_DELAY } from '../../utils/spaPublisherConfig.js';
 
 // ============================================================================
 // TRACKER CONFIG

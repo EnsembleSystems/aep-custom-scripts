@@ -16,9 +16,9 @@
  * @version 2.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import { trackElement, type ElementTrackerConfig } from '../utils/spaEventTracker.js';
-import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../utils/spaPageViewConfig.js';
+import { executeScript } from '../../utils/script.js';
+import { trackElement, type ElementTrackerConfig } from '../../utils/spaEventTracker.js';
+import { DEBOUNCE_DELAY, SPA_PAGE_VIEW_COMMIT_EVENT } from '../../utils/spaPageViewConfig.js';
 
 // ============================================================================
 // TRACKER CONFIG

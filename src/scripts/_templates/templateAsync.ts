@@ -1,32 +1,28 @@
 /**
- * Template Script for AEP (Sync Version)
+ * Template Script for AEP (Async Version)
  *
- * Use this template when your script performs only synchronous operations
- * such as reading cookies, localStorage, DOM parsing, or data transformation.
+ * Use this template when your script needs to perform asynchronous operations
+ * such as API calls, async data fetching, or Promise-based operations.
  *
  * Features demonstrated:
- * - Synchronous execution with executeScript wrapper
+ * - Async/await patterns with executeAsyncScript wrapper
  * - Logger integration
- * - Data extraction pipeline pattern
+ * - Fetch with timeout
  * - Error handling patterns
  * - Test mode support
  * - Type safety
  *
  * Usage:
- * 1. Copy this file: cp src/scripts/templateSync.ts src/scripts/yourScript.ts
+ * 1. Copy this file: cp src/scripts/templateAsync.ts src/scripts/yourScript.ts
  * 2. Replace "Template" with your script name in types and functions
  * 3. Modify the logic to suit your needs
  * 4. Run `npm run build`
  * 5. Deploy build/yourScript.js to AEP
  */
 
-import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-// Uncomment these imports as needed in your script
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { getCookie as _getCookie, parseJsonCookie as _parseJsonCookie } from '../utils/cookie.js';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { extractData as _extractData } from '../utils/extraction.js';
+import { executeAsyncScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
+import { fetchWithTimeout, isAbortError, isNetworkError } from '../../utils/fetch.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -36,8 +32,8 @@ import { extractData as _extractData } from '../utils/extraction.js';
  * Configuration for the script
  */
 export interface TemplateConfig {
-  /** Custom cookie key to read */
-  cookieKey?: string;
+  /** Request timeout in milliseconds */
+  timeout: number;
   /** Custom message to display */
   message?: string;
 }
@@ -64,13 +60,55 @@ export interface TemplateResult {
  * Default configuration values
  */
 const DEFAULT_CONFIG: TemplateConfig = {
-  cookieKey: 'my_cookie',
+  timeout: 10000,
   message: 'Template script executed',
+};
+
+/**
+ * Example API endpoints (if needed)
+ */
+// @ts-expect-error - Placeholder for template
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const API = {
+  // Example: '/api/data.json'
 };
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Example helper function to fetch data from an API
+ * Delete this if you don't need it
+ */
+// @ts-expect-error - Example function for template
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function fetchExampleData(config: TemplateConfig, logger: Logger): Promise<unknown> {
+  logger.log('Fetching example data...');
+
+  // Example API call (replace with your actual endpoint)
+  const apiUrl = `${window.location.origin}/api/example`;
+
+  const response = await fetchWithTimeout(
+    apiUrl,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+    config.timeout
+  );
+
+  if (!response.ok) {
+    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  logger.log('Data received:', data);
+
+  return data;
+}
 
 /**
  * Example helper function to process data
@@ -95,8 +133,7 @@ function processData(data: unknown, logger: Logger): unknown {
  * Main entry point for the Template script
  *
  * @param testMode - Set to true for browser console testing, false for AEP deployment
- * @param config - Optional configuration object
- * @returns Result object or null on error
+ * @returns Promise that resolves to result object or null on error
  *
  * @example
  * // In browser console (with TEST_MODE = true in wrapper):
@@ -104,30 +141,38 @@ function processData(data: unknown, logger: Logger): unknown {
  *
  * @example
  * // In AEP Data Element:
- * // Result is returned synchronously
+ * // Promise is returned and AEP Launch will await it
  */
-export function templateSyncScript(
-  testMode: boolean = false,
-  config: TemplateConfig = {}
-): TemplateResult | null {
-  // Merge with default config
-  const mergedConfig: TemplateConfig = {
+export async function templateAsyncScript(
+  testMode: boolean = false
+): Promise<TemplateResult | null> {
+  // Merge default config
+  const config: TemplateConfig = {
     ...DEFAULT_CONFIG,
-    ...config,
   };
 
-  return executeScript(
+  return executeAsyncScript(
     {
       scriptName: 'Template',
       testMode,
-      testHeaderTitle: 'TEMPLATE SCRIPT (SYNC) - TEST MODE',
-      testHeaderExtraInfo: mergedConfig,
-      onError: (error, logger) => {
-        logger.error('Unexpected error in template script:', error);
+      testHeaderTitle: 'TEMPLATE SCRIPT (ASYNC) - TEST MODE',
+      testHeaderExtraInfo: config,
+      onError: (error) => {
+        // Handle timeout errors
+        if (isAbortError(error)) {
+          return null;
+        }
+
+        // Handle network errors
+        if (isNetworkError(error)) {
+          return null;
+        }
+
+        // Handle all other errors
         return null;
       },
     },
-    (logger) => {
+    async (logger) => {
       // ========================================================================
       // YOUR SCRIPT LOGIC GOES HERE
       // ========================================================================
@@ -136,7 +181,7 @@ export function templateSyncScript(
 
       // Example 1: Simple data construction
       const simpleResult = {
-        message: mergedConfig.message || DEFAULT_CONFIG.message,
+        message: config.message || DEFAULT_CONFIG.message,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         currentUrl: window.location.href,
@@ -144,41 +189,31 @@ export function templateSyncScript(
 
       logger.log('Simple result created:', simpleResult);
 
-      // Example 2: Extract data from cookies using extraction pipeline
-      // const cookieData = extractData({
-      //   source: () => getCookie(mergedConfig.cookieKey || ''),
-      //   parser: parseJsonCookie,
-      //   transformer: (data) => {
-      //     // Transform or filter data as needed
-      //     return data;
-      //   },
-      //   logger,
-      //   errorMessage: 'Error parsing cookie data',
-      //   notFoundMessage: 'No cookie data found',
-      // });
-      //
-      // if (cookieData) {
-      //   logger.log('Cookie data extracted:', cookieData);
+      // Example 2: Fetch data from API (uncomment if needed)
+      // try {
+      //   const apiData = await fetchExampleData(config, logger);
+      //   const processedData = processData(apiData, logger);
+      //   // Use processedData in your result
+      // } catch (error) {
+      //   logger.error('Failed to fetch data:', error);
+      //   // Decide whether to continue or return null
       // }
 
-      // Example 3: Extract data from DOM
+      // Example 3: Extract data from DOM (uncomment if needed)
       // const titleElement = document.querySelector('h1');
       // const pageTitle = titleElement?.textContent || 'No title found';
       // logger.log('Page title:', pageTitle);
 
-      // Example 4: Read from localStorage
-      // import { getStorageItem } from '../utils/storage.js';
+      // Example 4: Read from localStorage (uncomment if needed)
+      // import { getStorageItem } from '../../utils/storage.js';
       // const userData = getStorageItem('user_data');
       // logger.log('User data:', userData);
 
-      // Example 5: Use DOM utilities for shadow DOM
-      // import { queryShadow, getTextContent } from '../utils/dom.js';
-      // const shadowHost = document.querySelector('.shadow-host');
-      // if (shadowHost) {
-      //   const element = queryShadow(shadowHost, '.selector');
-      //   const text = getTextContent(element);
-      //   logger.log('Shadow DOM text:', text);
-      // }
+      // Example 5: Read from cookies (uncomment if needed)
+      // import { getCookie, parseJsonCookie } from '../../utils/cookie.js';
+      // const cookieValue = getCookie('my_cookie');
+      // const parsedCookie = parseJsonCookie(cookieValue);
+      // logger.log('Cookie data:', parsedCookie);
 
       // ========================================================================
       // BUILD RESULT OBJECT

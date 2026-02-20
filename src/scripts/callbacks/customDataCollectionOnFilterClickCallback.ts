@@ -15,8 +15,8 @@
  * - No window._adobePartners storage needed
  */
 
-import { executeScript } from '../utils/script';
-import logEventInfo, { isValidUserEvent } from '../utils/events';
+import { executeScript } from '../../utils/script';
+import logEventInfo, { isValidUserEvent } from '../../utils/events';
 
 /**
  * Type for the content object passed to Launch's before event send callback

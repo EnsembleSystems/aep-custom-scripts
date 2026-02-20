@@ -14,9 +14,9 @@
  * @version 2.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import { parseSearchUrl } from '../utils/searchUrlParser.js';
-import { getPartnerState, setPartnerState } from '../utils/globalState.js';
+import { executeScript } from '../../utils/script.js';
+import { parseSearchUrl } from '../../utils/searchUrlParser.js';
+import { getPartnerState, setPartnerState } from '../../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS

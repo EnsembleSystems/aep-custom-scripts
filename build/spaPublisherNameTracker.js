@@ -175,7 +175,7 @@ function trackElement(config, logger, testMode) {
 var SPA_PUBLISHER_NAME_COMMIT_EVENT = "spaPublisherNameCommit";
 var DEBOUNCE_DELAY = 300;
 
-// src/scripts/spaPublisherNameTracker.ts
+// src/scripts/spa/spaPublisherNameTracker.ts
 var PUBLISHER_TRACKER_CONFIG = {
   stateKey: "publisherName",
   timerKey: "publisherNameTimer",

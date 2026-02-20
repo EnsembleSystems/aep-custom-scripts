@@ -7,9 +7,9 @@
  * @version 3.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import { SEARCH_SOURCES } from '../utils/searchConfig.js';
-import { trackSearch } from '../utils/searchTracker.js';
+import { executeScript } from '../../utils/script.js';
+import { SEARCH_SOURCES } from '../../utils/searchConfig.js';
+import { trackSearch } from '../../utils/searchTracker.js';
 
 // ============================================================================
 // TYPE DEFINITIONS

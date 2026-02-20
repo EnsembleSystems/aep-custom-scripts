@@ -288,7 +288,7 @@ function trackSearch(source, logger, testMode) {
   };
 }
 
-// src/scripts/searchTrackerEntry.ts
+// src/scripts/search/searchTrackerEntry.ts
 function searchTrackerEntryScript(testMode = false) {
   return executeScript(
     {

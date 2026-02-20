@@ -233,7 +233,7 @@ function setGlobalValue(obj, path, value, logger) {
   }
 }
 
-// src/scripts/fetchEventData.ts
+// src/scripts/data/fetchEventData.ts
 var API = {
   EVENT_ENDPOINT: "/api/event.json?meta=true"
 };

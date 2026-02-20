@@ -28,7 +28,8 @@ const SCRIPTS_DIR = join(projectRoot, 'src/scripts');
 const BUILD_DIR = join(projectRoot, 'build');
 
 /**
- * Discovers all scripts in src/scripts/
+ * Discovers all scripts in src/scripts/ recursively.
+ * Skips directories starting with '_' (e.g. _templates).
  */
 function discoverScripts() {
   if (!existsSync(SCRIPTS_DIR)) {
@@ -36,12 +37,25 @@ function discoverScripts() {
     return [];
   }
 
-  return readdirSync(SCRIPTS_DIR)
-    .filter((file) => file.endsWith('.ts') && !file.includes('.test.'))
-    .map((file) => ({
-      name: basename(file, '.ts'),
-      path: join(SCRIPTS_DIR, file),
-    }));
+  function walkDir(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith('_')) {
+          files.push(...walkDir(join(dir, entry.name)));
+        }
+      } else if (entry.name.endsWith('.ts') && !entry.name.includes('.test.')) {
+        files.push(join(dir, entry.name));
+      }
+    }
+    return files;
+  }
+
+  return walkDir(SCRIPTS_DIR).map((filePath) => ({
+    name: basename(filePath, '.ts'),
+    path: filePath,
+  }));
 }
 
 /**

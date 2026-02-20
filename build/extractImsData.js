@@ -124,7 +124,7 @@ function isArray(value) {
   return Array.isArray(value);
 }
 
-// src/scripts/extractImsData.ts
+// src/scripts/data/extractImsData.ts
 var SELECTED_ORG_KEY = "selectedOrg";
 var ORGS_ARR_KEY = "orgsArr";
 function extractFromOrgObject(selectedOrg, logger) {

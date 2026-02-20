@@ -130,7 +130,7 @@ function isValidUserEvent(event, logger) {
   return true;
 }
 
-// src/scripts/customDataCollectionOnFilterClickCallback.ts
+// src/scripts/callbacks/customDataCollectionOnFilterClickCallback.ts
 function customDataCollectionOnFilterClickCallbackScript(content, event, testMode = false) {
   return executeScript(
     {

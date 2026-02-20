@@ -77,8 +77,8 @@ module.exports = {
     {
       files: [
         'src/scripts/setPartnerDataOnEvent.ts',
-        'src/scripts/customDataCollectionOnBeforeEventSend.ts',
-        'src/scripts/customDataCollectionOnFilterClickCallback.ts',
+        'src/scripts/callbacks/customDataCollectionOnBeforeEventSend.ts',
+        'src/scripts/callbacks/customDataCollectionOnFilterClickCallback.ts',
       ],
       rules: {
         'no-param-reassign': ['error', { props: false }],

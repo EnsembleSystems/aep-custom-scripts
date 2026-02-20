@@ -8,14 +8,14 @@
  * 3. localStorage (mage-cache-storage - email fallback)
  */
 
-import { executeScript } from '../utils/script.js';
-import { extractData, parseJsonObject } from '../utils/extraction.js';
-import { getCookie, parseJsonCookie } from '../utils/cookie.js';
-import removeProperties, { mergeNonNull, pickFields } from '../utils/object.js';
-import { hasProperty } from '../utils/validation.js';
-import { DEFAULT_COOKIE_KEYS, EXCHANGE_SESSION_STORAGE_KEY } from '../utils/constants.js';
-import { getStorageItem } from '../utils/storage.js';
-import type { Logger } from '../utils/logger.js';
+import { executeScript } from '../../utils/script.js';
+import { extractData, parseJsonObject } from '../../utils/extraction.js';
+import { getCookie, parseJsonCookie } from '../../utils/cookie.js';
+import removeProperties, { mergeNonNull, pickFields } from '../../utils/object.js';
+import { hasProperty } from '../../utils/validation.js';
+import { DEFAULT_COOKIE_KEYS, EXCHANGE_SESSION_STORAGE_KEY } from '../../utils/constants.js';
+import { getStorageItem } from '../../utils/storage.js';
+import type { Logger } from '../../utils/logger.js';
 
 // Constants
 const PROPERTIES_TO_REMOVE = ['latestAgreementAcceptedVersion'];

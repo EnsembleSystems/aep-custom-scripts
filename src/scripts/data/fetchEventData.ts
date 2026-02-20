@@ -5,19 +5,19 @@
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
-import { executeAsyncScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
+import { executeAsyncScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
 import {
   fetchWithTimeout,
   validateResponseSize,
   isAbortError,
   isNetworkError,
-} from '../utils/fetch.js';
-import { EVENT_DATA_READY_EVENT } from '../utils/constants.js';
-import { extractDates } from '../utils/dates.js';
-import { dispatchCustomEvent } from '../utils/dom.js';
-import { mergeWithTransforms } from '../utils/transform.js';
-import setGlobalValue from '../utils/globalState.js';
+} from '../../utils/fetch.js';
+import { EVENT_DATA_READY_EVENT } from '../../utils/constants.js';
+import { extractDates } from '../../utils/dates.js';
+import { dispatchCustomEvent } from '../../utils/dom.js';
+import { mergeWithTransforms } from '../../utils/transform.js';
+import setGlobalValue from '../../utils/globalState.js';
 
 // Types
 export interface EventDataConfig {

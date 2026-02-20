@@ -14,11 +14,11 @@
  * @version 2.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-import { getPartnerState, setPartnerState } from '../utils/globalState.js';
-import dispatchCustomEvent from '../utils/customEvent.js';
-import { URL_CHANGE_EVENT, URL_PATTERN } from '../utils/searchConfig.js';
+import { executeScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
+import { getPartnerState, setPartnerState } from '../../utils/globalState.js';
+import dispatchCustomEvent from '../../utils/customEvent.js';
+import { URL_CHANGE_EVENT, URL_PATTERN } from '../../utils/searchConfig.js';
 
 // ============================================================================
 // TYPE DEFINITIONS

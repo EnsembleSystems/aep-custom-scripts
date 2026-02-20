@@ -6,7 +6,7 @@
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
-import { executeScript } from '../utils/script.js';
+import { executeScript } from '../../utils/script.js';
 
 /**
  * Main entry point for the event data getter

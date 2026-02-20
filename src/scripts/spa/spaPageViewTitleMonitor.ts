@@ -12,22 +12,22 @@
  * @version 2.0.0
  */
 
-import { executeScript } from '../utils/script.js';
+import { executeScript } from '../../utils/script.js';
 import {
   installElementObserver,
   type ElementMonitorConfig,
   type SpaMonitorResult,
-} from '../utils/spaElementObserver.js';
+} from '../../utils/spaElementObserver.js';
 import {
   SPA_TITLE_CHANGE_EVENT,
   isDefaultTitle,
   TITLE_MONITOR_TIMEOUT_MS,
-} from '../utils/spaPageViewConfig.js';
+} from '../../utils/spaPageViewConfig.js';
 import {
   getPartnerStateByKey,
   setPartnerStateByKey,
   setPartnerState,
-} from '../utils/globalState.js';
+} from '../../utils/globalState.js';
 
 // ============================================================================
 // ELEMENT CONFIG

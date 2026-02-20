@@ -6,11 +6,11 @@
  * Returns an object matching the publisherData XDM schema.
  */
 
-import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-import { isValidPublisherId } from '../utils/validation.js';
-import { extractAndValidate, createPathStructure } from '../utils/url.js';
-import type { PublisherData } from '../types/index.js';
+import { executeScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
+import { isValidPublisherId } from '../../utils/validation.js';
+import { extractAndValidate, createPathStructure } from '../../utils/url.js';
+import type { PublisherData } from '../../types/index.js';
 
 // URL structure configuration for publisher links
 // Example: "/publisher/cc/2c4c7552-2bb9-4541-b625-04721319c07b/picture-instruments"

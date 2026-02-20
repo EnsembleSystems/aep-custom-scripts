@@ -221,7 +221,7 @@ function isValidPublisherName(name) {
   return name.trim().length > 0;
 }
 
-// src/scripts/spaPublisherNameMonitor.ts
+// src/scripts/spa/spaPublisherNameMonitor.ts
 var PUBLISHER_MONITOR_CONFIG = {
   selector: PUBLISHER_ELEMENT_SELECTOR,
   stateKey: "publisherName",

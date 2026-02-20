@@ -136,7 +136,7 @@ function dispatchCustomEvent(eventName, detail) {
 var URL_CHANGE_EVENT = "partnersSearchUrlChanged";
 var URL_PATTERN = /.*\/digitalexperience\/home\/search\/.*/;
 
-// src/scripts/searchUrlMonitor.ts
+// src/scripts/search/searchUrlMonitor.ts
 function installHistoryHooks(logger) {
   const originalPushState = window.history.pushState;
   const originalReplaceState = window.history.replaceState;

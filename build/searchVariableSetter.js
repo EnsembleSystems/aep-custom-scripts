@@ -148,7 +148,7 @@ function getSatelliteVar(name, logger, testMode) {
 // src/utils/constants.ts
 var XDM_VARIABLE_NAME = "XDMVariable";
 
-// src/scripts/searchVariableSetter.ts
+// src/scripts/search/searchVariableSetter.ts
 function readSearchPayload(logger) {
   try {
     const payload = getPartnerState("searchPayload");

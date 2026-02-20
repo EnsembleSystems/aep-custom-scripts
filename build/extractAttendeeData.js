@@ -116,7 +116,7 @@ function getStorageItem(key) {
 // src/utils/constants.ts
 var ATTENDEE_STORAGE_KEY = "attendeaseMember";
 
-// src/scripts/extractAttendeeData.ts
+// src/scripts/data/extractAttendeeData.ts
 function extractAttendeeDataScript(testMode = false) {
   return executeScript(
     {

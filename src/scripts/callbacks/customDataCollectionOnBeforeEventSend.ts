@@ -16,8 +16,8 @@
  * - No window._adobePartners storage needed
  */
 
-import { executeScript } from '../utils/script';
-import { extractPartnerDataScript } from './extractPartnerData';
+import { executeScript } from '../../utils/script';
+import { extractPartnerDataScript } from '../data/extractPartnerData';
 import {
   getAttribute,
   getTextContent,
@@ -25,16 +25,16 @@ import {
   findInComposedPath,
   createElementMatcher,
   extractStructuredAttribute,
-} from '../utils/dom';
-import { getStorageItem } from '../utils/storage';
-import logEventInfo, { shouldProcessEventType } from '../utils/events';
-import { setNestedValue, conditionalProperties, mergeNonNull } from '../utils/object';
-import type { PartnerCardCtx, CheckoutData, CartItem } from '../types';
-import { createLogger } from '../utils/logger';
-import { DEFAULT_COOKIE_KEYS, ATTENDEE_STORAGE_KEY } from '../utils/constants';
-import { isHostnameMatch } from '../utils/url';
-import { extractImsDataScript } from './extractImsData';
-import { extractPublisherDataScript } from './extractPublisherData';
+} from '../../utils/dom';
+import { getStorageItem } from '../../utils/storage';
+import logEventInfo, { shouldProcessEventType } from '../../utils/events';
+import { setNestedValue, conditionalProperties, mergeNonNull } from '../../utils/object';
+import type { PartnerCardCtx, CheckoutData, CartItem } from '../../types';
+import { createLogger } from '../../utils/logger';
+import { DEFAULT_COOKIE_KEYS, ATTENDEE_STORAGE_KEY } from '../../utils/constants';
+import { isHostnameMatch } from '../../utils/url';
+import { extractImsDataScript } from '../data/extractImsData';
+import { extractPublisherDataScript } from '../data/extractPublisherData';
 
 // Constants for card metadata extraction
 const SELECTORS = {

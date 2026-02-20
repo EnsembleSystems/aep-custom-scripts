@@ -276,7 +276,7 @@ function getStorageItem(key) {
   }
 }
 
-// src/scripts/extractPartnerData.ts
+// src/scripts/data/extractPartnerData.ts
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
 var MAGE_CACHE_STORAGE_KEY = "mage-cache-storage";
 var SESSION_STORAGE_FIELDS = ["email", "first_name", "last_name"];
@@ -510,7 +510,7 @@ function createPathStructure(type, config) {
   }
 }
 
-// src/scripts/extractImsData.ts
+// src/scripts/data/extractImsData.ts
 var SELECTED_ORG_KEY = "selectedOrg";
 var ORGS_ARR_KEY = "orgsArr";
 function extractFromOrgObject(selectedOrg, logger) {
@@ -575,7 +575,7 @@ function extractImsDataScript(testMode = false) {
   );
 }
 
-// src/scripts/extractPublisherData.ts
+// src/scripts/data/extractPublisherData.ts
 var PUBLISHER_URL_STRUCTURE = createPathStructure("nested-resource", {
   resourceType: "publisher",
   minSegments: 4
@@ -655,7 +655,7 @@ function extractPublisherDataScript(testMode = false) {
   );
 }
 
-// src/scripts/customDataCollectionOnBeforeEventSend.ts
+// src/scripts/callbacks/customDataCollectionOnBeforeEventSend.ts
 var SELECTORS = {
   CARD_TITLE: ".card-title",
   PARTNER_CARDS: ".partner-cards",

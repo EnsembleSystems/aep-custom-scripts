@@ -7,11 +7,11 @@
  * 2. "selectedOrg" - if string (numeric ID), looks up in "orgsArr" by orgID
  */
 
-import { executeScript } from '../utils/script.js';
-import { getStorageItem } from '../utils/storage.js';
-import { isObject, isString, isArray } from '../utils/validation.js';
-import type { Logger } from '../utils/logger.js';
-import type { ImsData } from '../types/index.js';
+import { executeScript } from '../../utils/script.js';
+import { getStorageItem } from '../../utils/storage.js';
+import { isObject, isString, isArray } from '../../utils/validation.js';
+import type { Logger } from '../../utils/logger.js';
+import type { ImsData } from '../../types/index.js';
 
 // Constants
 const SELECTED_ORG_KEY = 'selectedOrg';

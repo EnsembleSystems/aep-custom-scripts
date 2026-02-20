@@ -7,11 +7,11 @@
  * @version 3.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-import { SEARCH_SOURCES, DEBOUNCE_DELAY } from '../utils/searchConfig.js';
-import { trackSearch } from '../utils/searchTracker.js';
-import { getPartnerState, setPartnerState } from '../utils/globalState.js';
+import { executeScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
+import { SEARCH_SOURCES, DEBOUNCE_DELAY } from '../../utils/searchConfig.js';
+import { trackSearch } from '../../utils/searchTracker.js';
+import { getPartnerState, setPartnerState } from '../../utils/globalState.js';
 
 // ============================================================================
 // TYPE DEFINITIONS

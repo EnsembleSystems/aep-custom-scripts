@@ -232,7 +232,7 @@ function isDefaultTitle(title) {
   return DEFAULT_TITLE_PATTERNS.some((pattern) => trimmed.toLowerCase() === pattern.toLowerCase());
 }
 
-// src/scripts/spaPageViewTitleMonitor.ts
+// src/scripts/spa/spaPageViewTitleMonitor.ts
 var TITLE_MONITOR_CONFIG = {
   selector: "title",
   stateKey: "titleValue",

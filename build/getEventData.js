@@ -100,7 +100,7 @@ function executeScript(config, execute) {
   }
 }
 
-// src/scripts/getEventData.ts
+// src/scripts/data/getEventData.ts
 function getEventDataScript(testMode = false) {
   return executeScript(
     {

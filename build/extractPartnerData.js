@@ -236,7 +236,7 @@ function getStorageItem(key) {
   }
 }
 
-// src/scripts/extractPartnerData.ts
+// src/scripts/data/extractPartnerData.ts
 var PROPERTIES_TO_REMOVE = ["latestAgreementAcceptedVersion"];
 var MAGE_CACHE_STORAGE_KEY = "mage-cache-storage";
 var SESSION_STORAGE_FIELDS = ["email", "first_name", "last_name"];

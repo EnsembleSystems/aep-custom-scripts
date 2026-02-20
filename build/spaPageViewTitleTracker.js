@@ -175,7 +175,7 @@ function trackElement(config, logger, testMode) {
 var SPA_PAGE_VIEW_COMMIT_EVENT = "spaPageViewCommit";
 var DEBOUNCE_DELAY = 300;
 
-// src/scripts/spaPageViewTitleTracker.ts
+// src/scripts/spa/spaPageViewTitleTracker.ts
 var PAGE_VIEW_TRACKER_CONFIG = {
   stateKey: "titleValue",
   timerKey: "pageViewTimer",

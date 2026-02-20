@@ -178,7 +178,7 @@ function createPathStructure(type, config) {
   }
 }
 
-// src/scripts/extractPublisherData.ts
+// src/scripts/data/extractPublisherData.ts
 var PUBLISHER_URL_STRUCTURE = createPathStructure("nested-resource", {
   resourceType: "publisher",
   minSegments: 4

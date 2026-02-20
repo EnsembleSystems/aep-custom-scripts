@@ -289,7 +289,7 @@ function trackSearch(source, logger, testMode) {
   };
 }
 
-// src/scripts/searchTrackerDynamic.ts
+// src/scripts/search/searchTrackerDynamic.ts
 function searchTrackerDynamicScript(testMode = false) {
   return executeScript(
     {

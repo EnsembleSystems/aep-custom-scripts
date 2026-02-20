@@ -9,14 +9,14 @@
  * @version 3.0.0
  */
 
-import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-import type { SearchPayload } from '../utils/searchUrlParser.js';
-import { FILTER_TO_XDM_MAP } from '../utils/searchConfig.js';
-import type { XdmSearchFilters, XdmSearchResults } from '../utils/searchConfig.js';
-import { ensurePath, getPartnerState } from '../utils/globalState.js';
-import { getSatelliteVar } from '../utils/satellite.js';
-import { XDM_VARIABLE_NAME } from '../utils/constants.js';
+import { executeScript } from '../../utils/script.js';
+import type { Logger } from '../../utils/logger.js';
+import type { SearchPayload } from '../../utils/searchUrlParser.js';
+import { FILTER_TO_XDM_MAP } from '../../utils/searchConfig.js';
+import type { XdmSearchFilters, XdmSearchResults } from '../../utils/searchConfig.js';
+import { ensurePath, getPartnerState } from '../../utils/globalState.js';
+import { getSatelliteVar } from '../../utils/satellite.js';
+import { XDM_VARIABLE_NAME } from '../../utils/constants.js';
 
 // ============================================================================
 // TYPE DEFINITIONS

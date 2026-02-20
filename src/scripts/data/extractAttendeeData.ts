@@ -5,9 +5,9 @@
  * Example URL: https://pelabs-10feb2025.solutionpartners.adobeevents.com/
  */
 
-import { executeScript } from '../utils/script.js';
-import { getStorageItem } from '../utils/storage.js';
-import { ATTENDEE_STORAGE_KEY } from '../utils/constants.js';
+import { executeScript } from '../../utils/script.js';
+import { getStorageItem } from '../../utils/storage.js';
+import { ATTENDEE_STORAGE_KEY } from '../../utils/constants.js';
 
 /**
  * Main entry point for the attendee data extractor

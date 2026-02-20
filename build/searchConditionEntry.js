@@ -201,7 +201,7 @@ function setPartnerState(key, value) {
   ns[key] = value;
 }
 
-// src/scripts/searchConditionEntry.ts
+// src/scripts/search/searchConditionEntry.ts
 function searchConditionEntryScript(testMode = false) {
   return executeScript(
     {
