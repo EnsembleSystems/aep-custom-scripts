@@ -116,8 +116,110 @@ function dispatchCustomEvent(eventName, detail) {
   }
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function setPartnerState(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+function getPartnerStateByKey(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerStateByKey(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
+// src/utils/spaElementObserver.ts
+var DEFAULT_EXTRACT = (el) => {
+  var _a, _b;
+  return (_b = (_a = el.textContent) == null ? void 0 : _a.trim()) != null ? _b : "";
+};
+var DEFAULT_IS_VALID = (value) => value.length > 0;
+function emit(config, value, logger) {
+  setPartnerStateByKey(config.stateKey, value);
+  dispatchCustomEvent(config.eventName, {
+    value,
+    timestamp: Date.now()
+  });
+  logger.log(`Dispatched "${config.eventName}" with value: "${value}"`);
+  if (config.onEmit) {
+    config.onEmit(value);
+  }
+}
+function cancelTimeout(config) {
+  if (config.timeoutKey) {
+    const id = getPartnerStateByKey(config.timeoutKey);
+    if (id !== void 0) {
+      clearTimeout(id);
+    }
+  }
+}
+function installElementObserver(config, logger) {
+  var _a, _b, _c, _d;
+  const extract = (_a = config.extractValue) != null ? _a : DEFAULT_EXTRACT;
+  const isValid = (_b = config.isValidValue) != null ? _b : DEFAULT_IS_VALID;
+  const watchBody = (_c = config.watchBody) != null ? _c : false;
+  const disconnectAfterFirst = (_d = config.disconnectAfterFirst) != null ? _d : true;
+  const existingEl = document.querySelector(config.selector);
+  if (existingEl) {
+    const existingValue = extract(existingEl);
+    if (isValid(existingValue)) {
+      logger.log(`Element "${config.selector}" already has valid value at install time`);
+      emit(config, existingValue, logger);
+      return { success: true, message: "Dispatched immediately", immediateValue: existingValue };
+    }
+  } else if (!watchBody) {
+    logger.warn(`Element "${config.selector}" not found in document`);
+    return { success: false, message: `Element "${config.selector}" not found` };
+  }
+  const observer = new MutationObserver(() => {
+    const el = document.querySelector(config.selector);
+    if (!el) return;
+    const value = extract(el);
+    if (!isValid(value)) {
+      logger.log(`Value not yet valid: "${value}"`);
+      return;
+    }
+    logger.log(`Valid value detected: "${value}"`);
+    if (disconnectAfterFirst) {
+      cancelTimeout(config);
+      setPartnerStateByKey(config.observerKey, void 0);
+      observer.disconnect();
+      logger.log("Observer disconnected after first valid value");
+    }
+    emit(config, value, logger);
+  });
+  if (watchBody) {
+    observer.observe(document.body, { childList: true, subtree: true });
+    logger.log(`MutationObserver installed on document.body watching for "${config.selector}"`);
+  } else {
+    observer.observe(existingEl, { childList: true });
+    logger.log(`MutationObserver installed on "${config.selector}"`);
+  }
+  setPartnerStateByKey(config.observerKey, observer);
+  if (config.timeout && config.timeoutKey) {
+    const timeoutId = setTimeout(() => {
+      observer.disconnect();
+      setPartnerStateByKey(config.observerKey, void 0);
+      logger.warn(`Observer timed out after ${config.timeout}ms \u2014 "${config.selector}" not found`);
+    }, config.timeout);
+    setPartnerStateByKey(config.timeoutKey, timeoutId);
+  } else if (config.timeout && !config.timeoutKey) {
+    logger.warn("`timeout` is set but `timeoutKey` is missing \u2014 timeout will not be stored");
+  }
+  return { success: true, message: "Observer installed" };
+}
+
 // src/utils/spaPageViewConfig.ts
 var SPA_TITLE_CHANGE_EVENT = "spaPageTitleChanged";
+var TITLE_MONITOR_TIMEOUT_MS = 1e4;
 var DEFAULT_TITLE_PATTERNS = [
   "React Include",
   "React App",
@@ -130,66 +232,23 @@ function isDefaultTitle(title) {
   return DEFAULT_TITLE_PATTERNS.some((pattern) => trimmed.toLowerCase() === pattern.toLowerCase());
 }
 
-// src/utils/globalState.ts
-function ensurePartnerNamespace() {
-  if (!window._adobePartners) {
-    window._adobePartners = {};
-  }
-  return window._adobePartners;
-}
-function getPartnerState(key) {
-  var _a;
-  return (_a = window._adobePartners) == null ? void 0 : _a[key];
-}
-function setPartnerState(key, value) {
-  const ns = ensurePartnerNamespace();
-  ns[key] = value;
-}
-
 // src/scripts/spaPageViewTitleMonitor.ts
-function installTitleObserver(logger) {
-  const previousUrl = document.referrer || "";
-  const titleElement = document.querySelector("title");
-  if (!titleElement) {
-    logger.warn("No <title> element found in document");
-    return;
-  }
-  const observer = new MutationObserver(() => {
-    const currentTitle2 = document.title;
-    if (isDefaultTitle(currentTitle2)) {
-      logger.log(`Title is still a default/placeholder: "${currentTitle2}"`);
-      return;
-    }
-    const currentUrl = window.location.href;
-    logger.log(
-      `Title changed to: "${currentTitle2}", dispatching page view and disconnecting observer`
-    );
-    dispatchCustomEvent(SPA_TITLE_CHANGE_EVENT, {
-      title: currentTitle2,
-      url: currentUrl,
-      referrer: previousUrl,
-      timestamp: Date.now()
-    });
-    setPartnerState("previousPageUrl", currentUrl);
-    observer.disconnect();
-    logger.log("Observer disconnected after first valid title change");
-  });
-  observer.observe(titleElement, { childList: true });
-  setPartnerState("titleMonitorObserver", observer);
-  logger.log("MutationObserver installed on <title> element");
-  const currentTitle = document.title;
-  if (!isDefaultTitle(currentTitle)) {
-    logger.log(`Title already set at install time: "${currentTitle}", dispatching immediately`);
-    dispatchCustomEvent(SPA_TITLE_CHANGE_EVENT, {
-      title: currentTitle,
-      url: window.location.href,
-      referrer: previousUrl,
-      timestamp: Date.now()
-    });
-    observer.disconnect();
-    logger.log("Observer disconnected \u2014 title was already valid at install time");
-  }
-}
+var TITLE_MONITOR_CONFIG = {
+  selector: "title",
+  stateKey: "titleValue",
+  hookKey: "titleMonitorHooked",
+  observerKey: "titleMonitorObserver",
+  timeoutKey: "titleMonitorTimeout",
+  eventName: SPA_TITLE_CHANGE_EVENT,
+  timeout: TITLE_MONITOR_TIMEOUT_MS,
+  watchBody: false,
+  // <title> content is read via document.title rather than textContent
+  extractValue: () => document.title,
+  isValidValue: (title) => !isDefaultTitle(title),
+  disconnectAfterFirst: true,
+  // Track the current URL as the previous page URL for SPA referrer tracking
+  onEmit: () => setPartnerState("previousPageUrl", window.location.href)
+};
 function spaPageViewTitleMonitorScript(testMode = false) {
   return executeScript(
     {
@@ -206,7 +265,8 @@ function spaPageViewTitleMonitorScript(testMode = false) {
       }
     },
     (logger) => {
-      if (getPartnerState("titleMonitorHooked")) {
+      var _a;
+      if (getPartnerStateByKey(TITLE_MONITOR_CONFIG.hookKey)) {
         logger.log("Title change observer already installed");
         return {
           success: true,
@@ -215,24 +275,16 @@ function spaPageViewTitleMonitorScript(testMode = false) {
           currentTitle: document.title
         };
       }
-      try {
-        installTitleObserver(logger);
-        setPartnerState("titleMonitorHooked", true);
-        logger.log("Title change observer successfully installed");
-        return {
-          success: true,
-          message: "Title change observer installed successfully",
-          alreadyHooked: false,
-          currentTitle: document.title
-        };
-      } catch (error) {
-        logger.error("Failed to install observer:", error);
-        return {
-          success: false,
-          message: "Failed to install title change observer",
-          alreadyHooked: false
-        };
+      const result = installElementObserver(TITLE_MONITOR_CONFIG, logger);
+      if (result.success) {
+        setPartnerStateByKey(TITLE_MONITOR_CONFIG.hookKey, true);
       }
+      return {
+        success: result.success,
+        message: result.message,
+        alreadyHooked: false,
+        currentTitle: (_a = result.immediateValue) != null ? _a : document.title
+      };
     }
   );
 }

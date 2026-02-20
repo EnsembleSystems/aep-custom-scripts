@@ -93,6 +93,53 @@ export function isDuplicate(
   return false;
 }
 
+// ============================================================================
+// DYNAMIC KEY HELPERS (for config-driven generic utilities)
+// ============================================================================
+
+/**
+ * Reads an arbitrary (dynamically-named) key from window._adobePartners.
+ * Use this when the key name is supplied at runtime (e.g. from ElementMonitorConfig).
+ * Returns undefined if the namespace or key does not exist.
+ */
+export function getPartnerStateByKey(key: string): unknown {
+  return (window._adobePartners as Record<string, unknown> | undefined)?.[key];
+}
+
+/**
+ * Writes an arbitrary (dynamically-named) key to window._adobePartners.
+ * Initializes the namespace if it doesn't exist.
+ */
+export function setPartnerStateByKey(key: string, value: unknown): void {
+  const ns = ensurePartnerNamespace();
+  (ns as Record<string, unknown>)[key] = value;
+}
+
+/**
+ * Checks if `value` matches the string stored at `window._adobePartners[stateKey]`.
+ * Works with dynamically-named state keys. If not a duplicate, stores the new value.
+ *
+ * @param value - The deduplication key to check
+ * @param stateKey - Partner state key to check/update (any string)
+ * @param logger - Logger instance
+ * @returns true if duplicate (caller should skip), false if new
+ */
+export function isDuplicateByKey(
+  value: string,
+  stateKey: string,
+  logger: { log(message: string, data?: unknown): void }
+): boolean {
+  if (value === getPartnerStateByKey(stateKey)) {
+    logger.log('Duplicate detected, skipping');
+    return true;
+  }
+  setPartnerStateByKey(stateKey, value);
+  logger.log('Updated deduplication key');
+  return false;
+}
+
+// ============================================================================
+
 export default function setGlobalValue(
   obj: Record<string, unknown>,
   path: string[] | string,

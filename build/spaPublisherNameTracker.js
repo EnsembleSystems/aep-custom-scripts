@@ -112,10 +112,6 @@ function fireSatelliteEvent(eventName, logger, testMode) {
   return false;
 }
 
-// src/utils/spaPublisherConfig.ts
-var SPA_PUBLISHER_NAME_COMMIT_EVENT = "spaPublisherNameCommit";
-var DEBOUNCE_DELAY = 300;
-
 // src/utils/globalState.ts
 function ensurePartnerNamespace() {
   if (!window._adobePartners) {
@@ -123,32 +119,70 @@ function ensurePartnerNamespace() {
   }
   return window._adobePartners;
 }
-function getPartnerState(key) {
+function getPartnerStateByKey(key) {
   var _a;
   return (_a = window._adobePartners) == null ? void 0 : _a[key];
 }
-function setPartnerState(key, value) {
+function setPartnerStateByKey(key, value) {
   const ns = ensurePartnerNamespace();
   ns[key] = value;
 }
-function isDuplicate(key, stateKey, logger) {
-  if (key === getPartnerState(stateKey)) {
+function isDuplicateByKey(value, stateKey, logger) {
+  if (value === getPartnerStateByKey(stateKey)) {
     logger.log("Duplicate detected, skipping");
     return true;
   }
-  setPartnerState(stateKey, key);
+  setPartnerStateByKey(stateKey, value);
   logger.log("Updated deduplication key");
   return false;
 }
 
-// src/scripts/spaPublisherNameTracker.ts
-function processPublisherName(publisherName, logger, testMode) {
-  logger.log("Processing SPA publisher name after debounce");
-  if (isDuplicate(publisherName, "lastPublisherNameKey", logger)) {
-    return;
+// src/utils/spaEventTracker.ts
+function trackElement(config, logger, testMode) {
+  var _a;
+  const delay = (_a = config.debounceDelay) != null ? _a : 300;
+  const value = getPartnerStateByKey(config.stateKey);
+  if (!value) {
+    logger.warn(`No value found in partner state at key "${config.stateKey}"`);
+    return { success: false, message: `No value at state key "${config.stateKey}"` };
   }
-  fireSatelliteEvent(SPA_PUBLISHER_NAME_COMMIT_EVENT, logger, testMode);
+  logger.log(`Value: "${value}"`);
+  const existingTimer = getPartnerStateByKey(config.timerKey);
+  if (existingTimer !== void 0) {
+    clearTimeout(existingTimer);
+    logger.log("Cleared existing debounce timer");
+  }
+  logger.log(`Setting up debounced tracking (${delay}ms delay)`);
+  setPartnerStateByKey(
+    config.timerKey,
+    setTimeout(() => {
+      logger.log("Processing after debounce");
+      const dedupKey = config.generateDedupKey ? config.generateDedupKey(value) : value;
+      if (isDuplicateByKey(dedupKey, config.dedupKey, logger)) {
+        return;
+      }
+      fireSatelliteEvent(config.commitEvent, logger, testMode);
+    }, delay)
+  );
+  return {
+    success: true,
+    message: `Tracking timer set (${delay}ms delay)`,
+    value
+  };
 }
+
+// src/utils/spaPublisherConfig.ts
+var SPA_PUBLISHER_NAME_COMMIT_EVENT = "spaPublisherNameCommit";
+var DEBOUNCE_DELAY = 300;
+
+// src/scripts/spaPublisherNameTracker.ts
+var PUBLISHER_TRACKER_CONFIG = {
+  stateKey: "publisherName",
+  timerKey: "publisherNameTimer",
+  dedupKey: "lastPublisherNameKey",
+  commitEvent: SPA_PUBLISHER_NAME_COMMIT_EVENT,
+  debounceDelay: DEBOUNCE_DELAY
+};
 function spaPublisherNameTrackerScript(testMode = false) {
   return executeScript(
     {
@@ -157,38 +191,15 @@ function spaPublisherNameTrackerScript(testMode = false) {
       testHeaderTitle: "SPA PUBLISHER NAME TRACKER - TEST MODE",
       onError: (error, logger) => {
         logger.error("Error setting up SPA publisher name tracking:", error);
-        return {
-          success: false,
-          message: "Failed to set up SPA publisher name tracking"
-        };
+        return { success: false, message: "Failed to set up SPA publisher name tracking" };
       }
     },
     (logger) => {
-      const publisherName = getPartnerState("publisherName");
-      if (!publisherName) {
-        logger.warn("No publisher name found in partner state");
-        return {
-          success: false,
-          message: "No publisher name available in state"
-        };
-      }
-      logger.log(`Publisher name: "${publisherName}"`);
-      const existingTimer = getPartnerState("publisherNameTimer");
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-        logger.log("Cleared existing publisher name timer");
-      }
-      logger.log(`Setting up debounced SPA publisher name tracking (${DEBOUNCE_DELAY}ms delay)`);
-      setPartnerState(
-        "publisherNameTimer",
-        setTimeout(() => {
-          processPublisherName(publisherName, logger, testMode);
-        }, DEBOUNCE_DELAY)
-      );
+      const result = trackElement(PUBLISHER_TRACKER_CONFIG, logger, testMode);
       return {
-        success: true,
-        message: `SPA publisher name tracking timer set (${DEBOUNCE_DELAY}ms delay)`,
-        publisherName
+        success: result.success,
+        message: result.message,
+        publisherName: result.value
       };
     }
   );

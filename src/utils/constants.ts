@@ -9,7 +9,7 @@ export const EVENT_DATA_READY_EVENT = 'eventDataReady';
 
 /**
  * Name of the XDM Variable in AEP Launch
- * Used by searchVariableSetter and spaPageViewTracker to read/write XDM data
+ * Used by searchVariableSetter and spaPageViewTitleTracker to read/write XDM data
  * @constant
  */
 export const XDM_VARIABLE_NAME = 'XDMVariable';

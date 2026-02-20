@@ -1,105 +1,61 @@
 /**
  * SPA Page View Title Monitor Script for AEP
  *
- * Installs a MutationObserver on the <title> element to detect
- * when a React SPA updates the page title after initial load.
- * Dispatches a custom event when a valid (non-default) title is detected.
+ * Thin config wrapper around the generic `installElementObserver` utility.
+ * Observes the <title> element to detect when a React SPA updates the page
+ * title after initial load. Dispatches a custom event when a valid
+ * (non-default) title is detected.
  *
- * @version 1.1.0
+ * To track a different element, create a new script file and supply a
+ * different ElementMonitorConfig — no logic changes required.
+ *
+ * @version 2.0.0
  */
 
 import { executeScript } from '../utils/script.js';
-import type { Logger } from '../utils/logger.js';
-import dispatchCustomEvent from '../utils/customEvent.js';
-import { SPA_TITLE_CHANGE_EVENT, isDefaultTitle } from '../utils/spaPageViewConfig.js';
-import type { TitleChangeDetail } from '../utils/spaPageViewConfig.js';
-import { setPartnerState, getPartnerState } from '../utils/globalState.js';
+import {
+  installElementObserver,
+  type ElementMonitorConfig,
+  type SpaMonitorResult,
+} from '../utils/spaElementObserver.js';
+import {
+  SPA_TITLE_CHANGE_EVENT,
+  isDefaultTitle,
+  TITLE_MONITOR_TIMEOUT_MS,
+} from '../utils/spaPageViewConfig.js';
+import {
+  getPartnerStateByKey,
+  setPartnerStateByKey,
+  setPartnerState,
+} from '../utils/globalState.js';
+
+// ============================================================================
+// ELEMENT CONFIG
+// ============================================================================
+
+const TITLE_MONITOR_CONFIG: ElementMonitorConfig = {
+  selector: 'title',
+  stateKey: 'titleValue',
+  hookKey: 'titleMonitorHooked',
+  observerKey: 'titleMonitorObserver',
+  timeoutKey: 'titleMonitorTimeout',
+  eventName: SPA_TITLE_CHANGE_EVENT,
+  timeout: TITLE_MONITOR_TIMEOUT_MS,
+  watchBody: false,
+  // <title> content is read via document.title rather than textContent
+  extractValue: () => document.title,
+  isValidValue: (title) => !isDefaultTitle(title),
+  disconnectAfterFirst: true,
+  // Track the current URL as the previous page URL for SPA referrer tracking
+  onEmit: () => setPartnerState('previousPageUrl', window.location.href),
+};
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-/**
- * Result returned by the script
- */
-export interface SpaPageViewTitleMonitorResult {
-  /** Whether the observer was successfully installed */
-  success: boolean;
-  /** Message describing the result */
-  message: string;
-  /** Whether observer was already installed */
-  alreadyHooked: boolean;
-  /** Current title at install time */
+export interface SpaPageViewTitleMonitorResult extends SpaMonitorResult {
   currentTitle?: string;
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Installs MutationObserver on the <title> element
- *
- * @param logger - Logger instance for debugging
- */
-function installTitleObserver(logger: Logger): void {
-  const previousUrl = document.referrer || '';
-
-  const titleElement = document.querySelector('title');
-
-  if (!titleElement) {
-    logger.warn('No <title> element found in document');
-    return;
-  }
-
-  const observer = new MutationObserver(() => {
-    const currentTitle = document.title;
-
-    if (isDefaultTitle(currentTitle)) {
-      logger.log(`Title is still a default/placeholder: "${currentTitle}"`);
-      return;
-    }
-
-    const currentUrl = window.location.href;
-
-    logger.log(
-      `Title changed to: "${currentTitle}", dispatching page view and disconnecting observer`
-    );
-
-    dispatchCustomEvent<TitleChangeDetail>(SPA_TITLE_CHANGE_EVENT, {
-      title: currentTitle,
-      url: currentUrl,
-      referrer: previousUrl,
-      timestamp: Date.now(),
-    });
-
-    setPartnerState('previousPageUrl', currentUrl);
-
-    // Disconnect after first valid title — subsequent SPA navigations are link clicks
-    observer.disconnect();
-    logger.log('Observer disconnected after first valid title change');
-  });
-
-  observer.observe(titleElement, { childList: true });
-
-  // Store observer for cleanup access
-  setPartnerState('titleMonitorObserver', observer);
-
-  logger.log('MutationObserver installed on <title> element');
-
-  // If the title is already valid at install time, dispatch and disconnect immediately
-  const currentTitle = document.title;
-  if (!isDefaultTitle(currentTitle)) {
-    logger.log(`Title already set at install time: "${currentTitle}", dispatching immediately`);
-    dispatchCustomEvent<TitleChangeDetail>(SPA_TITLE_CHANGE_EVENT, {
-      title: currentTitle,
-      url: window.location.href,
-      referrer: previousUrl,
-      timestamp: Date.now(),
-    });
-    observer.disconnect();
-    logger.log('Observer disconnected — title was already valid at install time');
-  }
 }
 
 // ============================================================================
@@ -107,13 +63,7 @@ function installTitleObserver(logger: Logger): void {
 // ============================================================================
 
 /**
- * Installs a MutationObserver on the <title> element to monitor SPA title changes
- *
- * This function:
- * 1. Checks if observer is already installed
- * 2. Installs MutationObserver on <title> element
- * 3. Dispatches spaPageTitleChanged custom event when title changes
- * 4. Filters out default/placeholder titles
+ * Installs a MutationObserver on the <title> element to monitor SPA title changes.
  *
  * @param testMode - Enable verbose logging for testing
  * @returns Result object with success status
@@ -129,7 +79,7 @@ function installTitleObserver(logger: Logger): void {
  * // Enable debug mode and listen for changes:
  * localStorage.setItem('__aep_scripts_debug', 'true');
  * window.addEventListener('spaPageTitleChanged', (e) => {
- *   console.log('Title changed:', e.detail.title);
+ *   console.log('Title changed:', e.detail.value);
  * });
  * ```
  */
@@ -151,8 +101,7 @@ export function spaPageViewTitleMonitorScript(
       },
     },
     (logger) => {
-      // Check if already hooked
-      if (getPartnerState('titleMonitorHooked')) {
+      if (getPartnerStateByKey(TITLE_MONITOR_CONFIG.hookKey)) {
         logger.log('Title change observer already installed');
         return {
           success: true,
@@ -162,28 +111,18 @@ export function spaPageViewTitleMonitorScript(
         };
       }
 
-      try {
-        // Install observer
-        installTitleObserver(logger);
+      const result = installElementObserver(TITLE_MONITOR_CONFIG, logger);
 
-        // Mark as hooked
-        setPartnerState('titleMonitorHooked', true);
-        logger.log('Title change observer successfully installed');
-
-        return {
-          success: true,
-          message: 'Title change observer installed successfully',
-          alreadyHooked: false,
-          currentTitle: document.title,
-        };
-      } catch (error) {
-        logger.error('Failed to install observer:', error);
-        return {
-          success: false,
-          message: 'Failed to install title change observer',
-          alreadyHooked: false,
-        };
+      if (result.success) {
+        setPartnerStateByKey(TITLE_MONITOR_CONFIG.hookKey, true);
       }
+
+      return {
+        success: result.success,
+        message: result.message,
+        alreadyHooked: false,
+        currentTitle: result.immediateValue ?? document.title,
+      };
     }
   );
 }

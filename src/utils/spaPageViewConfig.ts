@@ -2,7 +2,7 @@
  * Shared configuration for SPA page view tracking scripts
  *
  * Centralizes all SPA page view constants, types, and helpers
- * to ensure consistency across spaPageViewTitleMonitor and spaPageViewTracker.
+ * to ensure consistency across spaPageViewTitleMonitor and spaPageViewTitleTracker.
  */
 
 // ============================================================================
@@ -47,6 +47,13 @@ export const SPA_PAGE_VIEW_COMMIT_EVENT = 'spaPageViewCommit';
  * @constant
  */
 export const DEBOUNCE_DELAY = 300;
+
+/**
+ * Timeout in milliseconds before the title observer auto-disconnects
+ * if no valid title has been detected.
+ * @constant
+ */
+export const TITLE_MONITOR_TIMEOUT_MS = 10_000;
 
 /**
  * Default/placeholder titles that indicate the SPA hasn't finished rendering.

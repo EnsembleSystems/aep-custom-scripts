@@ -116,6 +116,103 @@ function dispatchCustomEvent(eventName, detail) {
   }
 }
 
+// src/utils/globalState.ts
+function ensurePartnerNamespace() {
+  if (!window._adobePartners) {
+    window._adobePartners = {};
+  }
+  return window._adobePartners;
+}
+function getPartnerStateByKey(key) {
+  var _a;
+  return (_a = window._adobePartners) == null ? void 0 : _a[key];
+}
+function setPartnerStateByKey(key, value) {
+  const ns = ensurePartnerNamespace();
+  ns[key] = value;
+}
+
+// src/utils/spaElementObserver.ts
+var DEFAULT_EXTRACT = (el) => {
+  var _a, _b;
+  return (_b = (_a = el.textContent) == null ? void 0 : _a.trim()) != null ? _b : "";
+};
+var DEFAULT_IS_VALID = (value) => value.length > 0;
+function emit(config, value, logger) {
+  setPartnerStateByKey(config.stateKey, value);
+  dispatchCustomEvent(config.eventName, {
+    value,
+    timestamp: Date.now()
+  });
+  logger.log(`Dispatched "${config.eventName}" with value: "${value}"`);
+  if (config.onEmit) {
+    config.onEmit(value);
+  }
+}
+function cancelTimeout(config) {
+  if (config.timeoutKey) {
+    const id = getPartnerStateByKey(config.timeoutKey);
+    if (id !== void 0) {
+      clearTimeout(id);
+    }
+  }
+}
+function installElementObserver(config, logger) {
+  var _a, _b, _c, _d;
+  const extract = (_a = config.extractValue) != null ? _a : DEFAULT_EXTRACT;
+  const isValid = (_b = config.isValidValue) != null ? _b : DEFAULT_IS_VALID;
+  const watchBody = (_c = config.watchBody) != null ? _c : false;
+  const disconnectAfterFirst = (_d = config.disconnectAfterFirst) != null ? _d : true;
+  const existingEl = document.querySelector(config.selector);
+  if (existingEl) {
+    const existingValue = extract(existingEl);
+    if (isValid(existingValue)) {
+      logger.log(`Element "${config.selector}" already has valid value at install time`);
+      emit(config, existingValue, logger);
+      return { success: true, message: "Dispatched immediately", immediateValue: existingValue };
+    }
+  } else if (!watchBody) {
+    logger.warn(`Element "${config.selector}" not found in document`);
+    return { success: false, message: `Element "${config.selector}" not found` };
+  }
+  const observer = new MutationObserver(() => {
+    const el = document.querySelector(config.selector);
+    if (!el) return;
+    const value = extract(el);
+    if (!isValid(value)) {
+      logger.log(`Value not yet valid: "${value}"`);
+      return;
+    }
+    logger.log(`Valid value detected: "${value}"`);
+    if (disconnectAfterFirst) {
+      cancelTimeout(config);
+      setPartnerStateByKey(config.observerKey, void 0);
+      observer.disconnect();
+      logger.log("Observer disconnected after first valid value");
+    }
+    emit(config, value, logger);
+  });
+  if (watchBody) {
+    observer.observe(document.body, { childList: true, subtree: true });
+    logger.log(`MutationObserver installed on document.body watching for "${config.selector}"`);
+  } else {
+    observer.observe(existingEl, { childList: true });
+    logger.log(`MutationObserver installed on "${config.selector}"`);
+  }
+  setPartnerStateByKey(config.observerKey, observer);
+  if (config.timeout && config.timeoutKey) {
+    const timeoutId = setTimeout(() => {
+      observer.disconnect();
+      setPartnerStateByKey(config.observerKey, void 0);
+      logger.warn(`Observer timed out after ${config.timeout}ms \u2014 "${config.selector}" not found`);
+    }, config.timeout);
+    setPartnerStateByKey(config.timeoutKey, timeoutId);
+  } else if (config.timeout && !config.timeoutKey) {
+    logger.warn("`timeout` is set but `timeoutKey` is missing \u2014 timeout will not be stored");
+  }
+  return { success: true, message: "Observer installed" };
+}
+
 // src/utils/spaPublisherConfig.ts
 var SPA_PUBLISHER_NAME_EVENT = "spaPublisherNameChanged";
 var PUBLISHER_ELEMENT_SELECTOR = '[data-testid="publisherName-display"]';
@@ -124,66 +221,19 @@ function isValidPublisherName(name) {
   return name.trim().length > 0;
 }
 
-// src/utils/globalState.ts
-function ensurePartnerNamespace() {
-  if (!window._adobePartners) {
-    window._adobePartners = {};
-  }
-  return window._adobePartners;
-}
-function getPartnerState(key) {
-  var _a;
-  return (_a = window._adobePartners) == null ? void 0 : _a[key];
-}
-function setPartnerState(key, value) {
-  const ns = ensurePartnerNamespace();
-  ns[key] = value;
-}
-
 // src/scripts/spaPublisherNameMonitor.ts
-function emitPublisherName(name, logger) {
-  setPartnerState("publisherName", name);
-  dispatchCustomEvent(SPA_PUBLISHER_NAME_EVENT, {
-    publisherName: name,
-    timestamp: Date.now()
-  });
-  logger.log(`Dispatched "${SPA_PUBLISHER_NAME_EVENT}" with name: "${name}"`);
-}
-function installPublisherNameObserver(logger) {
-  var _a;
-  const existingElement = document.querySelector(PUBLISHER_ELEMENT_SELECTOR);
-  const existingName = ((_a = existingElement == null ? void 0 : existingElement.textContent) != null ? _a : "").trim();
-  if (isValidPublisherName(existingName)) {
-    logger.log(`Publisher name already available at install time: "${existingName}"`);
-    emitPublisherName(existingName, logger);
-    return;
-  }
-  const observer = new MutationObserver(() => {
-    var _a2;
-    const element = document.querySelector(PUBLISHER_ELEMENT_SELECTOR);
-    if (!element) return;
-    const name = ((_a2 = element.textContent) != null ? _a2 : "").trim();
-    if (!isValidPublisherName(name)) return;
-    logger.log(`Publisher name element found: "${name}" \u2014 dispatching event and disconnecting`);
-    clearTimeout(getPartnerState("publisherMonitorTimeout"));
-    setPartnerState("publisherMonitorObserver", void 0);
-    observer.disconnect();
-    emitPublisherName(name, logger);
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-  setPartnerState("publisherMonitorObserver", observer);
-  logger.log(
-    `MutationObserver installed on document.body watching for "${PUBLISHER_ELEMENT_SELECTOR}"`
-  );
-  const timeoutId = setTimeout(() => {
-    observer.disconnect();
-    setPartnerState("publisherMonitorObserver", void 0);
-    logger.warn(
-      `Publisher name observer timed out after ${PUBLISHER_MONITOR_TIMEOUT_MS}ms \u2014 element not found`
-    );
-  }, PUBLISHER_MONITOR_TIMEOUT_MS);
-  setPartnerState("publisherMonitorTimeout", timeoutId);
-}
+var PUBLISHER_MONITOR_CONFIG = {
+  selector: PUBLISHER_ELEMENT_SELECTOR,
+  stateKey: "publisherName",
+  hookKey: "publisherMonitorHooked",
+  observerKey: "publisherMonitorObserver",
+  timeoutKey: "publisherMonitorTimeout",
+  eventName: SPA_PUBLISHER_NAME_EVENT,
+  watchBody: true,
+  isValidValue: isValidPublisherName,
+  timeout: PUBLISHER_MONITOR_TIMEOUT_MS,
+  disconnectAfterFirst: true
+};
 function spaPublisherNameMonitorScript(testMode = false) {
   return executeScript(
     {
@@ -200,7 +250,7 @@ function spaPublisherNameMonitorScript(testMode = false) {
       }
     },
     (logger) => {
-      if (getPartnerState("publisherMonitorHooked")) {
+      if (getPartnerStateByKey(PUBLISHER_MONITOR_CONFIG.hookKey)) {
         logger.log("Publisher name observer already installed");
         return {
           success: true,
@@ -208,23 +258,16 @@ function spaPublisherNameMonitorScript(testMode = false) {
           alreadyHooked: true
         };
       }
-      try {
-        installPublisherNameObserver(logger);
-        setPartnerState("publisherMonitorHooked", true);
-        logger.log("Publisher name observer successfully installed");
-        return {
-          success: true,
-          message: "Publisher name observer installed successfully",
-          alreadyHooked: false
-        };
-      } catch (error) {
-        logger.error("Failed to install observer:", error);
-        return {
-          success: false,
-          message: "Failed to install publisher name observer",
-          alreadyHooked: false
-        };
+      const result = installElementObserver(PUBLISHER_MONITOR_CONFIG, logger);
+      if (result.success) {
+        setPartnerStateByKey(PUBLISHER_MONITOR_CONFIG.hookKey, true);
       }
+      return {
+        success: result.success,
+        message: result.message,
+        alreadyHooked: false,
+        publisherName: result.immediateValue
+      };
     }
   );
 }

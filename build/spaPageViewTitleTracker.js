@@ -112,10 +112,6 @@ function fireSatelliteEvent(eventName, logger, testMode) {
   return false;
 }
 
-// src/utils/spaPageViewConfig.ts
-var SPA_PAGE_VIEW_COMMIT_EVENT = "spaPageViewCommit";
-var DEBOUNCE_DELAY = 300;
-
 // src/utils/globalState.ts
 function ensurePartnerNamespace() {
   if (!window._adobePartners) {
@@ -123,35 +119,73 @@ function ensurePartnerNamespace() {
   }
   return window._adobePartners;
 }
-function getPartnerState(key) {
+function getPartnerStateByKey(key) {
   var _a;
   return (_a = window._adobePartners) == null ? void 0 : _a[key];
 }
-function setPartnerState(key, value) {
+function setPartnerStateByKey(key, value) {
   const ns = ensurePartnerNamespace();
   ns[key] = value;
 }
-function isDuplicate(key, stateKey, logger) {
-  if (key === getPartnerState(stateKey)) {
+function isDuplicateByKey(value, stateKey, logger) {
+  if (value === getPartnerStateByKey(stateKey)) {
     logger.log("Duplicate detected, skipping");
     return true;
   }
-  setPartnerState(stateKey, key);
+  setPartnerStateByKey(stateKey, value);
   logger.log("Updated deduplication key");
   return false;
 }
 
-// src/scripts/spaPageViewTracker.ts
-function processPageView(title, url, logger, testMode) {
-  logger.log("Processing SPA page view after debounce");
-  const pageViewKey = `${url}|${title}`;
-  logger.log("Generated page view key:", pageViewKey);
-  if (isDuplicate(pageViewKey, "lastPageViewKey", logger)) {
-    return;
+// src/utils/spaEventTracker.ts
+function trackElement(config, logger, testMode) {
+  var _a;
+  const delay = (_a = config.debounceDelay) != null ? _a : 300;
+  const value = getPartnerStateByKey(config.stateKey);
+  if (!value) {
+    logger.warn(`No value found in partner state at key "${config.stateKey}"`);
+    return { success: false, message: `No value at state key "${config.stateKey}"` };
   }
-  fireSatelliteEvent(SPA_PAGE_VIEW_COMMIT_EVENT, logger, testMode);
+  logger.log(`Value: "${value}"`);
+  const existingTimer = getPartnerStateByKey(config.timerKey);
+  if (existingTimer !== void 0) {
+    clearTimeout(existingTimer);
+    logger.log("Cleared existing debounce timer");
+  }
+  logger.log(`Setting up debounced tracking (${delay}ms delay)`);
+  setPartnerStateByKey(
+    config.timerKey,
+    setTimeout(() => {
+      logger.log("Processing after debounce");
+      const dedupKey = config.generateDedupKey ? config.generateDedupKey(value) : value;
+      if (isDuplicateByKey(dedupKey, config.dedupKey, logger)) {
+        return;
+      }
+      fireSatelliteEvent(config.commitEvent, logger, testMode);
+    }, delay)
+  );
+  return {
+    success: true,
+    message: `Tracking timer set (${delay}ms delay)`,
+    value
+  };
 }
-function spaPageViewTrackerScript(testMode = false) {
+
+// src/utils/spaPageViewConfig.ts
+var SPA_PAGE_VIEW_COMMIT_EVENT = "spaPageViewCommit";
+var DEBOUNCE_DELAY = 300;
+
+// src/scripts/spaPageViewTitleTracker.ts
+var PAGE_VIEW_TRACKER_CONFIG = {
+  stateKey: "titleValue",
+  timerKey: "pageViewTimer",
+  dedupKey: "lastPageViewKey",
+  commitEvent: SPA_PAGE_VIEW_COMMIT_EVENT,
+  debounceDelay: DEBOUNCE_DELAY,
+  // Dedup by url|title to distinguish navigations to the same title on diff pages
+  generateDedupKey: (title) => `${window.location.href}|${title}`
+};
+function spaPageViewTitleTrackerScript(testMode = false) {
   return executeScript(
     {
       scriptName: "SPA Page View Tracker",
@@ -159,37 +193,19 @@ function spaPageViewTrackerScript(testMode = false) {
       testHeaderTitle: "SPA PAGE VIEW TRACKER - TEST MODE",
       onError: (error, logger) => {
         logger.error("Error setting up SPA page view tracking:", error);
-        return {
-          success: false,
-          message: "Failed to set up SPA page view tracking"
-        };
+        return { success: false, message: "Failed to set up SPA page view tracking" };
       }
     },
     (logger) => {
-      const { title } = document;
-      const url = window.location.href;
-      logger.log(`Title: "${title}", URL: "${url}"`);
-      const existingTimer = getPartnerState("pageViewTimer");
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-        logger.log("Cleared existing page view timer");
-      }
-      logger.log(`Setting up debounced SPA page view tracking (${DEBOUNCE_DELAY}ms delay)`);
-      setPartnerState(
-        "pageViewTimer",
-        setTimeout(() => {
-          processPageView(title, url, logger, testMode);
-        }, DEBOUNCE_DELAY)
-      );
+      const result = trackElement(PAGE_VIEW_TRACKER_CONFIG, logger, testMode);
       return {
-        success: true,
-        message: `SPA page view tracking timer set (${DEBOUNCE_DELAY}ms delay)`,
-        title,
-        url
+        success: result.success,
+        message: result.message,
+        title: result.value
       };
     }
   );
 }
 
 
-return spaPageViewTrackerScript(TEST_MODE);
+return spaPageViewTitleTrackerScript(TEST_MODE);

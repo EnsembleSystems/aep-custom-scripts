@@ -83,6 +83,10 @@ declare global {
       titleMonitorHooked?: boolean;
       /** MutationObserver instance for cleanup */
       titleMonitorObserver?: MutationObserver;
+      /** Timeout ID for the 10s title monitor auto-disconnect */
+      titleMonitorTimeout?: ReturnType<typeof setTimeout>;
+      /** Title value detected by the observer */
+      titleValue?: string;
 
       // Page view tracking
       /** Debounce timer for page view tracking */
