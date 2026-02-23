@@ -15,20 +15,18 @@
  * - No window._adobePartners storage needed
  */
 
-import { executeScript } from '../../utils/script';
-import logEventInfo, { isValidUserEvent } from '../../utils/events';
+// Use this custom code block to adjust or filter click data. You can use the following variables:
+// content.clickedElement: The DOM element that was clicked
+// content.pageName: The page name when the click happened
+// content.linkName: The name of the clicked link
+// content.linkRegion: The region of the clicked link
+// content.linkType: The type of link (typically exit, download, or other)
+// content.linkUrl: The destination URL of the clicked link
+// Return false to omit link data.
 
-/**
- * Type for the content object passed to Launch's before event send callback
- */
-interface LaunchEventContent {
-  clickedElement?: Element; // The clicked DOM element
-  xdm?: {
-    eventType?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
+import { executeScript } from '../../utils/script';
+import logEventInfo, { isMeaningfulClickEvent, isValidUserEvent } from '../../utils/events';
+import type { LaunchEventContent } from '../../types';
 
 /**
  * Filters click events to allow only genuine user interactions
@@ -75,6 +73,11 @@ export default function customDataCollectionOnFilterClickCallbackScript(
 
       // Validate event is a trusted user interaction
       if (!isValidUserEvent(event, logger)) {
+        return false;
+      }
+
+      // Validate valid SPA click event
+      if (!isMeaningfulClickEvent(content, logger)) {
         return false;
       }
 

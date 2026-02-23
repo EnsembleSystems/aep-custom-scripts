@@ -69,6 +69,28 @@ export interface PublisherData {
   description: string;
 }
 
+/**
+ * Content object passed to Launch's before event send / click filter callbacks.
+ * Used by events utils, customDataCollectionOnFilterClickCallback, and
+ * customDataCollectionOnBeforeEventSend.
+ */
+export interface LaunchEventContent {
+  clickedElement?: Element;
+  xdm?: {
+    eventType?: string;
+    _adobepartners?: {
+      partnerData?: unknown;
+      cardCollection?: unknown;
+      linkClickLabel?: string;
+      Checkout?: CheckoutData;
+      eventData?: unknown;
+      attendeeData?: unknown;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 // Extend Window interface to include Adobe Partners namespace
 declare global {
   interface Window {

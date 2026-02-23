@@ -118,6 +118,21 @@ function logEventInfo(event, logger, additionalInfo) {
   }
   logger.log("Event information", eventInfo);
 }
+function isMeaningfulClickEvent(content, logger) {
+  if (!content.clickedElement) {
+    logger == null ? void 0 : logger.log("Clicked element is missing");
+    return false;
+  }
+  const { linkType, linkRegion } = content;
+  if ((linkType == null ? void 0 : linkType.toLowerCase()) === "exit") {
+    return true;
+  }
+  if ((linkRegion == null ? void 0 : linkRegion.toLowerCase()) === "main" || (linkRegion == null ? void 0 : linkRegion.toLowerCase()) === "body") {
+    logger == null ? void 0 : logger.log(`Ghost click detected \u2014 linkRegion is "${linkRegion}", ignoring`);
+    return false;
+  }
+  return true;
+}
 function isValidUserEvent(event, logger) {
   if (!event) {
     logger == null ? void 0 : logger.log("Event is missing");
@@ -146,6 +161,9 @@ function customDataCollectionOnFilterClickCallbackScript(content, event, testMod
       logger.testInfo("Provided content object", content);
       logEventInfo(event, logger);
       if (!isValidUserEvent(event, logger)) {
+        return false;
+      }
+      if (!isMeaningfulClickEvent(content, logger)) {
         return false;
       }
       if (event) {

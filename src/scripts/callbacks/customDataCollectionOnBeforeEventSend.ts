@@ -29,7 +29,7 @@ import {
 import { getStorageItem } from '../../utils/storage';
 import logEventInfo, { shouldProcessEventType } from '../../utils/events';
 import { setNestedValue, conditionalProperties, mergeNonNull } from '../../utils/object';
-import type { PartnerCardCtx, CheckoutData, CartItem } from '../../types';
+import type { PartnerCardCtx, CheckoutData, CartItem, LaunchEventContent } from '../../types';
 import { createLogger } from '../../utils/logger';
 import { DEFAULT_COOKIE_KEYS, ATTENDEE_STORAGE_KEY } from '../../utils/constants';
 import { isHostnameMatch } from '../../utils/url';
@@ -87,25 +87,6 @@ interface MageCacheCartItem {
 interface MageCacheStorage {
   cart?: {
     items?: MageCacheCartItem[];
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
-
-/**
- * Type for the content object passed to Launch's before event send callback
- */
-interface LaunchEventContent {
-  xdm?: {
-    eventType?: string;
-    _adobepartners?: {
-      partnerData?: unknown;
-      cardCollection?: unknown;
-      linkClickLabel?: string;
-      Checkout?: CheckoutData;
-      eventData?: unknown;
-      attendeeData?: unknown;
-    };
     [key: string]: unknown;
   };
   [key: string]: unknown;

@@ -2,6 +2,7 @@
  * Event processing, filtering, and validation utilities
  */
 
+import type { LaunchEventContent } from '../types/index.js';
 import type { Logger } from './logger.js';
 
 /**
@@ -43,6 +44,40 @@ export default function logEventInfo(
   }
 
   logger.log('Event information', eventInfo);
+}
+
+/**
+ * Validates if a Launch click event is a genuine SPA interaction and not a ghost click
+ * (e.g. a click on whitespace with no meaningful link target).
+ *
+ * Rules:
+ * - Exit links (`linkType === 'exit'`) are always valid.
+ * - Clicks in broad layout regions (`linkRegion === 'MAIN'` or `'BODY'`) without a
+ *   specific anchor are treated as ghost clicks and rejected.
+ * - Everything else is considered valid.
+ *
+ * @param content - The content object from the Launch click event
+ * @param logger - Optional logger instance
+ * @returns true if the click should be processed
+ */
+export function isMeaningfulClickEvent(content: LaunchEventContent, logger?: Logger): boolean {
+  if (!content.clickedElement) {
+    logger?.log('Clicked element is missing');
+    return false;
+  }
+
+  const { linkType, linkRegion } = content as { linkType?: string; linkRegion?: string };
+
+  if (linkType?.toLowerCase() === 'exit') {
+    return true;
+  }
+
+  if (linkRegion?.toLowerCase() === 'main' || linkRegion?.toLowerCase() === 'body') {
+    logger?.log(`Ghost click detected — linkRegion is "${linkRegion}", ignoring`);
+    return false;
+  }
+
+  return true;
 }
 
 /**
