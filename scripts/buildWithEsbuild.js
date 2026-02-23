@@ -113,20 +113,14 @@ function determineFunctionCall(bundledCode, mainFunctionName) {
     return `${mainFunctionName}(content, event, TEST_MODE)`;
   }
 
-  if (hasContent || hasEvent) {
-    // Function has either content or event parameter
-    const eventIndex = Math.min(
-      signature.indexOf('event') !== -1 ? signature.indexOf('event') : Infinity,
-      signature.indexOf('content') !== -1 ? signature.indexOf('content') : Infinity
-    );
-    const testModeIndex = signature.indexOf('testMode');
+  if (hasEvent && !hasContent) {
+    // Function has only event parameter (Rule Action custom code - only `event` is available)
+    return `${mainFunctionName}(event, TEST_MODE)`;
+  }
 
-    // If event/content comes before testMode (or testMode not found), use (content, TEST_MODE)
-    // Otherwise use (TEST_MODE, content)
-    if (testModeIndex === -1 || eventIndex < testModeIndex) {
-      return `${mainFunctionName}(content, TEST_MODE)`;
-    }
-    return `${mainFunctionName}(TEST_MODE, content)`;
+  if (hasContent && !hasEvent) {
+    // Function has only content parameter
+    return `${mainFunctionName}(content, TEST_MODE)`;
   }
 
   // No content or event parameter
