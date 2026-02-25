@@ -105,19 +105,9 @@ export const FILTER_TO_XDM_MAP: Record<string, string> = {
 // XDM SEARCH TYPES
 // ============================================================================
 
-/** XDM searchFilters structure */
-export interface XdmSearchFilters {
-  searchContentType?: string[];
-  searchFunctionality?: string[];
-  searchIndustries?: string[];
-  searchProducts?: string[];
-  searchSolutions?: string[];
-  searchTopic?: string[];
-}
-
 /** XDM searchResults structure */
 export interface XdmSearchResults {
   searchTerm: string;
   searchSource: string;
-  searchFilters: XdmSearchFilters;
+  filters: string[];
 }

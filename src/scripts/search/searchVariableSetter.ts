@@ -12,9 +12,9 @@
 import { executeScript } from '../../utils/script.js';
 import type { Logger } from '../../utils/logger.js';
 import type { SearchPayload } from '../../utils/searchUrlParser.js';
-import { FILTER_TO_XDM_MAP } from '../../utils/searchConfig.js';
-import type { XdmSearchFilters, XdmSearchResults } from '../../utils/searchConfig.js';
+import type { XdmSearchResults } from '../../utils/searchConfig.js';
 import { ensurePath, getPartnerState } from '../../utils/globalState.js';
+import { flattenRecordValues } from '../../utils/object.js';
 import { getSatelliteVar } from '../../utils/satellite.js';
 import { XDM_VARIABLE_NAME } from '../../utils/constants.js';
 
@@ -74,26 +74,6 @@ function readSearchPayload(logger: Logger): SearchPayload | null {
   }
 }
 
-/**
- * Maps generic filters to XDM searchFilters structure
- * Only known filter keys (from FILTER_TO_XDM_MAP) are included
- */
-function mapFiltersToXdm(filters: Record<string, string[]>, logger: Logger): XdmSearchFilters {
-  const xdmFilters: XdmSearchFilters = {};
-
-  Object.entries(filters).forEach(([key, values]) => {
-    const xdmKey = FILTER_TO_XDM_MAP[key];
-    if (xdmKey) {
-      (xdmFilters as Record<string, string[]>)[xdmKey] = values;
-      logger.log(`Mapped filter "${key}" → "${xdmKey}":`, values);
-    } else {
-      logger.log(`Skipping unmapped filter "${key}" (not in XDM schema)`);
-    }
-  });
-
-  return xdmFilters;
-}
-
 // ============================================================================
 // MAIN SCRIPT FUNCTION
 // ============================================================================
@@ -137,12 +117,12 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
       }
 
       // Build XDM search results
-      const xdmFilters = mapFiltersToXdm(payload.filters, logger);
+      const filters = flattenRecordValues(payload.filters);
 
       const searchResults: XdmSearchResults = {
         searchTerm: payload.term,
         searchSource: payload.source,
-        searchFilters: xdmFilters,
+        filters,
       };
 
       logger.log('Built XDM searchResults:', searchResults);
@@ -165,7 +145,7 @@ export function searchVariableSetterScript(testMode: boolean = false): SearchVar
         // Set search results fields
         searchResultsNode.searchTerm = searchResults.searchTerm;
         searchResultsNode.searchSource = searchResults.searchSource;
-        searchResultsNode.searchFilters = searchResults.searchFilters;
+        searchResultsNode.filters = searchResults.filters;
 
         logger.log('Successfully set XDM Variable searchResults');
 

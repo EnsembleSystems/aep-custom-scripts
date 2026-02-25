@@ -100,16 +100,6 @@ function executeScript(config, execute) {
   }
 }
 
-// src/utils/searchConfig.ts
-var FILTER_TO_XDM_MAP = {
-  "content-type": "searchContentType",
-  functionality: "searchFunctionality",
-  industries: "searchIndustries",
-  products: "searchProducts",
-  solutions: "searchSolutions",
-  topic: "searchTopic"
-};
-
 // src/utils/object.ts
 function ensureNestedPath(obj, path) {
   const keys = Array.isArray(path) ? path : path.split(".");
@@ -121,6 +111,9 @@ function ensureNestedPath(obj, path) {
     current = current[key];
   });
   return current;
+}
+function flattenRecordValues(record) {
+  return Object.values(record).flat();
 }
 
 // src/utils/globalState.ts
@@ -180,19 +173,6 @@ function readSearchPayload(logger) {
     return null;
   }
 }
-function mapFiltersToXdm(filters, logger) {
-  const xdmFilters = {};
-  Object.entries(filters).forEach(([key, values]) => {
-    const xdmKey = FILTER_TO_XDM_MAP[key];
-    if (xdmKey) {
-      xdmFilters[xdmKey] = values;
-      logger.log(`Mapped filter "${key}" \u2192 "${xdmKey}":`, values);
-    } else {
-      logger.log(`Skipping unmapped filter "${key}" (not in XDM schema)`);
-    }
-  });
-  return xdmFilters;
-}
 function searchVariableSetterScript(testMode = false) {
   return executeScript(
     {
@@ -216,11 +196,11 @@ function searchVariableSetterScript(testMode = false) {
           message: "No valid search payload found"
         };
       }
-      const xdmFilters = mapFiltersToXdm(payload.filters, logger);
+      const filters = flattenRecordValues(payload.filters);
       const searchResults = {
         searchTerm: payload.term,
         searchSource: payload.source,
-        searchFilters: xdmFilters
+        filters
       };
       logger.log("Built XDM searchResults:", searchResults);
       const xdmVar = getSatelliteVar(XDM_VARIABLE_NAME, logger, testMode);
@@ -235,7 +215,7 @@ function searchVariableSetterScript(testMode = false) {
         const searchResultsNode = ensurePath(xdmVar, ["_adobepartners", "searchResults"]);
         searchResultsNode.searchTerm = searchResults.searchTerm;
         searchResultsNode.searchSource = searchResults.searchSource;
-        searchResultsNode.searchFilters = searchResults.searchFilters;
+        searchResultsNode.filters = searchResults.filters;
         logger.log("Successfully set XDM Variable searchResults");
         return {
           success: true,

@@ -160,6 +160,19 @@ export function pickFields(
 }
 
 /**
+ * Flattens all values of a string-array record into a single array
+ * @param record - Object with string array values
+ * @returns Flat array of all values
+ *
+ * @example
+ * flattenRecordValues({ a: ['x', 'y'], b: ['z'] });
+ * // Returns: ['x', 'y', 'z']
+ */
+export function flattenRecordValues(record: Record<string, string[]>): string[] {
+  return Object.values(record).flat();
+}
+
+/**
  * Merges objects, excluding null/undefined values
  * @param objects - Objects to merge
  * @returns Merged object without null/undefined values
