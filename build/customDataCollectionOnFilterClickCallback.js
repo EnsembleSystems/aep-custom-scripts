@@ -127,7 +127,7 @@ function isMeaningfulClickEvent(content, logger) {
   if ((linkType == null ? void 0 : linkType.toLowerCase()) === "exit") {
     return true;
   }
-  if ((linkRegion == null ? void 0 : linkRegion.toLowerCase()) === "main" || (linkRegion == null ? void 0 : linkRegion.toLowerCase()) === "body") {
+  if ((linkRegion == null ? void 0 : linkRegion.toLowerCase()) === "main") {
     logger == null ? void 0 : logger.log(`Ghost click detected \u2014 linkRegion is "${linkRegion}", ignoring`);
     return false;
   }

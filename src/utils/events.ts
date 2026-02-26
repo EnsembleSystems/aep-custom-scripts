@@ -72,7 +72,7 @@ export function isMeaningfulClickEvent(content: LaunchEventContent, logger?: Log
     return true;
   }
 
-  if (linkRegion?.toLowerCase() === 'main' || linkRegion?.toLowerCase() === 'body') {
+  if (linkRegion?.toLowerCase() === 'main') {
     logger?.log(`Ghost click detected — linkRegion is "${linkRegion}", ignoring`);
     return false;
   }
